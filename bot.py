@@ -22,14 +22,13 @@ def get_menu():
         [InlineKeyboardButton("🛍 USA 🇺🇸", callback_data='usd')],
         [InlineKeyboardButton("🌍 OTRO PAÍS / INTERNATIONAL", callback_data='intl')],
         [InlineKeyboardButton("🎁 REGALITOS", callback_data='regalitos')],
-        [InlineKeyboardButton("🔥 MI CANAL VIP", callback_data='canal')],
-        [InlineKeyboardButton("📼 VIDEOLLAMADAS", callback_data='llamadas')]
+        [InlineKeyboardButton("🔥 MI CANAL VIP", callback_data='canal')]
     ])
 
 def get_volver():
-    return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Volver al Menú", callback_data='volver')]])
+    return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Volver al Menú Principal", callback_data='volver')]])
 
-# ✅ USÉ MARKDOWNV2 Y ESCAPÉ CARACTERES ESPECIALES
+# 🇵🇪 PERÚ - VIDEOS + VIDEOLLAMADAS
 PE_PRECIOS = """
 🛍 *VIDEOS \- PERÚ* 🇵🇪
 
@@ -45,6 +44,13 @@ PE_PRECIOS = """
 → incluye sexting 🥰
 → Ahorras 67%
 
+━━━━━━━━━━━━━━━
+📼 *VIDEOLLAMADAS \- PERÚ* 📼
+
+S/ 60: 10 min
+S/ 80: 20 min
+
+━━━━━━━━━━━━━━━
 💳 *PAGO:*
 *YAPE/PLIN:* `923553612`
 
@@ -53,6 +59,7 @@ PE_PRECIOS = """
 1\. Yapeas 2\. Captura
 """
 
+# 🇲🇽 MÉXICO - VIDEOS + VIDEOLLAMADAS
 MX_PRECIOS = """
 🛍 *VIDEOS \- MÉXICO* 🇲🇽
 
@@ -68,6 +75,13 @@ MX_PRECIOS = """
 → incluye sexting 🥰
 → Ahorras 80%
 
+━━━━━━━━━━━━━━━
+📼 *VIDEOLLAMADAS \- MÉXICO* 📼
+
+$400 MXN: 10 min
+$600 MXN: 20 min
+
+━━━━━━━━━━━━━━━
 🛍 *PAGO MXN:*
 🇲🇽 Transfer/Astropay
 → *Pídeme datos por aquí*
@@ -75,6 +89,7 @@ MX_PRECIOS = """
 1\. Pagas 2\. Captura
 """
 
+# 🌍 USD/INTERNACIONAL - VIDEOS + VIDEOLLAMADAS
 USD_PRECIOS = """
 🛍 *VIDEOS \- USD/INTERNACIONAL* 🌍
 
@@ -90,6 +105,13 @@ USD_PRECIOS = """
 → incluye sexting 🥰
 → Ahorras 60%
 
+━━━━━━━━━━━━━━━
+📼 *VIDEOLLAMADAS \- INTERNACIONAL* 📼
+
+$20 USD: 10 min
+$30 USD: 20 min
+
+━━━━━━━━━━━━━━━
 🪙 *PAGO:* 
 *PayPal:* `AbigailMaximoofO`
 
@@ -106,24 +128,6 @@ Avísame cuando envíes con el comprobante 🥰
 En cuanto caiga te mando tu pack 🔥
 
 1\. Pagas 2\. Captura
-"""
-
-LLAMADAS = """
-📼 *VIDEOLLAMADAS* 📼
-
-*PERÚ 🇵🇪*
-S/ 60: 10 min
-S/ 80: 20 min
-
-*MÉXICO 🇲🇽*
-$400 MXN: 10 min
-$600 MXN: 20 min
-
-*USA/INTERNACIONAL 🌍*
-$20 USD: 10 min
-$30 USD: 20 min
-
-*Pídeme datos de pago según tu país* 💋
 """
 
 REGALITOS = """
@@ -169,8 +173,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(MX_PRECIOS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2)
         elif data == 'usd' or data == 'intl':
             await query.edit_message_text(USD_PRECIOS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2)
-        elif data == 'llamadas':
-            await query.edit_message_text(LLAMADAS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2)
         elif data == 'regalitos':
             await query.edit_message_text(REGALITOS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True)
         elif data == 'canal':
@@ -195,4 +197,35 @@ async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
         texto = update.message.text.lower()
         if any(x in texto for x in ['peru', 'soles', 's/', 'yape']):
             await update.message.reply_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2)
-        elif any(x in texto for x in ['mexico', 'mxn', 'peso',
+        elif any(x in texto for x in ['mexico', 'mxn', 'peso', 'astropay']):
+            await update.message.reply_text(MX_PRECIOS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2)
+        elif any(x in texto for x in ['usa', 'paypal', 'bank', 'dolar']):
+            await update.message.reply_text(USD_PRECIOS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2)
+        elif any(x in texto for x in ['regalito', 'gratis', 'free', 'muestra']):
+            await update.message.reply_text(REGALITOS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True)
+        elif any(x in texto for x in ['canal', 'vip']):
+            await update.message.reply_text(CANAL_VIP, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True)
+        else:
+            await update.message.reply_text(
+                "Amor, estos son los precios internacionales 🌍\n\n" + USD_PRECIOS,
+                reply_markup=get_volver(),
+                parse_mode=ParseMode.MARKDOWN_V2
+            )
+    except Exception as e:
+        logger.error(f"Error en responder: {e}")
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    logger.error(f"Exception: {context.error}", exc_info=context.error)
+
+def main():
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(button))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
+    app.add_handler(MessageHandler(filters.PHOTO, responder))
+    app.add_error_handler(error_handler)
+    logger.info("Bot YANABICITASA iniciado")
+    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+
+if __name__ == '__main__':
+    main()
