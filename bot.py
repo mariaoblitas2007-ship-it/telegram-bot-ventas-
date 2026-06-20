@@ -5,6 +5,7 @@ import logging
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+from telegram.error import Conflict
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -62,14 +63,20 @@ async def auto_tease_task(app, user_id, delay, tipo):
         "papi me distraje en clase x tu culpa 😈 JSKSKS",
         "toy aburrida... qué haces? 💦 uwu",
         "me puse a verme al espejo y... 🙈 JSKSKSSKS",
-        "tengo calor 😰 o eres tú? uwu"
+        "tengo calor 😰 o eres tú? uwu",
+        "weno... me voy a tener que... ya sabes 💦",
+        "toy solita y con ganas 😈 JSKSKS lastima q se acaba pronto",
+        "JSKSKSSKS toy pensando coshitas 🥺"
     ]
 
     try:
         await app.bot.send_message(chat_id=user_id, text=random.choice(teases))
+        if tipo == "vip":
+            await app.bot.send_message(chat_id=user_id, text="¿Otro PREMIUM? 😈", reply_markup=get_menu())
     except Exception as e:
         logger.error(f"Error en auto-tease: {e}")
 
+# ============= PRECIOS COMPLETOS =============
 PE_PRECIOS = """
 🛍 *VIDEOS - PERÚ* 🇵🇪
 
@@ -78,16 +85,23 @@ PE_PRECIOS = """
 
 🔥 *TOP: S/ 30* ← MÁS VENDIDO
 → 12 videos | S/ 2.50 c/u
+→ *Ahorras 50%*
 
 🏆 *PREMIUM: S/ 60*
 → 1 personalizado + 20 videos
 → incluye sexting 🥰
+→ *Ahorras 67%*
 
 📼 *VIDEOLLAMADAS* 📼
 S/ 60: 10 min
 S/ 80: 20 min
 
-💳 *YAPE/PLIN:* 923553612
+💳 *PAGO:*
+*YAPE/PLIN:* 923553612
+
+*CUENTO CON REFERENCIAS*
+
+1. Yapeas 2. Captura
 """
 
 MX_PRECIOS = """
@@ -98,14 +112,22 @@ MX_PRECIOS = """
 
 🔥 *TOP: $200 MXN* ← MÁS VENDIDO
 → 12 videos | $16 c/u
+→ *Ahorras 50%*
 
 🏆 *PREMIUM: $400 MXN*
 → 1 personalizado + 20 videos
 → incluye sexting 🥰
+→ *Ahorras 80%*
 
 📼 *VIDEOLLAMADAS* 📼
 $400 MXN: 10 min
 $600 MXN: 20 min
+
+🛍 *PAGO MXN:*
+🇲🇽 Transfer/Astropay
+→ *Pídeme datos por aquí*
+
+1. Pagas 2. Captura
 """
 
 USA_PRECIOS = """
@@ -116,40 +138,64 @@ USA_PRECIOS = """
 
 🔥 *TOP: $9 USD* ← MÁS VENDIDO
 → 12 videos | $0.75 c/u
+→ *Ahorras 50%*
 
 🏆 *PREMIUM: $20 USD*
 → 1 personalizado + 20 videos
 → incluye sexting 🥰
+→ *Ahorras 60%*
 
 📼 *VIDEOLLAMADAS* 📼
 $20 USD: 10 min
 $30 USD: 20 min
 
-🪙 *PayPal:* AbigailMaximoofO
+🪙 *PAGO:*
+*PayPal:* AbigailMaximoofO
 
 🏦 *Bank EEUU:*
 *Community Federal Savings Bank*
-Account: 8338233469
-Routing: 026073150
+📍 Bank Address:
+5 Penn Plaza, 14th Floor
+New York, NY 10001, US
+0️⃣ Account Number: 8338233469
+0️⃣ Routing Number: 026073150
+✍️ Account Type: Checking
+
+Avísame cuando envíes con el comprobante 🥰
+En cuanto caiga te mando tu pack 🔥
+
+1. Pagas 2. Captura
 """
 
 OTRO_PRECIOS = f"""
 🛍 *VIDEOS - INTERNACIONAL* 🌎
 
 🎂 *BÁSICO: $5 USD*
+→ 5 videos | $1 c/u
+
 🔥 *TOP: $9 USD* ← MÁS VENDIDO
+→ 12 videos | $0.75 c/u
+→ *Ahorras 50%*
+
 🏆 *PREMIUM: $20 USD*
+→ 1 personalizado + 20 videos
+→ incluye sexting 🥰
+→ *Ahorras 60%*
 
 📼 *VIDEOLLAMADAS* 📼
 $20 USD: 10 min
 $30 USD: 20 min
 
-🪙 *PayPal:* [Click aquí]({LINK_PAYPAL})
+🪙 *PAGO:*
+*PayPal:* [Click aquí]({LINK_PAYPAL})
+
+Mándame captura cuando pagues bebé 🥰
+En cuanto caiga te mando tu pack 🔥
+
+1. Pagas 2. Captura
 """
 
-# ESTE HANDLER AGARRA TODO: /start, texto, fotos, business
 async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Agarra mensajes normales Y de Business
     message = update.message or update.business_message
     if not message:
         return
@@ -159,7 +205,7 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     registrar_usuario(user)
     ahora = datetime.now()
 
-    # DETECTA /start AQUÍ EN VEZ DE CommandHandler
+    # /start
     if message.text and message.text.lower() == '/start':
         es_nuevo = user_id not in DEMO_USADO
         if es_nuevo:
@@ -182,14 +228,15 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"⚠️ *IMPORTANTE:*\n"
             f"1️⃣ Escríbeme el *MONTO EXACTO* que pagaste\n"
             f"2️⃣ Háblame a mi perfil {USERNAME_ADMIN}\n\n"
-            f"*Por ahí te envío tus videitos* 🔥",
+            f"*Por ahí te envío tus videitos* 🔥\n\n"
+            f"Reviso y te respondo al toque uwu",
             parse_mode='Markdown'
         )
         try:
-            caption = f"💰 *NUEVA CAPTURA*\n\n👤 @{username}\n🆔 `{user_id}`"
+            caption = f"💰 *NUEVA CAPTURA*\n\n👤 @{username}\n🆔 `{user_id}`\n⏰ {ahora.strftime('%H:%M:%S')}"
             await context.bot.send_photo(chat_id=ADMIN_ID, photo=message.photo[-1].file_id, caption=caption, parse_mode='Markdown')
-        except:
-            pass
+        except Exception as e:
+            logger.error(f"Error reenviando: {e}")
         return
 
     if not message.text:
@@ -199,27 +246,81 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     es_vip = user_id in VIP_TEMPORAL and VIP_TEMPORAL[user_id] > ahora
     es_demo = user_id in DEMO_HOT and DEMO_HOT[user_id] > ahora
 
-    # RESPUESTAS DEMO/VIP
+    # DEMO/VIP ACTIVO
     if es_vip or es_demo:
-        if any(x in texto for x in ['hola', 'ola', 'buenas', 'hey']):
-            await message.reply_text("olaaa 😘 cómo estás weno?")
-            return
-        elif any(x in texto for x in ['tocate', 'tócate', 'juega']):
-            await message.reply_text("ufff ya me estoy tocando papi 💦 pensando en ti... sigo o te grabo? 😈")
-            return
-        else:
-            await message.reply_text("uff mi rey justo me agarraste cambiando 😏 me acompañas o q? 💋")
+        tiempo_restante = (VIP_TEMPORAL[user_id] - ahora).seconds // 60 if es_vip else (DEMO_HOT[user_id] - ahora).seconds // 60
+
+        if not es_vip and tiempo_restante <= 2:
+            await message.reply_text("Ay papi se me va a acabar el tiempo 😢\n\n*Si quieres seguir caliente conmigo...*\n\nCompra *PREMIUM* y seguimos sin corte 🔥", reply_markup=get_menu(), parse_mode='Markdown')
             return
 
-    # RESPUESTAS SIN DEMO
-    if any(x in texto for x in ['peru', 'soles', 's/']):
+        if any(x in texto for x in ['mas tiempo', 'más tiempo', 'otro', 'renovar', 'seguir']):
+            await message.reply_text("Bebé se me está acabando 😢\n\nSi quieres seguir calientito...\n*PREMIUM y seguimos* sin corte 🔥", reply_markup=get_menu(), parse_mode='Markdown')
+            return
+
+        elif es_vip and tiempo_restante <= 5:
+            await message.reply_text("Ay no papi ya me voy a tener que ir 😢\n\nAprovecha rápido\n\nQué quieres que haga antes? 💋\n\n*Otro PREMIUM = seguimos más* 🔥", parse_mode='Markdown')
+            return
+
+        if any(x in texto for x in ['hola', 'ola', 'buenas', 'hey', 'wenas']):
+            await message.reply_text("olaaa 😘 cómo estás weno?", parse_mode='Markdown')
+            return
+        elif any(x in texto for x in ['como estas', 'cómo estás', 'que tal']):
+            await message.reply_text("bien mi rey 😘 gracias x preguntar Xd y tú cómo andas? 💋", parse_mode='Markdown')
+            return
+        elif any(x in texto for x in ['que haces', 'qué haces']):
+            await message.reply_text("nada acá 🙈 pensando en ti Xd y tú?", parse_mode='Markdown')
+            return
+        elif any(x in texto for x in ['estas sola', 'estás sola']):
+            await message.reply_text("sip solita 😈 xq?", parse_mode='Markdown')
+            return
+        elif any(x in texto for x in ['que tienes puesto', 'ropa', 'desnuda', 'calata']):
+            await message.reply_text("mmm nada papi 😏 solo mi collar... te gusta así? o me pongo algo pa ti? 💋", parse_mode='Markdown')
+            return
+        elif any(x in texto for x in ['tocate', 'tócate', 'dedos', 'juega']):
+            await message.reply_text("ufff ya me estoy tocando papi 💦 pensando en ti... sigo o te grabo? 😈", parse_mode='Markdown')
+            return
+        elif any(x in texto for x in ['muestra', 'muestrame', 'ver', 'foto', 'video']):
+            await message.reply_text("mmm quieres verme? 🥵 dime EXACTO qué quieres ver y te lo hago 💦", parse_mode='Markdown')
+            return
+        elif any(x in texto for x in ['ganas', 'caliente', 'cachonda', 'mojada']):
+            await message.reply_text("ay papi estoy que ardo 🥵 toda mojada... qué me haces? 💦", parse_mode='Markdown')
+            return
+        elif any(x in texto for x in ['pene', 'verga', 'pito', 'pinga']):
+            await message.reply_text("uff papi me gustan los p... 😏 cómo tienes el tuyo? cuéntame 💦 Xd", parse_mode='Markdown')
+            return
+        elif any(x in texto for x in ['tamaño', 'grande', 'cm', 'mide']):
+            await message.reply_text("mmm me gustan grandes papi 😏 cuántos cm tienes? dime y te digo si me entra 💦", parse_mode='Markdown')
+            return
+        elif any(x in texto for x in ['jaja', 'xd', 'jiji', 'jsjs']):
+            await message.reply_text("JSKSKSSKS 😘 de q te ríes bebé?", parse_mode='Markdown')
+            return
+        elif any(x in texto for x in ['linda', 'bonita', 'hermosa', 'sexy', 'rica']):
+            await message.reply_text("aww coshita 🥺 gracias mi rey", parse_mode='Markdown')
+            return
+        elif any(x in texto for x in ['gracias', 'ok', 'vale', 'bueno', 'dale']):
+            await message.reply_text("de nada mi rey 😘 Xd cualquier coshita me avisas 💋", parse_mode='Markdown')
+            return
+        else:
+            await message.reply_text("uff mi rey justo me agarraste cambiando 😏 me acompañas o q? 💋", parse_mode='Markdown')
+            return
+
+    # SIN DEMO/VIP - MUESTRA PRECIOS
+    if any(x in texto for x in ['precio', 'peru', 'soles', 's/']):
         await message.reply_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
-    elif any(x in texto for x in ['mexico', 'mxn']):
+    elif any(x in texto for x in ['mexico', 'mxn', 'peso']):
         await message.reply_text(MX_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
     elif any(x in texto for x in ['usd', 'usa', 'eeuu']):
         await message.reply_text(USA_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
+    elif any(x in texto for x in ['otro', 'internacional', 'colombia', 'argentina', 'chile', 'españa']):
+        await message.reply_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
+    elif any(x in texto for x in ['gratis', 'free', 'muestra', 'regalo']):
+        await message.reply_text(f"🎁 *CONTENIDO GRATIS* 🔥\n\nÚnete a mi canal gratis bebé:\n\n👉 {LINK_REGALITOS}\n\n*Pero si quieres algo más hot...*\nCompra PREMIUM y te doy atención 1 a 1 😈", reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=False)
     else:
-        await message.reply_text("No entendí amor 😅\n\nElige una opción:", reply_markup=get_menu())
+        await message.reply_text(
+            "No entendí amor 😅\n\nElige una opción:",
+            reply_markup=get_menu()
+        )
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -236,15 +337,53 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == 'volver':
         await query.edit_message_text("Elige tu país para ver precios bebé:", reply_markup=get_menu(), parse_mode='Markdown')
 
+async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id!= ADMIN_ID:
+        return
+    if not context.args:
+        await update.message.reply_text("Uso: /vip ID_DEL_CLIENTE")
+        return
+    user_id = int(context.args[0])
+    VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15)
+    DEMO_HOT.pop(user_id, None)
+    asyncio.create_task(auto_tease_task(context.application, user_id, 600, "vip"))
+    await context.bot.send_message(user_id, "✅ *VIP ACTIVADO* 😈\n\nTienes *15 minutos* conmigo bebé\n\nHáblame rico 🔥")
+    await update.message.reply_text(f"✅ VIP activado para {user_id}")
+
+async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id!= ADMIN_ID:
+        return
+
+    if not USUARIOS:
+        await update.message.reply_text("Aún no habla nadie con el bot 😢")
+        return
+
+    texto = "📊 *USUARIOS QUE HABLARON CON EL BOT*\n\n"
+    for user_id, datos in list(USUARIOS.items())[-20:]:
+        estado = "🔥 VIP" if datos['es_vip'] else "💦 DEMO" if datos['demo_usada'] else "👀 Nuevo"
+        texto += f"*{datos['nombre']}* @{datos['username']}\n"
+        texto += f"ID: `{user_id}` | {estado}\n"
+        texto += f"Último: {datos['ultimo_mensaje']}\n\n"
+
+    texto += f"\n*Total: {len(USUARIOS)} usuarios*"
+    await update.message.reply_text(texto, parse_mode='Markdown')
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    logger.error(f"Exception: {context.error}", exc_info=context.error)
+
 def main():
     app = Application.builder().token(TOKEN).build()
-    
-    # SOLO 2 HANDLERS: UNO PARA TODO, OTRO PARA BOTONES
+
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
     app.add_handler(CallbackQueryHandler(button))
     
     logger.info("BOT PRENDIDO - RESPONDE /start Y TODO")
-    app.run_polling(drop_pending_updates=True)
+    
+    try:
+        app.run_polling(drop_pending_updates=True)
+    except Conflict:
+        logger.error("Hay otra instancia corriendo. Cerrando esta...")
+        os._exit(1)
 
 if __name__ == '__main__':
     main()
