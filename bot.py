@@ -3,7 +3,7 @@ import asyncio
 import random
 import logging
 from datetime import datetime, timedelta
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import Application, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from telegram.error import Conflict
 
@@ -32,12 +32,18 @@ def get_menu():
         [InlineKeyboardButton("🛍 VIDEOS - MÉXICO 🇲🇽", callback_data='mx')],
         [InlineKeyboardButton("🛍 VIDEOS - USA 🇺🇸", callback_data='usa')],
         [InlineKeyboardButton("🌎 OTRO PAÍS", callback_data='otro')],
-        [InlineKeyboardButton("🎁 Regalitos", url=LINK_REGALITOS)],
+        [InlineKeyboardButton("📸 Fotitos GRATIS", callback_data='fotitos')],
         [InlineKeyboardButton("🔥 Mi Canal VIP", url=LINK_CANAL)]
     ])
 
 def get_volver():
     return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Volver al Menú", callback_data='volver')]])
+
+def get_no_entiendo():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📸 Ver Fotitos GRATIS", callback_data='fotitos')],
+        [InlineKeyboardButton("🛍 Ver Precios", callback_data='volver')]
+    ])
 
 def registrar_usuario(user):
     USUARIOS[user.id] = {
@@ -76,7 +82,6 @@ async def auto_tease_task(app, user_id, delay, tipo):
     except Exception as e:
         logger.error(f"Error en auto-tease: {e}")
 
-# ============= PRECIOS COMPLETOS =============
 PE_PRECIOS = """
 🛍 *VIDEOS - PERÚ* 🇵🇪
 
@@ -205,7 +210,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     registrar_usuario(user)
     ahora = datetime.now()
 
-    # /start
     if message.text and message.text.lower() == '/start':
         es_nuevo = user_id not in DEMO_USADO
         if es_nuevo:
@@ -220,7 +224,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("Elige tu país para ver precios bebé:", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
-    # FOTOS
     if message.photo:
         username = user.username or "sin_username"
         await message.reply_text(
@@ -228,8 +231,7 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"⚠️ *IMPORTANTE:*\n"
             f"1️⃣ Escríbeme el *MONTO EXACTO* que pagaste\n"
             f"2️⃣ Háblame a mi perfil {USERNAME_ADMIN}\n\n"
-            f"*Por ahí te envío tus videitos* 🔥\n\n"
-            f"Reviso y te respondo al toque uwu",
+            f"*Por ahí te envío tus videitos* 🔥",
             parse_mode='Markdown'
         )
         try:
@@ -246,7 +248,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     es_vip = user_id in VIP_TEMPORAL and VIP_TEMPORAL[user_id] > ahora
     es_demo = user_id in DEMO_HOT and DEMO_HOT[user_id] > ahora
 
-    # DEMO/VIP ACTIVO
     if es_vip or es_demo:
         tiempo_restante = (VIP_TEMPORAL[user_id] - ahora).seconds // 60 if es_vip else (DEMO_HOT[user_id] - ahora).seconds // 60
 
@@ -302,10 +303,13 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await message.reply_text("de nada mi rey 😘 Xd cualquier coshita me avisas 💋", parse_mode='Markdown')
             return
         else:
-            await message.reply_text("uff mi rey justo me agarraste cambiando 😏 me acompañas o q? 💋", parse_mode='Markdown')
+            await message.reply_text(
+                "No entendí bien amor 😅\n\n🥺 *Mientras me explicas mejor...*\n\n¿Ya viste mis *fotitos GRATIS*?\n\n👉 Toca el botón y si te gustan *ayúdame compartiendo* con tus amigos 🥺💋",
+                reply_markup=get_no_entiendo(),
+                parse_mode='Markdown'
+            )
             return
 
-    # SIN DEMO/VIP - MUESTRA PRECIOS
     if any(x in texto for x in ['precio', 'peru', 'soles', 's/']):
         await message.reply_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
     elif any(x in texto for x in ['mexico', 'mxn', 'peso']):
@@ -314,18 +318,20 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text(USA_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
     elif any(x in texto for x in ['otro', 'internacional', 'colombia', 'argentina', 'chile', 'españa']):
         await message.reply_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
-    elif any(x in texto for x in ['gratis', 'free', 'muestra', 'regalo']):
-        await message.reply_text(f"🎁 *CONTENIDO GRATIS* 🔥\n\nÚnete a mi canal gratis bebé:\n\n👉 {LINK_REGALITOS}\n\n*Pero si quieres algo más hot...*\nCompra PREMIUM y te doy atención 1 a 1 😈", reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=False)
+    elif any(x in texto for x in ['gratis', 'free', 'muestra', 'regalo', 'fotitos']):
+        await message.reply_text(f"🎁 *FOTITOS GRATIS* 🔥\n\nToca el botón para verlas bebé:\n\n👉 Si te gustan, *ayúdame compartiendo* con tus amigos 🥺💋\n\n*Si quieres algo más hot...*\nCompra PREMIUM y te doy atención 1 a 1 😈", reply_markup=get_no_entiendo(), parse_mode='Markdown')
     else:
         await message.reply_text(
-            "No entendí amor 😅\n\nElige una opción:",
-            reply_markup=get_menu()
+            "No entendí amor 😅\n\n🥺 *Mientras me dices qué quieres...*\n\n¿Ya viste mis *fotitos GRATIS*?\n\n👉 Toca el botón y si te gustan *ayúdame compartiendo* 🥺💋",
+            reply_markup=get_no_entiendo(),
+            parse_mode='Markdown'
         )
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
+    
     if data == 'pe':
         await query.edit_message_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
     elif data == 'mx':
@@ -334,6 +340,59 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(USA_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
     elif data == 'otro':
         await query.edit_message_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
+    
+    # ============= MANDA LAS 6 FOTITOS + MENSAJE TIERNO =============
+    elif data == 'fotitos':
+        try:
+            await query.delete_message()
+            
+            media_group1 = [
+                InputMediaPhoto(open('fotitos1.jpg', 'rb')),
+                InputMediaPhoto(open('fotitos2.jpg', 'rb')),
+                InputMediaPhoto(open('fotitos3.jpg', 'rb'))
+            ]
+            media_group2 = [
+                InputMediaPhoto(open('fotitos4.jpg', 'rb')),
+                InputMediaPhoto(open('fotitos5.jpg', 'rb')),
+                InputMediaPhoto(open('fotitos6.jpg', 'rb'))
+            ]
+            
+            await context.bot.send_media_group(chat_id=query.from_user.id, media=media_group1)
+            await context.bot.send_media_group(chat_id=query.from_user.id, media=media_group2)
+            
+            # TU MENSAJE TIERNO DE PROMOCIÓN
+            await context.bot.send_message(
+                chat_id=query.from_user.id,
+                text=f"""📸 *TUS FOTITOS GRATIS BEBÉ* 🥺💋
+
+¿Te gustaron? 😏
+
+✨ *QUIERES HASTA 20 VIDEITOS GRATIS?* ✨
+*Es por promocionarme en TikTok* ✅
+
+*Pasitos súper fáciles uwu:*
+1️⃣ Ponte un nombrecito + fotito tierna <33
+2️⃣ En tu bio pon: *Tg: yanabicitasa* ✨
+3️⃣ Sube una fotito a tu story + frasita hot 😋
+4️⃣ Comenta coshitas en videos hot, unos 30-100 👀
+   *Así generamos vistas juntos*
+5️⃣ Mándame captura + videito cuando termines
+6️⃣ *Disfruta tus 20 videitos* :3 ❤️‍🔥
+
+*¿Te animas o ño?* 🥺
+(Me avisas cuando cumplas mi rey)""",
+                parse_mode='Markdown',
+                disable_web_page_preview=True,
+                reply_markup=get_menu()
+            )
+        except Exception as e:
+            logger.error(f"Error enviando fotitos: {e}")
+            await context.bot.send_message(
+                chat_id=query.from_user.id,
+                text="Ay bebé hubo un error enviando las fotitos 😢\n\nMejor entra directo a mi canal 👉 " + LINK_REGALITOS,
+                reply_markup=get_volver()
+            )
+    
     elif data == 'volver':
         await query.edit_message_text("Elige tu país para ver precios bebé:", reply_markup=get_menu(), parse_mode='Markdown')
 
@@ -376,8 +435,11 @@ def main():
 
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
     app.add_handler(CallbackQueryHandler(button))
+    app.add_handler(CommandHandler("vip", vip))
+    app.add_handler(CommandHandler("usuarios", usuarios))
+    app.add_error_handler(error_handler)
     
-    logger.info("BOT PRENDIDO - RESPONDE /start Y TODO")
+    logger.info("BOT PRENDIDO - FOTITOS + PROMO TIERNA ACTIVADA")
     
     try:
         app.run_polling(drop_pending_updates=True)
