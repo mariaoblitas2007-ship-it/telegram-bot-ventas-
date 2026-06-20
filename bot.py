@@ -4,7 +4,7 @@ import random
 import logging
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from telegram.ext import Application, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+from telegram.ext import Application, MessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes
 from telegram.error import Conflict
 
 logging.basicConfig(
@@ -69,10 +69,7 @@ async def auto_tease_task(app, user_id, delay, tipo):
         "papi me distraje en clase x tu culpa 😈 JSKSKS",
         "toy aburrida... qué haces? 💦 uwu",
         "me puse a verme al espejo y... 🙈 JSKSKSSKS",
-        "tengo calor 😰 o eres tú? uwu",
-        "weno... me voy a tener que... ya sabes 💦",
-        "toy solita y con ganas 😈 JSKSKS lastima q se acaba pronto",
-        "JSKSKSSKS toy pensando coshitas 🥺"
+        "tengo calor 😰 o eres tú? uwu"
     ]
 
     try:
@@ -341,24 +338,24 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == 'otro':
         await query.edit_message_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
     
-    # ============= MANDA LAS 6 FOTITOS + MENSAJE TIERNO =============
+    # ============= MANDA LAS 6 FOTITOS.JPG MAYÚSCULA =============
     elif data == 'fotitos':
         try:
             await query.delete_message()
             
-            media_group1 = [
-                InputMediaPhoto(open('fotitos1.jpg', 'rb')),
-                InputMediaPhoto(open('fotitos2.jpg', 'rb')),
-                InputMediaPhoto(open('fotitos3.jpg', 'rb'))
-            ]
-            media_group2 = [
-                InputMediaPhoto(open('fotitos4.jpg', 'rb')),
-                InputMediaPhoto(open('fotitos5.jpg', 'rb')),
-                InputMediaPhoto(open('fotitos6.jpg', 'rb'))
-            ]
+            fotos_enviadas = []
+            for i in range(1, 7):
+                try:
+                    fotos_enviadas.append(InputMediaPhoto(open(f'fotitos{i}.JPG', 'rb')))
+                except FileNotFoundError:
+                    logger.warning(f"No encontré fotitos{i}.JPG")
             
-            await context.bot.send_media_group(chat_id=query.from_user.id, media=media_group1)
-            await context.bot.send_media_group(chat_id=query.from_user.id, media=media_group2)
+            if fotos_enviadas:
+                for i in range(0, len(fotos_enviadas), 3):
+                    await context.bot.send_media_group(
+                        chat_id=query.from_user.id, 
+                        media=fotos_enviadas[i:i+3]
+                    )
             
             # TU MENSAJE TIERNO DE PROMOCIÓN
             await context.bot.send_message(
@@ -439,7 +436,7 @@ def main():
     app.add_handler(CommandHandler("usuarios", usuarios))
     app.add_error_handler(error_handler)
     
-    logger.info("BOT PRENDIDO - FOTITOS + PROMO TIERNA ACTIVADA")
+    logger.info("BOT PRENDIDO - FOTITOS.JPG + PROMO TIERNA ACTIVADA")
     
     try:
         app.run_polling(drop_pending_updates=True)
