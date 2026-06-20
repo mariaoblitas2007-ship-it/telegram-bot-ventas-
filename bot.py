@@ -1,68 +1,198 @@
-import logging
 import os
+import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+from telegram.constants import ParseMode
 
-# ✅ TOKEN SE LEE DE RENDER - NO LO PONGAS AQUÍ
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
 TOKEN = os.environ.get('TOKEN')
+if not TOKEN:
+    logger.error("FATAL: No se encontró TOKEN en Environment Variables")
+    raise ValueError("Falta TOKEN en Render")
 
-# 👜 EDITA TU CATÁLOGO AQUÍ - BORRA ESTE Y PON TUS PRODUCTOS REALES
-CATALOGO = """
-👜 *YANABICITASA - Chiclayo* 📍
+def get_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🛍 PERÚ 🇵🇪", callback_data='pe')],
+        [InlineKeyboardButton("🛍 MÉXICO 🇲🇽", callback_data='mx')],
+        [InlineKeyboardButton("🛍 USA 🇺🇸", callback_data='usd')],
+        [InlineKeyboardButton("🌍 OTRO PAÍS / INTERNATIONAL", callback_data='intl')],
+        [InlineKeyboardButton("🎁 REGALITOS", callback_data='regalitos')],
+        [InlineKeyboardButton("🔥 MI CANAL VIP", callback_data='canal')],
+        [InlineKeyboardButton("📼 VIDEOLLAMADAS", callback_data='llamadas')]
+    ])
 
-✨ *PRODUCTOS DISPONIBLES:*
+def get_volver():
+    return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Volver al Menú", callback_data='volver')]])
 
-1️⃣ *Producto 1* - S/ 00
-   Descripción corta
-   
-2️⃣ *Producto 2* - S/ 00
-   Descripción corta
-   
-3️⃣ *Producto 3* - S/ 00
-   Descripción corta
+# ✅ USÉ MARKDOWNV2 Y ESCAPÉ CARACTERES ESPECIALES
+PE_PRECIOS = """
+🛍 *VIDEOS \- PERÚ* 🇵🇪
 
-🚚 *Envíos a todo Perú*
-💳 *Pagos:* Yape, Plin, Transferencia BCP
+🎂 *BÁSICO: S/ 15*
+→ 5 videos \| S/ 3 c/u
 
-Escríbeme para tu pedido amor 💋
+🔥 *TOP: S/ 30* ← MÁS VENDIDO
+→ 12 videos \| S/ 2\.50 c/u
+→ Ahorras 50%
+
+🏆 *PREMIUM: S/ 60*
+→ 1 personalizado \+ 20 videos
+→ incluye sexting 🥰
+→ Ahorras 67%
+
+💳 *PAGO:*
+*YAPE/PLIN:* `923553612`
+
+*CUENTO CON REFERENCIAS*
+
+1\. Yapeas 2\. Captura
 """
 
-PAGOS = """
-💵 *MÉTODOS DE PAGO YANABICITASA* 🇵🇪
+MX_PRECIOS = """
+🛍 *VIDEOS \- MÉXICO* 🇲🇽
 
-1️⃣ *Yape/Plin:* 923553612
-   Nombre: MARIA [TU APELLIDO]
-   
-2️⃣ *Transferencia BCP:*
-   Cuenta: [TU CUENTA BCP]
-   CCI: [TU CCI]
+🎂 *BÁSICO: $100 MXN*
+→ 5 videos \| $20 c/u
 
-3️⃣ *Contraentrega Chiclayo*
-   Pagas cuando te entrego 🛵
+🔥 *TOP: $200 MXN* ← MÁS VENDIDO
+→ 12 videos \| $16 c/u
+→ Ahorras 50%
 
-*PASOS:*
-1. Yapeas/Transfieres el monto
-2. Mándame captura aquí
-3. Coordino tu envío 🔥
+🏆 *PREMIUM: $400 MXN*
+→ 1 personalizado \+ 20 videos
+→ incluye sexting 🥰
+→ Ahorras 80%
+
+🛍 *PAGO MXN:*
+🇲🇽 Transfer/Astropay
+→ *Pídeme datos por aquí*
+
+1\. Pagas 2\. Captura
 """
 
-ENVIOS = """
-🚚 *ENVÍOS YANABICITASA*
+USD_PRECIOS = """
+🛍 *VIDEOS \- USD/INTERNACIONAL* 🌍
 
-📍 *Chiclayo:* S/ 5 - Entrega mismo día
-📍 *Lambayeque/Ferreñafe:* S/ 10 - 24hrs
-📍 *Todo Perú:* S/ 15 vía Olva/Shalom - 2-3 días
+🎂 *BÁSICO: $5 USD*
+→ 5 videos \| $1 c/u
 
-*ENVÍO GRATIS* en compras mayores a S/ 200 🎁
+🔥 *TOP: $9 USD* ← MÁS VENDIDO
+→ 12 videos \| $0\.75 c/u
+→ Ahorras 50%
+
+🏆 *PREMIUM: $20 USD*
+→ 1 personalizado \+ 20 videos
+→ incluye sexting 🥰
+→ Ahorras 60%
+
+🪙 *PAGO:* 
+*PayPal:* `AbigailMaximoofO`
+
+🏦 *Bank EEUU:*
+*Community Federal Savings Bank*
+📍 Bank Address:
+5 Penn Plaza, 14th Floor
+New York, NY 10001, US
+0️⃣ Account Number: `8338233469`
+0️⃣ Routing Number: `026073150`
+✍️ Account Type: Checking
+
+Avísame cuando envíes con el comprobante 🥰
+En cuanto caiga te mando tu pack 🔥
+
+1\. Pagas 2\. Captura
 """
 
-# 🔘 MENÚ PRINCIPAL
+LLAMADAS = """
+📼 *VIDEOLLAMADAS* 📼
+
+*PERÚ 🇵🇪*
+S/ 60: 10 min
+S/ 80: 20 min
+
+*MÉXICO 🇲🇽*
+$400 MXN: 10 min
+$600 MXN: 20 min
+
+*USA/INTERNACIONAL 🌍*
+$20 USD: 10 min
+$30 USD: 20 min
+
+*Pídeme datos de pago según tu país* 💋
+"""
+
+REGALITOS = """
+🎁 *REGALITOS PARA TI* 🔥
+
+Aquí tienes contenido gratis amor:
+
+👉 https://t\.me/\+cBI1upnfsN1iYTgx
+
+Entra y disfruta 😘
+"""
+
+CANAL_VIP = """
+🔥 *MI CANAL VIP EXCLUSIVO* 💋
+
+Todo mi contenido más caliente está aquí:
+
+👉 https://t\.me/\+ZWc0FAcw\-hQ2MDZh
+
+*Solo para mis reyes* 👑
+"""
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("👜 Ver Catálogo", callback_data='catalogo')],
-        [InlineKeyboardButton("💵 Métodos de Pago", callback_data='pagos')],
-        [InlineKeyboardButton("🚚 Envíos", callback_data='envios')],
-        [InlineKeyboardButton("📞 Hablar con Yana", callback_data='dudas')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
+    text = "Hola amor 💋 Bienvenido a *YANABICITASA*\n\nElige tu país para ver precios:"
+    try:
+        if update.message:
+            await update.message.reply_text(text, reply_markup=get_menu(), parse_mode=ParseMode.MARKDOWN_V2)
+        elif update.callback_query:
+            await update.callback_query.edit_message_text(text, reply_markup=get_menu(), parse_mode=ParseMode.MARKDOWN_V2)
+    except Exception as e:
+        logger.error(f"Error en start: {e}")
+
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    try:
+        data = query.data
+        if data == 'pe':
+            await query.edit_message_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2)
+        elif data == 'mx':
+            await query.edit_message_text(MX_PRECIOS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2)
+        elif data == 'usd' or data == 'intl':
+            await query.edit_message_text(USD_PRECIOS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2)
+        elif data == 'llamadas':
+            await query.edit_message_text(LLAMADAS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2)
+        elif data == 'regalitos':
+            await query.edit_message_text(REGALITOS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True)
+        elif data == 'canal':
+            await query.edit_message_text(CANAL_VIP, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True)
+        elif data == 'volver':
+            await start(update, context)
+    except Exception as e:
+        logger.error(f"Error en button: {e}")
+
+async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    try:
+        if update.message.photo:
+            await update.message.reply_text(
+                "Recibí tu captura amor 😘\n\nReviso tu pago y te mando tu pack al toque 🔥",
+                reply_markup=get_volver()
+            )
+            return
+        if not update.message.text:
+            return
+        texto = update.message.text.lower()
+        if any(x in texto for x in ['peru', 'soles', 's/', 'yape']):
+            await update.message.reply_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode=ParseMode.MARKDOWN_V2)
+        elif any(x in texto for x in ['mexico', 'mxn', 'peso',
