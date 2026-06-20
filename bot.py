@@ -3,46 +3,45 @@ import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
-# ✅ USA VARIABLE DE ENTORNO PARA RENDER
+# ✅ TOKEN SE LEE DE RENDER - NO LO PONGAS AQUÍ
 TOKEN = os.environ.get('TOKEN')
 
-# 👜 CATÁLOGO YANABICITASA - EDITA AQUÍ
+# 👜 EDITA TU CATÁLOGO AQUÍ - BORRA ESTE Y PON TUS PRODUCTOS REALES
 CATALOGO = """
 👜 *YANABICITASA - Chiclayo* 📍
 
-✨ *CARTERAS DISPONIBLES:*
+✨ *PRODUCTOS DISPONIBLES:*
 
-1️⃣ *Bandolera Cuero Premium* - S/ 89
-   Colores: Negro, Marrón, Beige
+1️⃣ *Producto 1* - S/ 00
+   Descripción corta
    
-2️⃣ *Tote Bag Grande* - S/ 120
-   Ideal para trabajo/universidad
+2️⃣ *Producto 2* - S/ 00
+   Descripción corta
    
-3️⃣ *Mini Bag Elegante* - S/ 65
-   Para salidas y fiestas
-   
-4️⃣ *Mochila Urbana* - S/ 95
-   Impermeable, varios compartimientos
+3️⃣ *Producto 3* - S/ 00
+   Descripción corta
 
 🚚 *Envíos a todo Perú*
 💳 *Pagos:* Yape, Plin, Transferencia BCP
+
+Escríbeme para tu pedido amor 💋
 """
 
 PAGOS = """
 💵 *MÉTODOS DE PAGO YANABICITASA* 🇵🇪
 
 1️⃣ *Yape/Plin:* 923553612
-   Nombre: [PON TU NOMBRE AQUÍ]
+   Nombre: MARIA [TU APELLIDO]
    
 2️⃣ *Transferencia BCP:*
-   Cuenta: [PON TU CUENTA AQUÍ]
-   CCI: [PON TU CCI AQUÍ]
+   Cuenta: [TU CUENTA BCP]
+   CCI: [TU CCI]
 
 3️⃣ *Contraentrega Chiclayo*
    Pagas cuando te entrego 🛵
 
 *PASOS:*
-1. Yapeas/Transfieres
+1. Yapeas/Transfieres el monto
 2. Mándame captura aquí
 3. Coordino tu envío 🔥
 """
@@ -54,7 +53,7 @@ ENVIOS = """
 📍 *Lambayeque/Ferreñafe:* S/ 10 - 24hrs
 📍 *Todo Perú:* S/ 15 vía Olva/Shalom - 2-3 días
 
-*GRATIS* en compras mayores a S/ 200 🎁
+*ENVÍO GRATIS* en compras mayores a S/ 200 🎁
 """
 
 # 🔘 MENÚ PRINCIPAL
@@ -67,59 +66,3 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    text = "Hola reina 💋 Bienvenida a *YANABICITASA*\n\n¿En qué te ayudo hoy?"
-    
-    if update.message:
-        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='Markdown')
-    else:
-        await update.callback_query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
-
-# 🔘 BOTONES - AQUÍ ESTABA EL ERROR, YA LO ARREGLÉ
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    # 🔥 BOTÓN VOLVER QUE FALTABA
-    boton_volver = [[InlineKeyboardButton("⬅️ Volver al Menú", callback_data='volver')]]
-    reply_markup_volver = InlineKeyboardMarkup(boton_volver)
-    
-    if query.data == 'catalogo':
-        await query.edit_message_text(CATALOGO, reply_markup=reply_markup_volver, parse_mode='Markdown')
-    elif query.data == 'pagos':
-        await query.edit_message_text(PAGOS, reply_markup=reply_markup_volver, parse_mode='Markdown')
-    elif query.data == 'envios':
-        await query.edit_message_text(ENVIOS, reply_markup=reply_markup_volver, parse_mode='Markdown')
-    elif query.data == 'dudas':
-        await query.edit_message_text(
-            "Escríbeme tu consulta por aquí amor 😘\n\nTe respondo al toque 💋",
-            reply_markup=reply_markup_volver
-        )
-    elif query.data == 'volver':
-        await start(update, context)
-
-# 🤖 AUTO-RESPUESTA - TAMBIÉN CON BOTÓN VOLVER
-async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    boton_volver = [[InlineKeyboardButton("⬅️ Volver al Menú", callback_data='volver')]]
-    reply_markup_volver = InlineKeyboardMarkup(boton_volver)
-    
-    if update.message.photo:
-        await update.message.reply_text(
-            "Recibí tu captura reina 😘\n\nYa reviso tu pago y coordino tu envío 🔥",
-            reply_markup=reply_markup_volver
-        )
-        return
-    
-    texto = update.message.text.lower()
-    
-    if any(palabra in texto for palabra in ['precio', 'catalogo', 'cartera', 'bolso', 'cuanto', 'costo']):
-        await update.message.reply_text(CATALOGO, reply_markup=reply_markup_volver, parse_mode='Markdown')
-    
-    elif any(palabra in texto for palabra in ['pago', 'pagar', 'yape', 'plin', 'cuenta']):
-        await update.message.reply_text(PAGOS, reply_markup=reply_markup_volver, parse_mode='Markdown')
-    
-    elif any(palabra in texto for palabra in ['envio', 'envían', 'delivery', 'chiclayo']):
-        await update.message.reply_text(ENVIOS, reply_markup=reply_markup_volver, parse_mode='Markdown')
-    
-    else:
-        await update.message.reply_text(
-            "No entendí amor 😅\n\nUsa el menú para ver
