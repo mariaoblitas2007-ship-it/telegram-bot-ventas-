@@ -87,6 +87,7 @@ $600 MXN: 20 min
 1\. Pagas 2\. Captura
 """
 
+# 🌍 USD/INTERNACIONAL - SOLO PAYPAL ✅
 USD_PRECIOS = """
 🛍 *VIDEOS \- USD/INTERNACIONAL* 🌍
 
@@ -109,17 +110,8 @@ $20 USD: 10 min
 $30 USD: 20 min
 
 ━━━━━━━━━━━━━━━
-🪙 *PAGO:* 
-*PayPal:* `AbigailMaximoofO`
-
-🏦 *Bank EEUU:*
-*Community Federal Savings Bank*
-📍 Bank Address:
-5 Penn Plaza, 14th Floor
-New York, NY 10001, US
-0️⃣ Account Number: `8338233469`
-0️⃣ Routing Number: `026073150`
-✍️ Account Type: Checking
+🪙 *PAGO PAYPAL:* 
+👉 https://www\.paypal\.me/yanabicitasa
 
 Avísame cuando envíes con el comprobante 🥰
 En cuanto caiga te mando tu pack 🔥
