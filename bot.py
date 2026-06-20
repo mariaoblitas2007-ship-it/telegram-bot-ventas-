@@ -106,6 +106,7 @@ S/ 80: 20 min
 1. Yapeas 2. Captura
 """
 
+# ============= ACTUALIZADO SIN NOMBRE =============
 MX_PRECIOS = """
 🛍 *VIDEOS - MÉXICO* 🇲🇽
 
@@ -126,8 +127,15 @@ $400 MXN: 10 min
 $600 MXN: 20 min
 
 🛍 *PAGO MXN:*
-🇲🇽 Transfer/Astropay
-→ *Pídeme datos por aquí*
+🏦 *Banco:* STP
+🔢 *CLABE:* `646180546711450910`
+📝 *Referencia/Concepto:* `yanae`
+
+🇲🇽 *También acepto:* Transfer / Astropay
+→ *Pídeme datos si usas otro método*
+
+Mándame captura cuando pagues bebé 🥰
+En cuanto caiga te mando tu pack 🔥
 
 1. Pagas 2. Captura
 """
@@ -436,7 +444,7 @@ def main():
     app.add_handler(CommandHandler("usuarios", usuarios))
     app.add_error_handler(error_handler)
     
-    logger.info("BOT PRENDIDO - FOTITOS.JPG + PROMO TIERNA ACTIVADA")
+    logger.info("BOT PRENDIDO - SIN NOMBRE MX + CLABE STP + REFERENCIA YANAE")
     
     try:
         app.run_polling(drop_pending_updates=True)
