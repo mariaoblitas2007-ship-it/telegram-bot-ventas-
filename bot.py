@@ -52,18 +52,21 @@ def get_menu():
 def get_volver():
     return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Volver al Menú", callback_data='volver')]])
 
-# ============= FUNCIONES AUXILIARES =============
+# ============= FUNCIONES AUXILIARES - OPTIMIZADAS =============
 async def send_fluid(message, textos):
-    for i, texto in enumerate(textos):
-        if i > 0:
-            await asyncio.sleep(random.uniform(0.8, 1.5))
-        try:
+    """Manda todos los mensajes de una - SIN DELAY para no congelar"""
+    try:
+        for texto in textos:
             await message.reply_text(texto, parse_mode='Markdown')
-        except:
-            break
+    except Exception as e:
+        logger.error(f"Error send_fluid: {e}")
 
-async def auto_tease_task(app, user_id, delay, tipo):
-    await asyncio.sleep(delay)
+async def auto_tease_task(context: ContextTypes.DEFAULT_TYPE):
+    """JobQueue en vez de asyncio.sleep - NO BLOQUEA"""
+    job = context.job
+    user_id = job.data['user_id']
+    tipo = job.data['tipo']
+
     ahora = datetime.now()
     if tipo == "demo":
         if user_id not in DEMO_HOT or DEMO_HOT[user_id] < ahora:
@@ -73,24 +76,20 @@ async def auto_tease_task(app, user_id, delay, tipo):
             return
 
     teases = [
-        ["oye...", "Xd no dejo de pensar en ti 😳"],
-        ["papi", "me distraje en clase x tu culpa 😈", "JSKSKS"],
-        ["toy aburrida...", "qué haces? 💦 uwu"],
-        ["me puse a verme al espejo y...", "🙈 JSKSKSSKS"],
-        ["tengo calor 😰", "o eres tú? uwu"],
-        ["weno...", "me voy a tener que... ya sabes 💦"],
-        ["toy solita y con ganas 😈", "JSKSKS lastima q se acaba pronto"],
-        ["JSKSKSSKS", "toy pensando coshitas 🥺"]
+        "oye... Xd no dejo de pensar en ti 😳",
+        "papi me distraje en clase x tu culpa 😈 JSKSKS",
+        "toy aburrida... qué haces? 💦 uwu",
+        "me puse a verme al espejo y... 🙈 JSKSKSSKS",
+        "tengo calor 😰 o eres tú? uwu",
+        "weno... me voy a tener que... ya sabes 💦",
+        "toy solita y con ganas 😈 JSKSKS lastima q se acaba pronto",
+        "JSKSKSSKS toy pensando coshitas 🥺"
     ]
 
     try:
-        mensajes = random.choice(teases)
-        for i, texto in enumerate(mensajes):
-            if i > 0:
-                await asyncio.sleep(1.2)
-            await app.bot.send_message(chat_id=user_id, text=texto)
+        await context.bot.send_message(chat_id=user_id, text=random.choice(teases))
         if tipo == "vip":
-            await app.bot.send_message(chat_id=user_id, text="¿Otro PREMIUM? 😈", reply_markup=get_menu())
+            await context.bot.send_message(chat_id=user_id, text="¿Otro PREMIUM? 😈", reply_markup=get_menu())
     except Exception as e:
         logger.error(f"Error en auto-tease: {e}")
 
@@ -223,19 +222,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         DEMO_USADO.add(user_id)
         DEMO_HOT[user_id] = datetime.now() + timedelta(minutes=10)
 
-        saludo = random.choice([
-            ["olaaa mi rey 😘", "Bienvenido a *YANABICITASA*", "tengo *18 añitos* y ando bien caliente 🔥", "*Te regalo 10 min de chat hot conmigo*", "es tu única vez gratis, aprovecha 💦"],
-            ["heyy bebé 💋", "Bienvenido a *YANABICITASA* uwu", "tengo *18* y toy con ganas 😈", "*10 min hot gratis pa ti*", "solo esta vez Xd"]
-        ])
-        await send_fluid(update.message, saludo)
-        asyncio.create_task(auto_tease_task(context.application, user_id, 180, "demo"))
-        asyncio.create_task(auto_tease_task(context.application, user_id, 420, "demo"))
+        # Auto-tease con JobQueue - NO BLOQUEA
+        context.job_queue.run_once(auto_tease_task, 180, data={'user_id': user_id, 'tipo': 'demo'})
+        context.job_queue.run_once(auto_tease_task, 420, data={'user_id': user_id, 'tipo': 'demo'})
+
+        saludo = ["olaaa mi rey 😘 Bienvenido a *YANABICITASA*\n\ntengo *18 añitos* y ando bien caliente 🔥\n\n*Te regalo 10 min de chat hot conmigo*\nes tu única vez gratis, aprovecha 💦"]
+        await update.message.reply_text(saludo[0], parse_mode='Markdown')
     else:
-        saludo_vuelta = random.choice([
-            ["ola de nuevo mi rey 😘", "ya tienes tu demo usada Xd", "pero puedes comprar *PREMIUM* y seguimos 💋"],
-            ["heyy bebé 💋", "uwu ya gastaste tu demo", "pero PREMIUM y te doy *15 min VIP* 🔥"]
-        ])
-        await send_fluid(update.message, saludo_vuelta)
+        saludo_vuelta = "ola de nuevo mi rey 😘 ya tienes tu demo usada Xd\n\npero puedes comprar *PREMIUM* y seguimos 💋"
+        await update.message.reply_text(saludo_vuelta, parse_mode='Markdown')
 
     text = "Elige tu país para ver precios bebé:"
     try:
@@ -300,64 +295,35 @@ async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
 
             elif es_vip and tiempo_restante <= 5:
-                await send_fluid(update.message, ["Ay no papi", "ya me voy a tener que ir 😢", "Aprovecha rápido", "Qué quieres que haga antes? 💋", "*Otro PREMIUM = seguimos más* 🔥"])
+                await update.message.reply_text("Ay no papi ya me voy a tener que ir 😢\n\nAprovecha rápido\n\nQué quieres que haga antes? 💋\n\n*Otro PREMIUM = seguimos más* 🔥", parse_mode='Markdown')
                 return
 
-            elif any(x in texto for x in ['hola', 'ola', 'buenas', 'hey', 'wenas', 'hello']):
-                await send_fluid(update.message, random.choice([["olaaa 😘", "cómo estás weno?"], ["heyy bebé 💋", "q tal tu día? Xd"], ["oliii JSKSKSKS", "todo bien?", "en q te ayudo uwu"]]))
-                return
+            # Respuestas rápidas sin delay
+            respuestas = {
+                'hola': "olaaa 😘 cómo estás weno?",
+                'ola': "heyy bebé 💋 q tal tu día? Xd",
+                'como estas': "bien mi rey 😘 gracias x preguntar Xd y tú cómo andas? 💋",
+                'que haces': "nada acá 🙈 pensando en ti Xd y tú?",
+                'estas sola': "sip solita 😈 xq?",
+                'que tienes puesto': "mmm nada papi 😏 solo mi collar... te gusta así? o me pongo algo pa ti? 💋",
+                'tocate': "ufff ya me estoy tocando papi 💦 pensando en ti... sigo o te grabo? 😈",
+                'muestra': "mmm quieres verme? 🥵 dime EXACTO qué quieres ver y te lo hago 💦",
+                'ganas': "ay papi estoy que ardo 🥵 toda mojada... qué me haces? 💦",
+                'pene': "uff papi me gustan los p... 😏 cómo tienes el tuyo? cuéntame 💦 Xd",
+                'tamaño': "mmm me gustan grandes papi 😏 cuántos cm tienes? dime y te digo si me entra 💦",
+                'jaja': "JSKSKSSKS 😘 de q te ríes bebé?",
+                'linda': "aww coshita 🥺 gracias mi rey",
+                'gracias': "de nada mi rey 😘 Xd cualquier coshita me avisas 💋"
+            }
 
-            elif any(x in texto for x in ['como estas', 'cómo estás', 'que tal', 'k tal', 'estas bien']):
-                await send_fluid(update.message, random.choice([["bien mi rey 😘", "gracias x preguntar Xd", "y tú cómo andas? 💋"], ["super bien bebé 🔥", "uwu tú q tal?"], ["bien amor 😏", "acá atendiéndote JSKSKS"]]))
-                return
+            for key, resp in respuestas.items():
+                if key in texto:
+                    await update.message.reply_text(resp, parse_mode='Markdown')
+                    return
 
-            elif any(x in texto for x in ['que haces', 'qué haces', 'q haces']):
-                await send_fluid(update.message, random.choice([["nada acá 🙈", "pensando en ti Xd", "y tú?"], ["toy echada aburrida...", "y tú? uwu"], ["acabo de salir de bañarme 😳", "JSKSKS y tú q haces?"], ["ando de ganas la vdd 💦", "uwu y tú qué? JSKSKSSKS"]]))
-                return
-
-            elif any(x in texto for x in ['estas sola', 'estás sola', 'sola']):
-                await send_fluid(update.message, random.choice([["sip solita 😈", "xq?"], ["sola y aburrida...", "me haces compañía? Xd"], ["solita en mi cuarto 🙈", "y tú? uwu"], ["sola y con calor 😰", "tú? Xd"]]))
-                return
-
-            elif any(x in texto for x in ['que tienes puesto', 'ropa', 'vestida', 'desnuda', 'calata', 'sin ropa']):
-                await send_fluid(update.message, random.choice([["mmm nada papi 😏", "solo mi collar...", "te gusta así?", "o me pongo algo pa ti? 💋"], ["uff acabo de salir de bañarme 🔥", "ando con toalla nada más...", "la dejo caer? 😈"], ["bebé ando en ropa interior 😏", "negra de encaje...", "quieres que me la quite? 💦"]]))
-                return
-
-            elif any(x in texto for x in ['tocate', 'tócate', 'toca', 'masturba', 'dedos', 'dedéate', 'juega']):
-                await send_fluid(update.message, random.choice([["ufff ya me estoy tocando papi 💦", "pensando en ti...", "sigo o te grabo? 😈"], ["mmm me metí los dedos 🥵", "x tu culpa", "estoy que me vengo...", "quieres escuchar? 💋"], ["bebé no sabes cómo me tienes 🔥", "ya estoy mojada...", "te muestro en video? 😏 Xd"]]))
-                return
-
-            elif any(x in texto for x in ['muestra', 'muestrame', 'enseña', 'ver', 'foto', 'video', 'pic']):
-                await send_fluid(update.message, random.choice([["mmm quieres verme? 🥵", "dime EXACTO qué quieres ver", "y te lo hago 💦"], ["bebé si me pagas te muestro TODO 🔥", "pero si me dices qué quieres ver", "te doy precio especial 😏"]]))
-                return
-
-            elif any(x in texto for x in ['ganas', 'caliente', 'cachonda', 'excitada', 'mojada', 'arrecha', 'prendida']):
-                await send_fluid(update.message, random.choice([["ay papi estoy que ardo 🥵", "toda mojada...", "qué me haces? 💦"], ["bebé no sabes cómo me tienes 😈", "necesito que me calmes...", "cómo? 🔥 Xd"], ["uff estoy bien cachonda 💦", "me ayudas?", "o me grabo sola? 😏"]]))
-                return
-
-            elif any(x in texto for x in ['pene', 'verga', 'pito', 'pinga', 'p']):
-                await send_fluid(update.message, random.choice([["uff papi me gustan los p... 😏", "cómo tienes el tuyo?", "cuéntame 💦 Xd"], ["bebé me vuelven loca los p... 🥵", "grande?", "grueso?", "dime todo 🔥"]]))
-                return
-
-            elif any(x in texto for x in ['tamaño', 'grande', 'cm', 'centímetros', 'mide', 'largo', 'grueso']):
-                await send_fluid(update.message, random.choice([["mmm me gustan grandes papi 😏", "cuántos cm tienes?", "dime y te digo si me entra 💦"], ["bebé el tamaño sí importa 🥵", "cuántos cm?", "si me gusta te grabo algo especial 🔥"]]))
-                return
-
-            elif any(x in texto for x in ['jaja', 'xd', 'jiji', 'jsjs', 'jsksks', 'XDD']):
-                await send_fluid(update.message, random.choice([["JSKSKSSKS 😘", "de q te ríes bebé?"], ["Xd me haces reír 🔥", "qué pasó uwu"], ["jsksk amor 😏", "eres chistoso"]]))
-                return
-
-            elif any(x in texto for x in ['linda', 'bonita', 'hermosa', 'preciosa', 'guapa', 'sexy', 'cute', 'rica']):
-                await send_fluid(update.message, random.choice([["aww coshita 🥺", "gracias mi rey"], ["JSKSKSKS coshita linda 😘", "uwu tú también"], ["ay coshita 💕", "me sonrojaste Xd"]]))
-                return
-
-            elif any(x in texto for x in ['gracias', 'ok', 'vale', 'bueno', 'dale', 'perfecto', 'weno', 'okaa', 'listo']):
-                await send_fluid(update.message, random.choice([["de nada mi rey 😘", "Xd cualquier coshita me avisas 💋"], ["a ti bebé 🔥", "uwu acá toy si necesitas algo"], ["weno amor 😏", "JSKSKS me hablas cuando quieras"]]))
-                return
-
-            else:
-                await send_fluid(update.message, random.choice([["uff mi rey", "justo me agarraste cambiando 😏", "me acompañas o q? 💋"], ["papi llegaste rico 🔥", "ando bien prendida...", "quieres ver? 😈"], ["ando de ganas bebé 🔥", "qué hacemos? 💦 Xd"], ["uff ando de ganas mal 😈", "me calmas tú?", "o me grabo? 💋"]]))
-                return
+            # Respuesta genérica
+            await update.message.reply_text("uff mi rey justo me agarraste cambiando 😏 me acompañas o q? 💋", parse_mode='Markdown')
+            return
 
         if any(x in texto for x in ['precio', 'peru', 'soles', 's/']):
             await update.message.reply_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
@@ -387,7 +353,8 @@ async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = int(context.args[0])
         VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15)
         DEMO_HOT.pop(user_id, None)
-        asyncio.create_task(auto_tease_task(context.application, user_id, 600, "vip"))
+        # JobQueue para VIP
+        context.job_queue.run_once(auto_tease_task, 600, data={'user_id': user_id, 'tipo': 'vip'})
         await context.bot.send_message(user_id, "✅ *VIP ACTIVADO* 😈\n\nTienes *15 minutos* conmigo bebé\n\nHáblame rico 🔥")
         await update.message.reply_text(f"✅ VIP activado para {user_id}")
     except Exception as e:
@@ -404,7 +371,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
     app.add_handler(MessageHandler(filters.PHOTO, responder))
     app.add_error_handler(error_handler)
-    logger.info("Bot YANABICITASA iniciado")
+    logger.info("Bot YANABICITASA iniciado - OPTIMIZADO")
     app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
