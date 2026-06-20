@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # ============= TU TOKEN Y TU ID =============
 TOKEN = '8751695788:AAFg5vFlt2EYvR5zOZ_tn29T0KZLYvTZs74'
 ADMIN_ID = 8783569348
-USERNAME_ADMIN = "@yanabicitasa" # ← TU USERNAME
+USERNAME_ADMIN = "@yanabicitasa"
 # ==============================================
 
 # ============= LINKS =============
@@ -27,6 +27,7 @@ LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 DEMO_HOT = {}
 VIP_TEMPORAL = {}
 DEMO_USADO = set()
+USUARIOS = {} # ← NUEVO: Registra todos los que hablan
 
 # ============= MENÚS =============
 def get_menu():
@@ -42,12 +43,21 @@ def get_menu():
 def get_volver():
     return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Volver al Menú", callback_data='volver')]])
 
-# ============= AUTO-TEASE CON JOBQUEUE =============
-async def auto_tease_task(context: ContextTypes.DEFAULT_TYPE):
-    job = context.job
-    user_id = job.data['user_id']
-    tipo = job.data['tipo']
+# ============= GUARDAR USUARIOS - NUEVO =============
+def registrar_usuario(user):
+    """Guarda quién habla con el bot"""
+    USUARIOS[user.id] = {
+        'nombre': user.first_name,
+        'username': user.username or "sin_username",
+        'ultimo_mensaje': datetime.now().strftime('%d/%m %H:%M'),
+        'demo_usada': user.id in DEMO_USADO,
+        'es_vip': user.id in VIP_TEMPORAL and VIP_TEMPORAL[user.id] > datetime.now()
+    }
 
+# ============= AUTO-TEASE SIN JOBQUEUE - NO CONGELA =============
+async def auto_tease_task(app, user_id, delay, tipo):
+    """Usa asyncio.create_task en vez de JobQueue para no saturar"""
+    await asyncio.sleep(delay)
     ahora = datetime.now()
     if tipo == "demo":
         if user_id not in DEMO_HOT or DEMO_HOT[user_id] < ahora:
@@ -68,9 +78,9 @@ async def auto_tease_task(context: ContextTypes.DEFAULT_TYPE):
     ]
 
     try:
-        await context.bot.send_message(chat_id=user_id, text=random.choice(teases))
+        await app.bot.send_message(chat_id=user_id, text=random.choice(teases))
         if tipo == "vip":
-            await context.bot.send_message(chat_id=user_id, text="¿Otro PREMIUM? 😈", reply_markup=get_menu())
+            await app.bot.send_message(chat_id=user_id, text="¿Otro PREMIUM? 😈", reply_markup=get_menu())
     except Exception as e:
         logger.error(f"Error en auto-tease: {e}")
 
@@ -197,14 +207,17 @@ En cuanto caiga te mando tu pack 🔥
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = user.id
+    registrar_usuario(user) # ← REGISTRA AL USUARIO
+
     es_nuevo = user_id not in DEMO_USADO
 
     if es_nuevo:
         DEMO_USADO.add(user_id)
         DEMO_HOT[user_id] = datetime.now() + timedelta(minutes=10)
 
-        context.job_queue.run_once(auto_tease_task, 180, data={'user_id': user_id, 'tipo': 'demo'})
-        context.job_queue.run_once(auto_tease_task, 420, data={'user_id': user_id, 'tipo': 'demo'})
+        # Usa asyncio.create_task en vez de JobQueue - NO CONGELA
+        asyncio.create_task(auto_tease_task(context.application, user_id, 180, "demo"))
+        asyncio.create_task(auto_tease_task(context.application, user_id, 420, "demo"))
 
         saludo = "olaaa mi rey 😘 Bienvenido a *YANABICITASA*\n\ntengo *18 añitos* y ando bien caliente 🔥\n\n*Te regalo 10 min de chat hot conmigo*\nes tu única vez gratis, aprovecha 💦"
         await update.message.reply_text(saludo, parse_mode='Markdown')
@@ -245,16 +258,17 @@ async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
     try:
-        user_id = update.effective_user.id
-        username = update.effective_user.username or "sin username"
-        ahora = datetime.now()
+        user = update.effective_user
+        user_id = user.id
+        registrar_usuario(user) # ← REGISTRA AL USUARIO
 
+        ahora = datetime.now()
         es_vip = user_id in VIP_TEMPORAL and VIP_TEMPORAL[user_id] > ahora
         es_demo = user_id in DEMO_HOT and DEMO_HOT[user_id] > ahora
 
-        # ============= CAPTURA DE PAGO - NUEVA RESPUESTA =============
+        # ============= CAPTURA DE PAGO =============
         if update.message.photo:
-            # 1. Responde al cliente
+            username = user.username or "sin_username"
             await update.message.reply_text(
                 f"Recibí tu captura amor 😘\n\n"
                 f"⚠️ *IMPORTANTE:*\n"
@@ -265,7 +279,7 @@ async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 parse_mode='Markdown'
             )
 
-            # 2. Te reenvía la captura a ti con datos del cliente
+            # Te reenvía la captura con datos
             try:
                 caption = f"💰 *NUEVA CAPTURA*\n\n👤 @{username}\n🆔 `{user_id}`\n⏰ {ahora.strftime('%H:%M:%S')}"
                 await context.bot.send_photo(
@@ -370,24 +384,47 @@ async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = int(context.args[0])
         VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15)
         DEMO_HOT.pop(user_id, None)
-        context.job_queue.run_once(auto_tease_task, 600, data={'user_id': user_id, 'tipo': 'vip'})
+        asyncio.create_task(auto_tease_task(context.application, user_id, 600, "vip"))
         await context.bot.send_message(user_id, "✅ *VIP ACTIVADO* 😈\n\nTienes *15 minutos* conmigo bebé\n\nHáblame rico 🔥")
         await update.message.reply_text(f"✅ VIP activado para {user_id}")
     except Exception as e:
         await update.message.reply_text(f"Error: {e}")
 
+# ============= NUEVO: COMANDO PARA VER USUARIOS =============
+async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id!= ADMIN_ID:
+        return
+
+    if not USUARIOS:
+        await update.message.reply_text("Aún no habla nadie con el bot 😢")
+        return
+
+    texto = "📊 *USUARIOS QUE HABLARON CON EL BOT*\n\n"
+    for user_id, datos in list(USUARIOS.items())[-20:]: # Últimos 20
+        estado = "🔥 VIP" if datos['es_vip'] else "💦 DEMO" if datos['demo_usada'] else "👀 Nuevo"
+        texto += f"*{datos['nombre']}* @{datos['username']}\n"
+        texto += f"ID: `{user_id}` | {estado}\n"
+        texto += f"Último: {datos['ultimo_mensaje']}\n\n"
+
+    texto += f"\n*Total: {len(USUARIOS)} usuarios*"
+    await update.message.reply_text(texto, parse_mode='Markdown')
+
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(f"Exception: {context.error}", exc_info=context.error)
 
 def main():
+    # SIN JOBQUEUE - NO SE CONGELA
     app = Application.builder().token(TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("vip", vip))
+    app.add_handler(CommandHandler("users", usuarios)) # ← NUEVO COMANDO
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
     app.add_handler(MessageHandler(filters.PHOTO, responder))
     app.add_error_handler(error_handler)
-    logger.info("Bot YANABICITASA iniciado - COMPATIBLE CON BUSINESS")
+
+    logger.info("Bot YANABICITASA iniciado - SIN CONGELARSE")
     app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
