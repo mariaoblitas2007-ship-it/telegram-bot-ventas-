@@ -28,7 +28,6 @@ def get_menu():
 def get_volver():
     return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Volver al Menú Principal", callback_data='volver')]])
 
-# 🇵🇪 PERÚ - VIDEOS + VIDEOLLAMADAS
 PE_PRECIOS = """
 🛍 *VIDEOS \- PERÚ* 🇵🇪
 
@@ -59,7 +58,6 @@ S/ 80: 20 min
 1\. Yapeas 2\. Captura
 """
 
-# 🇲🇽 MÉXICO - VIDEOS + VIDEOLLAMADAS
 MX_PRECIOS = """
 🛍 *VIDEOS \- MÉXICO* 🇲🇽
 
@@ -89,7 +87,6 @@ $600 MXN: 20 min
 1\. Pagas 2\. Captura
 """
 
-# 🌍 USD/INTERNACIONAL - VIDEOS + VIDEOLLAMADAS
 USD_PRECIOS = """
 🛍 *VIDEOS \- USD/INTERNACIONAL* 🌍
 
