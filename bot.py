@@ -1,8 +1,10 @@
 import os
+import sys
 import asyncio
 import random
 import logging
 import re
+import signal
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import Application, MessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes
@@ -227,15 +229,23 @@ def registrar_usuario(user):
 
 async def avisar_interes(context, user_id, username, mensaje, tipo="INTERÉS"):
     try:
+        username_safe = str(username).replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
+        mensaje_safe = str(mensaje)[:100].replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
+        
         texto = f"🔥 *{tipo} DE COMPRA* 🔥\n\n"
-        texto += f"👤 @{username}\n"
+        texto += f"👤 @{username_safe}\n"
         texto += f"🆔 `{user_id}`\n"
-        texto += f"💬 Mensaje: `{mensaje[:100]}`\n"
+        texto += f"💬 Mensaje: `{mensaje_safe}`\n"
         texto += f"⏰ {datetime.now().strftime('%H:%M:%S')}\n\n"
         texto += f"Háblale rápido antes que se enfríe 🤑"
         await context.bot.send_message(chat_id=ADMIN_ID, text=texto, parse_mode='Markdown')
     except Exception as e:
         logger.error(f"Error avisando interés: {e}")
+        try:
+            texto_plano = f"🔥 {tipo} DE COMPRA 🔥\n\n👤 @{username}\n🆔 {user_id}\n💬 Mensaje: {mensaje[:100]}\n⏰ {datetime.now().strftime('%H:%M:%S')}\n\nHáblale rápido antes que se enfríe 🤑"
+            await context.bot.send_message(chat_id=ADMIN_ID, text=texto_plano)
+        except:
+            pass
 
 async def follow_up_task(app, user_id, username):
     await asyncio.sleep(1800)
@@ -579,6 +589,13 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
         logger.error("⚠️ Conflicto: Otro bot está corriendo. Detenlo en Render/otros sitios")
     else:
         logger.error(f"Error: {context.error}", exc_info=context.error)
+
+def shutdown_handler(signum, frame):
+    logger.info("Apagando bot...")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, shutdown_handler)
+signal.signal(signal.SIGTERM, shutdown_handler)
 
 def main():
     app = Application.builder().token(TOKEN).build()
