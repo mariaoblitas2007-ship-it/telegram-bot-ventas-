@@ -282,8 +282,7 @@ async def auto_tease_task(app, user_id, delay, tipo):
             await app.bot.send_message(chat_id=user_id, text="¿Otro PREMIUM? 😈", reply_markup=get_menu())
     except Exception as e:
         logger.error(f"Error en auto-tease: {e}")
-
-async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message or update.business_message
     if not message or not message.from_user or message.from_user.is_bot:
         return
@@ -519,13 +518,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(USA_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
     elif data == 'otro':
         await query.edit_message_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
-        elif data == 'fotitos':
+    elif data == 'fotitos':
         try:
             await query.delete_message()
             fotos_enviadas = []
             fotos_faltantes = []
             
-            # Intenta cargar las 6 fotos
             for i in range(1, 7):
                 nombre_archivo = f'fotitos{i}.JPG'
                 if os.path.exists(nombre_archivo):
@@ -533,11 +531,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 else:
                     fotos_faltantes.append(nombre_archivo)
             
-            # Si encontró al menos 1 foto, las manda
             if fotos_enviadas:
                 for i in range(0, len(fotos_enviadas), 3):
                     await context.bot.send_media_group(chat_id=query.from_user.id, media=fotos_enviadas[i:i+3])
-                    await asyncio.sleep(1)  # Evita flood
+                    await asyncio.sleep(1)
                     
                 texto_exito = f"""📸 *TUS FOTITOS GRATIS BEBÉ* 🥺💋
 
@@ -553,92 +550,4 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 4️⃣ Comenta coshitas en videos hot, unos 30-100 👀
    *Así generamos vistas juntos*
 5️⃣ Mándame captura + videito cuando termines
-6️⃣ *Disfruta tus 20 videitos* :3 ❤️‍🔥
-
-*¿Te animas o ño?* 🥺
-(Me avisas cuando cumplas mi rey)"""
-                await context.bot.send_message(chat_id=query.from_user.id, text=texto_exito, parse_mode='Markdown', disable_web_page_preview=True, reply_markup=get_menu())
-                
-                # Avisa si faltaron fotos
-                if fotos_faltantes:
-                    await context.bot.send_message(chat_id=ADMIN_ID, text=f"⚠️ *FOTOS FALTANTES*\n\nNo encontré: {', '.join(fotos_faltantes)}\n\nSúbelas a Render bebé", parse_mode='Markdown')
-            else:
-                # Si no hay NINGUNA foto, manda solo el texto
-                await context.bot.send_message(chat_id=query.from_user.id, text=f"""📸 *FOTITOS GRATIS BEBÉ* 🥺💋
-
-Ay bebé, estoy subiendo las fotitos nuevas Xd
-
-*Mientras tanto entra a mi canal:* {LINK_REGALITOS}
-
-✨ *QUIERES HASTA 20 VIDEITOS GRATIS?* ✨
-*Es por promocionarme en TikTok* ✅
-
-*Pasitos súper fáciles uwu:*
-1️⃣ Ponte un nombrecito + fotito tierna <33
-2️⃣ En tu bio pon: *Tg: yanabicitasa* ✨
-3️⃣ Sube una fotito a tu story + frasita hot 😋
-4️⃣ Comenta coshitas en videos hot, unos 30-100 👀
-5️⃣ Mándame captura + videito cuando termines
-6️⃣ *Disfruta tus 20 videitos* :3 ❤️‍🔥""", parse_mode='Markdown', disable_web_page_preview=True, reply_markup=get_menu())
-                
-                await context.bot.send_message(chat_id=ADMIN_ID, text="❌ *ERROR CRÍTICO*\n\nNo hay NINGUNA fotito en el servidor\n\nSube fotitos1.JPG hasta fotitos6.JPG a Render", parse_mode='Markdown')
-                
-        except Exception as e:
-            logger.error(f"Error enviando fotitos: {e}")
-            await context.bot.send_message(chat_id=query.from_user.id, text=f"Ay bebé hubo un error 😢\n\nMejor entra directo a mi canal 👉 {LINK_REGALITOS}", reply_markup=get_volver())    elif data == 'volver':
-        await query.edit_message_text("Elige tu país para ver precios bebé:", reply_markup=get_menu(), parse_mode='Markdown')
-
-async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id!= ADMIN_ID:
-        return
-    if not context.args:
-        await update.message.reply_text("Uso: /vip ID_DEL_CLIENTE")
-        return
-    user_id = int(context.args[0])
-    VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15)
-    PAGARON.add(user_id)
-    DEMO_HOT.pop(user_id, None)
-    asyncio.create_task(auto_tease_task(context.application, user_id, 600, "vip"))
-    await context.bot.send_message(user_id, "✅ *VIP ACTIVADO* 😈\n\nTienes *15 minutos* conmigo bebé\n\nHáblame rico 🔥")
-    await update.message.reply_text(f"✅ VIP activado para {user_id}")
-
-async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id!= ADMIN_ID:
-        return
-    if not USUARIOS:
-        await update.message.reply_text("No hay usuarios aún")
-        return
-    texto = "📊 *USUARIOS REGISTRADOS* 📊\n\n"
-    for uid, data in USUARIOS.items():
-        estado = "💰 PAGÓ" if data['pago'] else "🔥 VIP" if data['es_vip'] else "💦 DEMO" if data['demo_usada'] else "👀 NUEVO"
-        texto += f"👤 {data['nombre']} @{data['username']}\n"
-        texto += f"🆔 `{uid}` | {estado}\n"
-        texto += f"⏰ {data['ultimo_mensaje']}\n\n"
-    texto += f"*Total: {len(USUARIOS)} usuarios*"
-    await update.message.reply_text(texto, parse_mode='Markdown')
-
-async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
-    if isinstance(context.error, Conflict):
-        logger.error("⚠️ Conflicto: Otro bot está corriendo. Detenlo en Render/otros sitios")
-    else:
-        logger.error(f"Error: {context.error}", exc_info=context.error)
-
-def shutdown_handler(signum, frame):
-    logger.info("Apagando bot...")
-    sys.exit(0)
-
-signal.signal(signal.SIGINT, shutdown_handler)
-signal.signal(signal.SIGTERM, shutdown_handler)
-
-def main():
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler('vip', vip))
-    app.add_handler(CommandHandler('usuarios', usuarios))
-    app.add_handler(CallbackQueryHandler(button))
-    app.add_handler(MessageHandler(filters.ALL, manejar_todo))
-    app.add_error_handler(error_handler)
-    logger.info("BOT PRENDIDO - AVISOS DE VENTA ACTIVOS ✅")
-    app.run_polling(drop_pending_updates=True)
-
-if __name__ == '__main__':
-    main()
+6️⃣
