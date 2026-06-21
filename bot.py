@@ -519,19 +519,27 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(USA_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
     elif data == 'otro':
         await query.edit_message_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
-    elif data == 'fotitos':
+        elif data == 'fotitos':
         try:
             await query.delete_message()
             fotos_enviadas = []
+            fotos_faltantes = []
+            
+            # Intenta cargar las 6 fotos
             for i in range(1, 7):
-                try:
-                    fotos_enviadas.append(InputMediaPhoto(open(f'fotitos{i}.JPG', 'rb')))
-                except FileNotFoundError:
-                    logger.warning(f"No encontré fotitos{i}.JPG")
+                nombre_archivo = f'fotitos{i}.JPG'
+                if os.path.exists(nombre_archivo):
+                    fotos_enviadas.append(InputMediaPhoto(open(nombre_archivo, 'rb')))
+                else:
+                    fotos_faltantes.append(nombre_archivo)
+            
+            # Si encontró al menos 1 foto, las manda
             if fotos_enviadas:
                 for i in range(0, len(fotos_enviadas), 3):
                     await context.bot.send_media_group(chat_id=query.from_user.id, media=fotos_enviadas[i:i+3])
-            await context.bot.send_message(chat_id=query.from_user.id, text=f"""📸 *TUS FOTITOS GRATIS BEBÉ* 🥺💋
+                    await asyncio.sleep(1)  # Evita flood
+                    
+                texto_exito = f"""📸 *TUS FOTITOS GRATIS BEBÉ* 🥺💋
 
 ¿Te gustaron? 😏
 
@@ -548,11 +556,36 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 6️⃣ *Disfruta tus 20 videitos* :3 ❤️‍🔥
 
 *¿Te animas o ño?* 🥺
-(Me avisas cuando cumplas mi rey)""", parse_mode='Markdown', disable_web_page_preview=True, reply_markup=get_menu())
+(Me avisas cuando cumplas mi rey)"""
+                await context.bot.send_message(chat_id=query.from_user.id, text=texto_exito, parse_mode='Markdown', disable_web_page_preview=True, reply_markup=get_menu())
+                
+                # Avisa si faltaron fotos
+                if fotos_faltantes:
+                    await context.bot.send_message(chat_id=ADMIN_ID, text=f"⚠️ *FOTOS FALTANTES*\n\nNo encontré: {', '.join(fotos_faltantes)}\n\nSúbelas a Render bebé", parse_mode='Markdown')
+            else:
+                # Si no hay NINGUNA foto, manda solo el texto
+                await context.bot.send_message(chat_id=query.from_user.id, text=f"""📸 *FOTITOS GRATIS BEBÉ* 🥺💋
+
+Ay bebé, estoy subiendo las fotitos nuevas Xd
+
+*Mientras tanto entra a mi canal:* {LINK_REGALITOS}
+
+✨ *QUIERES HASTA 20 VIDEITOS GRATIS?* ✨
+*Es por promocionarme en TikTok* ✅
+
+*Pasitos súper fáciles uwu:*
+1️⃣ Ponte un nombrecito + fotito tierna <33
+2️⃣ En tu bio pon: *Tg: yanabicitasa* ✨
+3️⃣ Sube una fotito a tu story + frasita hot 😋
+4️⃣ Comenta coshitas en videos hot, unos 30-100 👀
+5️⃣ Mándame captura + videito cuando termines
+6️⃣ *Disfruta tus 20 videitos* :3 ❤️‍🔥""", parse_mode='Markdown', disable_web_page_preview=True, reply_markup=get_menu())
+                
+                await context.bot.send_message(chat_id=ADMIN_ID, text="❌ *ERROR CRÍTICO*\n\nNo hay NINGUNA fotito en el servidor\n\nSube fotitos1.JPG hasta fotitos6.JPG a Render", parse_mode='Markdown')
+                
         except Exception as e:
             logger.error(f"Error enviando fotitos: {e}")
-            await context.bot.send_message(chat_id=query.from_user.id, text="Ay bebé hubo un error enviando las fotitos 😢\n\nMejor entra directo a mi canal 👉 " + LINK_REGALITOS, reply_markup=get_volver())
-    elif data == 'volver':
+            await context.bot.send_message(chat_id=query.from_user.id, text=f"Ay bebé hubo un error 😢\n\nMejor entra directo a mi canal 👉 {LINK_REGALITOS}", reply_markup=get_volver())    elif data == 'volver':
         await query.edit_message_text("Elige tu país para ver precios bebé:", reply_markup=get_menu(), parse_mode='Markdown')
 
 async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
