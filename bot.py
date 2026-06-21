@@ -28,7 +28,6 @@ ULTIMO_MENSAJE = {}
 VIO_PRECIOS = {}
 FOLLOWUP_ENVIADO = set()
 
-# ✅ DICCIONARIO CALLEJERO COMPLETO
 SINONIMOS = {
     'intercambio': ['cambiamos', 'cambias', 'cambio', 'intercambio', 'trueque', 'trueke', 'canje', 'canjeamos', 'inter', 'cambio x cambio'],
     'gratis': ['regalitos', 'regalo', 'muestra', 'muestras', 'gratis', 'free', 'preview', 'adelanto', 'probadita', 'demo', 'sample', 'calame', 'calis'],
@@ -38,7 +37,6 @@ SINONIMOS = {
     'referencias': ['refe', 'referencias', 'referencia', 'refs', 'confiable', 'real', 'seguro', 'estafa', 'legit', 'verdad']
 }
 
-# ✅ DICCIONARIO DE EMOJIS - ENTIENDE SIN PALABRAS
 EMOJIS_CALIENTES = {
     'hot': ['🥵', '🔥', '😈', '👿', '😏', '🤤', '🥴'],
     'mojada': ['💦', '💧', '🌊', '💨'],
@@ -285,7 +283,7 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ahora = datetime.now()
 
     if user_id in PAGARON:
-        await message.reply_text("Amor ya recibí tu pago 😘\n\nEstoy revisando y te mando tu pack en unos minutos\n\nCualquier cosa háblame a @yanabicitasa 💋", parse_mode='Markdown')
+        await message.reply_text(f"Amor ya recibí tu pago 😘\n\nEstoy revisando y te mando tu pack en unos minutos\n\nCualquier cosa háblame a {USERNAME_ADMIN} 💋", parse_mode='Markdown')
         return
 
     if message.text and message.text.lower() == '/start':
@@ -326,11 +324,9 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(texto_lower) < 2 and not any(e in texto for e in ['😂','🥵','💦','🍆','🍑','🍒','❤️','🥺','😭','?']):
         return
 
-    # ✅ DETECTOR DE INTENCIONES CALLEJERO + EMOJIS
     intenciones = entender_mensaje(texto_lower)
     intenciones_emojis = entender_emojis(texto)
 
-    # ✅ RESPONDE A EMOJIS CALIENTES PRIMERO
     if 'hot' in intenciones_emojis:
         await message.reply_text("ufff bebé 🥵 estás caliente? Yo también... qué quieres ver? 💦", parse_mode='Markdown')
         await message.reply_text("Elige qué te calienta más:", reply_markup=get_menu(), parse_mode='Markdown')
@@ -361,7 +357,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("hablando de 💰 bebé? Elige tu país y te paso precios 😏", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
-    # ✅ SALUDOS PARA TODOS
     if any(x in texto_lower for x in ['hola', 'ola', 'buenas', 'hey', 'wenas', 'buenos dias', 'buenas tardes', 'buenas noches', 'q tal', 'que tal', 'qué tal', 'alo']):
         await message.reply_text("olaaa bebé 😘 cómo estás? 💋", parse_mode='Markdown')
         await asyncio.sleep(1)
@@ -403,7 +398,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("dime bebé 😏 qué quieres saber? 💋", parse_mode='Markdown')
         return
 
-    # ✅ MANEJO INTELIGENTE DE INTENCIONES
     if 'intercambio' in intenciones:
         await avisar_interes(context, user_id, username, texto, "QUIERE INTERCAMBIO 👀")
         await message.reply_text("bebé yo no cambio 😅 solo vendo\n\nPero si compras *PREMIUM* te doy 20 videos + 1 personalizado 🔥\n\nEs mejor que un intercambio Xd", reply_markup=get_menu(), parse_mode='Markdown')
@@ -421,11 +415,9 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     es_vip = user_id in VIP_TEMPORAL and VIP_TEMPORAL[user_id] > ahora
     es_demo = user_id in DEMO_HOT and DEMO_HOT[user_id] > ahora
 
-    # ✅ DETECTA PALABRAS CALIENTES Y TE AVISA URGENTE
     if any(palabra in texto_lower for palabra in PALABRAS_HOT):
         await avisar_interes(context, user_id, username, texto, "CLIENTE CALIENTE 🔥")
 
-    # ✅ DETECTA INTENCIÓN DE COMPRA
     if any(palabra in texto_lower for palabra in PALABRAS_COMPRA):
         await avisar_interes(context, user_id, username, texto, "QUIERE COMPRAR YA 🤑")
 
@@ -468,7 +460,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await message.reply_text("No entendí bien amor 😅\n\nElige qué quieres ver:", reply_markup=get_menu(), parse_mode='Markdown')
             return
 
-    # ✅ PRECIOS + ACTIVA FOLLOW UP
     if any(x in texto_lower for x in ['precio', 'cuanto', 'cuánto', 'vale', 'costo', 'cuesta', 'peru', 'soles', 's/', 'sol']):
         await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
         VIO_PRECIOS[user_id] = datetime.now()
@@ -547,4 +538,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 (Me avisas cuando cumplas mi rey)""", parse_mode='Markdown', disable_web_page_preview=True, reply_markup=get_menu())
         except Exception as e:
             logger.error(f"Error enviando fotitos: {e}")
-            await context.bot.send_message(chat_id=query.from_user.id, text="Ay bebé hubo un error
+            await context.bot.send_message(chat_id=query.from_user.id, text="Ay bebé hubo un error enviando las fotitos 😢\n\nMejor entra directo a mi canal 👉 " + LINK_REGALITOS, reply_markup=get_volver())
+    elif data == 'volver':
+        await query.edit_message_text
