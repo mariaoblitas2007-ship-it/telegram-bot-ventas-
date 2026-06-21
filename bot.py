@@ -552,4 +552,4 @@ async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Uso: /vip ID_DEL_CLIENTE")
         return
     user_id = int(context.args[0])
-    VIP_TEMPORAL[user_id
+    VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15
