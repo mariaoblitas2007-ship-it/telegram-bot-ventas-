@@ -32,31 +32,7 @@ PAGARON = set()
 ULTIMO_MENSAJE = {}
 VIO_PRECIOS = {}
 FOLLOWUP_ENVIADO = set()
-
-SINONIMOS = {
-    'intercambio': ['cambiamos', 'cambias', 'cambio', 'intercambio', 'trueque', 'trueke', 'canje', 'canjeamos', 'inter', 'cambio x cambio'],
-    'gratis': ['regalitos', 'regalo', 'muestra', 'muestras', 'gratis', 'free', 'preview', 'adelanto', 'probadita', 'demo', 'sample', 'calame', 'calis'],
-    'comprar': ['comprar', 'compro', 'quiero', 'dame', 'pago', 'pagare', 'pagaré', 'yapeo', 'transferencia', 'paypal', 'adquirir', 'llevar', 'deseo'],
-    'caro': ['caro', 'mucho', 'rebaja', 'descuento', 'promo', 'barato', 'menos', 'negociar', 'regatear', 'oferta'],
-    'pack': ['pack', 'pak', 'paquete', 'contenido', 'videos', 'fotos', 'material', 'cont'],
-    'referencias': ['refe', 'referencias', 'referencia', 'refs', 'confiable', 'real', 'seguro', 'estafa', 'legit', 'verdad']
-}
-
-EMOJIS_CALIENTES = {
-    'hot': ['🥵', '🔥', '😈', '👿', '😏', '🤤', '🥴'],
-    'mojada': ['💦', '💧', '🌊', '💨'],
-    'pene': ['🍆', '🍌', '🌭', '🥒', '🎤', '📏'],
-    'cola': ['🍑', '🍩', '🎂'],
-    'senos': ['🍒', '🍈', '🍉', '🥥', '🍊'],
-    'sexo': ['🔞', '💋', '👅', '🫦', '🛏️', '🚿', '👉👌', '🤰'],
-    'amor': ['❤️', '💕', '💖', '💘', '😍', '🥰', '😘', '💗', '💝'],
-    'triste': ['😢', '😭', '🥺', '😔', '💔', '😿', '☹️'],
-    'risa': ['😂', '🤣', '😹', 'XD', 'jaja', 'jsjs'],
-    'dinero': ['💰', '💵', '💸', '🤑', '💳']
-}
-
-PALABRAS_HOT = ['barato', 'descuento', 'promo', 'rebaja', 'oferta', 'caro', 'mucho', 'menos', 'cuotas', 'plazos', 'duda', 'seguro', 'confiable', 'referencias', 'real', 'estafa']
-PALABRAS_COMPRA = ['comprar', 'compro', 'quiero', 'dame', 'pago', 'pagare', 'pagaré', 'yape', 'yapeo', 'transferencia', 'paypal']
+ULTIMA_RESPUESTA = {}
 
 PE_PRECIOS = """
 🛍 *VIDEOS - PERÚ* 🇵🇪
@@ -107,15 +83,9 @@ $600 MXN: 20 min
 🛍 *PAGO MXN:*
 🏦 *Banco:* STP
 🔢 *CLABE:* `646180546711450910`
-📝 *Referencia/Concepto:* `yanae`
-
-🇲🇽 *También acepto:* Transfer / Astropay
-→ *Pídeme datos si usas otro método*
+📝 *Referencia:* `yanae`
 
 Mándame captura cuando pagues bebé 🥰
-En cuanto caiga te mando tu pack 🔥
-
-1. Pagas 2. Captura
 """
 
 USA_PRECIOS = """
@@ -140,19 +110,7 @@ $30 USD: 20 min
 🪙 *PAGO:*
 *PayPal:* AbigailMaximoofO
 
-🏦 *Bank EEUU:*
-*Community Federal Savings Bank*
-📍 Bank Address:
-5 Penn Plaza, 14th Floor
-New York, NY 10001, US
-0️⃣ Account Number: 8338233469
-0️⃣ Routing Number: 026073150
-✍️ Account Type: Checking
-
 Avísame cuando envíes con el comprobante 🥰
-En cuanto caiga te mando tu pack 🔥
-
-1. Pagas 2. Captura
 """
 
 OTRO_PRECIOS = f"""
@@ -178,9 +136,6 @@ $30 USD: 20 min
 *PayPal:* [Click aquí]({LINK_PAYPAL})
 
 Mándame captura cuando pagues bebé 🥰
-En cuanto caiga te mando tu pack 🔥
-
-1. Pagas 2. Captura
 """
 
 def get_menu():
@@ -196,27 +151,6 @@ def get_menu():
 def get_volver():
     return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Volver al Menú", callback_data='volver')]])
 
-def get_no_entiendo():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📸 Ver Fotitos GRATIS", callback_data='fotitos')],
-        [InlineKeyboardButton("🛍 Ver Precios", callback_data='volver')]
-    ])
-
-def entender_mensaje(texto):
-    texto = texto.lower()
-    intenciones = []
-    for intencion, palabras in SINONIMOS.items():
-        if any(palabra in texto for palabra in palabras):
-            intenciones.append(intencion)
-    return intenciones
-
-def entender_emojis(texto):
-    intenciones = []
-    for intencion, emojis in EMOJIS_CALIENTES.items():
-        if any(emoji in texto for emoji in emojis):
-            intenciones.append(intencion)
-    return intenciones
-
 def registrar_usuario(user):
     USUARIOS[user.id] = {
         'nombre': user.first_name,
@@ -231,57 +165,158 @@ async def avisar_interes(context, user_id, username, mensaje, tipo="INTERÉS"):
     try:
         username_safe = str(username).replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
         mensaje_safe = str(mensaje)[:100].replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
-        
-        texto = f"🔥 *{tipo} DE COMPRA* 🔥\n\n"
-        texto += f"👤 @{username_safe}\n"
-        texto += f"🆔 `{user_id}`\n"
-        texto += f"💬 Mensaje: `{mensaje_safe}`\n"
-        texto += f"⏰ {datetime.now().strftime('%H:%M:%S')}\n\n"
-        texto += f"Háblale rápido antes que se enfríe 🤑"
+        texto = f"🔥 *{tipo} DE COMPRA* 🔥\n\n👤 @{username_safe}\n🆔 `{user_id}`\n💬 Mensaje: `{mensaje_safe}`\n⏰ {datetime.now().strftime('%H:%M:%S')}\n\nHáblale rápido antes que se enfríe 🤑"
         await context.bot.send_message(chat_id=ADMIN_ID, text=texto, parse_mode='Markdown')
-    except Exception as e:
-        logger.error(f"Error avisando interés: {e}")
-        try:
-            texto_plano = f"🔥 {tipo} DE COMPRA 🔥\n\n👤 @{username}\n🆔 {user_id}\n💬 Mensaje: {mensaje[:100]}\n⏰ {datetime.now().strftime('%H:%M:%S')}\n\nHáblale rápido antes que se enfríe 🤑"
-            await context.bot.send_message(chat_id=ADMIN_ID, text=texto_plano)
-        except:
-            pass
+    except:
+        pass
 
 async def follow_up_task(app, user_id, username):
     await asyncio.sleep(1800)
     if user_id in PAGARON or user_id in FOLLOWUP_ENVIADO:
         return
     FOLLOWUP_ENVIADO.add(user_id)
-    mensajes_followup = [
-        "oye bebé 😢 sigues ahí? Si compras el TOP te regalo 2 videitos extra solo para ti 🔥",
-        "papi 👉👈 no te vayas... si llevas PREMIUM te agrego 3 fotitos exclusivas que no subo a ningún lado 💋",
-        "amor 🥺 te espero... compra el TOP y te mando un videito extra haciendo lo que me pidas 😈",
-        "bebé 😘 con PREMIUM te doy acceso a mi canal VIP 24 horas gratis 🎁"
+    mensajes = [
+        f"oye {username} 😢 sigues ahí? Si compras TOP te regalo 2 videitos extra 🔥",
+        f"papi 👉👈 con PREMIUM te agrego 3 fotitos exclusivas que no subo a ningún lado 💋",
+        f"amor 🥺 te espero... compra TOP y te mando videito haciendo lo que pidas 😈"
     ]
     try:
-        await app.bot.send_message(chat_id=user_id, text=random.choice(mensajes_followup), reply_markup=get_menu(), parse_mode='Markdown')
-        await app.bot.send_message(chat_id=ADMIN_ID, text=f"🎁 *FOLLOW UP CON EXTRAS ENVIADO* 🎁\n\n👤 @{username}\n🆔 `{user_id}`\n\nLe ofrecí extras visuales. Ciérralo tú 🤑", parse_mode='Markdown')
-    except Exception as e:
-        logger.error(f"Error en follow up: {e}")
+        await app.bot.send_message(chat_id=user_id, text=random.choice(mensajes), reply_markup=get_menu(), parse_mode='Markdown')
+    except:
+        pass
 
-async def auto_tease_task(app, user_id, delay, tipo):
-    await asyncio.sleep(delay)
-    ahora = datetime.now()
-    if user_id in PAGARON:
-        return
-    if tipo == "demo":
-        if user_id not in DEMO_HOT or DEMO_HOT[user_id] < ahora:
-            return
-    else:
-        if user_id not in VIP_TEMPORAL or VIP_TEMPORAL[user_id] < ahora:
-            return
-    teases = ["oye... Xd no dejo de pensar en ti 😳", "papi me distraje en clase x tu culpa 😈 JSKSKS", "toy aburrida... qué haces? 💦 uwu", "me puse a verme al espejo y... 🙈 JSKSKSSKS", "tengo calor 😰 o eres tú? uwu"]
-    try:
-        await app.bot.send_message(chat_id=user_id, text=random.choice(teases))
-        if tipo == "vip":
-            await app.bot.send_message(chat_id=user_id, text="¿Otro PREMIUM? 😈", reply_markup=get_menu())
-    except Exception as e:
-        logger.error(f"Error en auto-tease: {e}")
+def respuesta_hot(texto, nombre, user_id):
+    texto = texto.lower()
+
+    def no_repetir(opciones):
+        ultima = ULTIMA_RESPUESTA.get(user_id, "")
+        opciones_filtradas = [r for r in opciones if r!= ultima]
+        if not opciones_filtradas:
+            opciones_filtradas = opciones
+        respuesta = random.choice(opciones_filtradas)
+        ULTIMA_RESPUESTA[user_id] = respuesta
+        return respuesta
+
+    if any(x in texto for x in ['hola', 'ola', 'buenas', 'hey', 'wenas', 'alo', 'q tal', 'que tal']):
+        return no_repetir([
+            f"Olaaa {nombre} 😘 cómo estás bebé? 💋",
+            f"Hey {nombre} 🔥 llegaste justo cuando pensaba en ti... qué haces? 😏",
+            f"Holaa mi rey 🙈 qué tal tu día? Yo acá calata pensando en ti Xd 💦",
+            f"Wenaas {nombre} 😈 andaba aburrida sin ti... qué me cuentas? 🔥"
+        ])
+
+    if any(x in texto for x in ['que haces', 'qué haces', 'q haces', 'haciendo']):
+        return no_repetir([
+            f"Acá {nombre} 🙈 pensando en qué haríamos si estuvieras aquí... y tú? 😏",
+            f"Nada, aburrida sin ti 🥺 tú qué haces mi rey? 💋",
+            f"Me estaba tocando y pensé en ti 🙊 jksjks tú qué cuentas? 🔥",
+            f"Acá solita 😈 esperándote... qué tienes ganas de hacer? 💦"
+        ])
+
+    if any(x in texto for x in ['sola', 'solo', 'solita', 'acompañada']):
+        return no_repetir([
+            f"Sí bebé solita 😈 por qué? Qué tienes en mente? 💦",
+            f"Solísima {nombre}... la cama está fría sin ti 🛏️🥺",
+            f"Sip, toda la casa para nosotros 🙊 vienes o qué? 🔥",
+            f"Sola y caliente {nombre} 🥵 tú me acompañas? 💋"
+        ])
+
+    if any(x in texto for x in ['ropa', 'desnuda', 'calata', 'vestida', 'llevas', 'puesto', 'tanga', 'hilo']):
+        return no_repetir([
+            f"Mmm solo un hilito bebé 😏 te lo quito o quieres que me ponga algo? 💋",
+            f"Nada {nombre} 🙈 estoy como Dios me trajo al mundo... te gusta? 🔥",
+            f"Una tanga nomás 🍑 me la saco para ti? 😈",
+            f"Sin nada {nombre} 💦 toda lista para ti... qué me haces? 🥵"
+        ])
+
+    if any(x in texto for x in ['tocate', 'tócate', 'dedos', 'juega', 'mastur', 'toca', 'mete']):
+        return no_repetir([
+            f"Ufff ya empecé {nombre} 💦 estoy mojándome toda... sigo? 😈",
+            f"Ay papi sí 🙈 *se toca* Mmm se siente rico... quieres ver? 🔥",
+            f"Ya estoy {nombre} 🥵 pensando en tu boca... te grabo un videito? 💋",
+            f"Sí bebé 💦 *mete dedos* ahh... te gusta? Sigo o paro? 😈"
+        ])
+
+    if any(x in texto for x in ['muestra', 'muestrame', 'ver', 'foto', 'video', 'enseña', 'ensena', 'manda']):
+        return no_repetir([
+            f"Mmm picoso 😏 dime QUÉ parte quieres ver y te lo mando ahora 💦",
+            f"Todo lo que quieras bebé 🔥 pero dime específico... ¿teta, poto, qué? 😈",
+            f"Uy {nombre} 🥵 si me dices qué quieres ver te hago video ahora mismo 💋",
+            f"Claro papi 😈 pero tienes que decirme exacto... tetas? culo? toda? 🔥"
+        ])
+
+    if any(x in texto for x in ['ganas', 'caliente', 'cachonda', 'mojada', 'excitad', 'ardiendo', 'rico']):
+        return no_repetir([
+            f"Demasiado {nombre} 🥵 estoy que ardo... ven a apagarme 🔥",
+            f"Ay sí 💦 toda mojada por tu culpa... qué me vas a hacer? 😈",
+            f"Demasiadas ganas 🙈 si estuvieras aquí ya te habría saltado encima 💋",
+            f"Ufff bebé 🔥 no aguanto más... me toco pensando en ti 💦"
+        ])
+
+    if any(x in texto for x in ['pene', 'verga', 'pito', 'pinga', 'verg', 'pit0', 'nepe', 'pija']):
+        return no_repetir([
+            f"Ufff me encantan 😏 cuéntame del tuyo bebé... cómo lo tienes? 💦",
+            f"Mmm me gustan venosos {nombre} 🥵 el tuyo cómo es? mándame foto 🙈",
+            f"Ay sí 🔥 me fascinan... el tuyo es grande? Dime cm 😈",
+            f"Me vuelven loca {nombre} 💋 el tuyo cómo es? Grueso? 😏"
+        ])
+
+    if any(x in texto for x in ['tamaño', 'grande', 'cm', 'mide', 'cuanto', 'cuánto', 'centimetros']):
+        return no_repetir([
+            f"Me gustan de +16cm bebé 😏 el tuyo cuánto mide? Si me gusta te premio 💦",
+            f"Mmm mientras me llene estoy feliz 🙈 el tuyo me entraría? Dime 🔥",
+            f"Grandes {nombre} 🥵 pero con técnica... el tuyo cómo es? 😈",
+            f"De 17 pa arriba me encantan 💋 el tuyo cuánto? Mándame foto 🙈"
+        ])
+
+    if any(x in texto for x in ['amor', 'amo', 'quiero', 'novia', 'enamore', 'enamoré', 'te amo', 'bebe']):
+        return no_repetir([
+            f"Aww {nombre} 🥺 yo también... pero mi novio tiene que ser PREMIUM jiji 💋",
+            f"Jiji me sonrojas 😳 demuéstrame que me quieres con el PREMIUM 🔥",
+            f"Ay bebé 🥰 eres un amor... pero amor con amor se paga Xd PREMIUM? 💦",
+            f"Tú también me gustas {nombre} 😏 pero los novios pagan PREMIUM 🙈"
+        ])
+
+    if any(x in texto for x in ['gracias', 'ok', 'vale', 'bueno', 'dale', 'listo', 'perfecto', 'grax', 'oka']):
+        return no_repetir([
+            f"De nada {nombre} 😘 Xd cualquier cosita caliente me avisas 💋",
+            f"Para ti siempre bebé 🔥 tú solo pide 💦",
+            f"Ok mi rey 😏 pero no te desaparezcas eh... 🥺",
+            f"Vale {nombre} 😈 acá te espero calientita 🔥"
+        ])
+
+    if any(x in texto for x in ['jaja', 'xd', 'jiji', 'jsjs', 'jjjj', 'lol', 'ksk', 'jaj', 'jeje']):
+        return no_repetir([
+            f"JSKSKSSKS 😘 de q te ríes {nombre}? Cuéntame 🔥",
+            f"Jiji te dio risa? 🙈 dime por qué 💦",
+            f"Jajaja me haces reír bebé 😂 eres tierno 😈",
+            f"Jsjsjs {nombre} 😏 me encanta tu risa... qué te causó? 💋"
+        ])
+
+    if any(x in texto for x in ['adios', 'adiós', 'chao', 'chau', 'bye', 'nos vemos', 'hasta luego', 'me voy', 'bay']):
+        return no_repetir([
+            f"Ya te vas {nombre}? 😢 vuelve pronto mi rey 💋",
+            f"Chao bebé 😘 me avisas cuando quieras más uwu 🔥",
+            f"Adiós papi 🥺 te voy a extrañar... si cambias de opinión aquí estoy 💦",
+            f"Bye {nombre} 😘 cuídate mucho Xd y vuelve caliente 😈"
+        ])
+
+    if any(x in texto for x in ['linda', 'bonita', 'hermosa', 'sexy', 'rica', 'preciosa', 'guapa', 'bella', 'chula', 'hot', 'diosa']):
+        return no_repetir([
+            f"Aww {nombre} 🥺 gracias mi rey... tú también estás bien bueno 😏💋",
+            f"Jiji me sonrojas 🙈 tú también bebé... qué me harías? 🔥",
+            f"Gracias papi 😘 por eso me gustas... eres diferente 💦",
+            f"Ay {nombre} 😈 si supieras lo que pienso hacerte... 🙈"
+        ])
+
+    return no_repetir([
+        f"Mmm {nombre} 😏 y si mejor me dices qué quieres que te haga? 🔥",
+        f"Jiji me distraes bebé 🙈 háblame rico o dime qué ver 💦",
+        f"Ay {nombre} 🥵 estoy caliente... dime algo hot o te muestro algo? 😈",
+        f"Bebé 💋 estoy esperando que me digas qué hacer... te toco? te grabo? 🔥",
+        f"Uff {nombre} 😏 me pones nerviosa... dime qué tienes ganas de hacer 💦",
+        f"Mmm 🙈 no entendí bien pero me gustas... háblame más rico 😈"
+    ])
 
 async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message or update.business_message
@@ -294,9 +329,10 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = user.username or "sin_username"
     registrar_usuario(user)
     ahora = datetime.now()
+    nombre = user.first_name
 
     if user_id in PAGARON:
-        await message.reply_text(f"Amor ya recibí tu pago 😘\n\nEstoy revisando y te mando tu pack en unos minutos\n\nCualquier cosa háblame a {USERNAME_ADMIN} 💋", parse_mode='Markdown')
+        await message.reply_text(f"Amor ya recibí tu pago 😘\n\n✅ *PAGO CONFIRMADO*\n\n📩 *HÁBLAME A MI PRIVADO YA*\n👉 {USERNAME_ADMIN}\n\nAhí te mando tu pack completo sin demora 💋", parse_mode='Markdown')
         return
 
     if message.text and message.text.lower() == '/start':
@@ -304,21 +340,27 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if es_nuevo:
             DEMO_USADO.add(user_id)
             DEMO_HOT[user_id] = datetime.now() + timedelta(minutes=10)
-            asyncio.create_task(auto_tease_task(context.application, user_id, 180, "demo"))
-            asyncio.create_task(auto_tease_task(context.application, user_id, 420, "demo"))
-            saludo = "olaaa mi rey 😘 Bienvenido a *YANABICITASA*\n\ntengo *18 añitos* y ando bien caliente 🔥\n\n*Te regalo 10 min de chat hot conmigo*\nes tu única vez gratis, aprovecha 💦"
+            saludo = f"olaaa {nombre} 😘 Bienvenido a *YANABICITASA*\n\ntengo *18 añitos* y ando bien caliente 🔥\n\n*Te regalo 10 min de chat hot conmigo*\nes tu única vez gratis, aprovecha 💦"
             await message.reply_text(saludo, parse_mode='Markdown')
         else:
-            await message.reply_text("ola de nuevo mi rey 😘 ya tienes tu demo usada Xd\n\npero puedes comprar *PREMIUM* y seguimos 💋", parse_mode='Markdown')
+            await message.reply_text(f"ola de nuevo {nombre} 😘 ya tienes tu demo usada Xd\n\npero puedes comprar *PREMIUM* y seguimos 💋", parse_mode='Markdown')
         await message.reply_text("Elige tu país para ver precios bebé:", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
     if message.photo:
         PAGARON.add(user_id)
         await avisar_interes(context, user_id, username, "ENVÍO CAPTURA DE PAGO", "PAGO RECIBIDO 💰")
-        await message.reply_text(f"Recibí tu captura amor 😘\n\n✅ *PAGO EN REVISIÓN*\nTe mando tu pack en 5-10 min\n\nSi demora más de 20min háblame a {USERNAME_ADMIN}\n\n*Gracias por confiar* 🔥", parse_mode='Markdown')
+        await message.reply_text(
+            f"✅ *PAGO RECIBIDO MI REY* 😘\n\n"
+            f"Ya vi tu captura {nombre} 🔥\n\n"
+            f"📩 *AHORA HÁBLAME A MI PRIVADO*\n"
+            f"👉 {USERNAME_ADMIN}\n\n"
+            f"Ahí te mando tu pack completo sin demora 💋\n\n"
+            f"*No lo mando por aquí por seguridad* 🥺",
+            parse_mode='Markdown'
+        )
         try:
-            caption = f"💰 *NUEVA CAPTURA - MARCAR COMO PAGADO*\n\n👤 @{username}\n🆔 `{user_id}`\n⏰ {ahora.strftime('%H:%M:%S')}"
+            caption = f"💰 *NUEVA CAPTURA - PAGO CONFIRMADO*\n\n👤 @{username}\n🆔 `{user_id}`\n⏰ {ahora.strftime('%H:%M:%S')}\n\n*El cliente ya fue enviado a tu privado* ✅"
             await context.bot.send_photo(chat_id=ADMIN_ID, photo=message.photo[-1].file_id, caption=caption, parse_mode='Markdown')
         except Exception as e:
             logger.error(f"Error reenviando: {e}")
@@ -328,176 +370,64 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     texto = message.text.strip()
-    texto_lower = texto.lower()
 
-    if ULTIMO_MENSAJE.get(user_id) == texto_lower:
+    if ULTIMO_MENSAJE.get(user_id) == texto.lower():
         return
-    ULTIMO_MENSAJE[user_id] = texto_lower
+    ULTIMO_MENSAJE[user_id] = texto.lower()
 
-    if len(texto_lower) < 2 and not any(e in texto for e in ['😂','🥵','💦','🍆','🍑','🍒','❤️','🥺','😭','?']):
-        return
-
-    intenciones = entender_mensaje(texto_lower)
-    intenciones_emojis = entender_emojis(texto)
-
-    if 'hot' in intenciones_emojis:
-        await message.reply_text("ufff bebé 🥵 estás caliente? Yo también... qué quieres ver? 💦", parse_mode='Markdown')
-        await message.reply_text("Elige qué te calienta más:", reply_markup=get_menu(), parse_mode='Markdown')
-        return
-    if 'mojada' in intenciones_emojis:
-        await message.reply_text("ay papi 💦 toda mojada por tu culpa... qué me haces? 😈", parse_mode='Markdown')
-        return
-    if 'pene' in intenciones_emojis:
-        await message.reply_text("mmm 🍆 me gustan grandes bebé 😏 cuántos cm tienes? 💦", parse_mode='Markdown')
-        return
-    if 'cola' in intenciones_emojis:
-        await message.reply_text("te gusta mi 🍑 bebé? 😏 compra PREMIUM y te mando videito moviéndola 🔥", parse_mode='Markdown')
-        return
-    if 'senos' in intenciones_emojis:
-        await message.reply_text("quieres ver mis 🍒? 😈 TOP te da 12 videos... ahí salen 💋", reply_markup=get_menu(), parse_mode='Markdown')
-        return
-    if 'sexo' in intenciones_emojis:
-        await message.reply_text("ay bebé 🔞 quieres algo más hot? Videollamada PREMIUM y hacemos lo que quieras 💦", parse_mode='Markdown')
-        return
-    if 'amor' in intenciones_emojis:
-        respuestas_amor = ["aww coshita 🥺 yo también te quiero... compra PREMIUM y somos novios virtuales 💋", "jiji me haces sonrojar 😳 si me quieres de verdad demuéstralo con el PREMIUM 🔥", "ay bebé 🥰 eres un amor... pero mi novio tiene que ser PREMIUM Xd 💦"]
-        await message.reply_text(random.choice(respuestas_amor), parse_mode='Markdown')
-        return
-    if 'triste' in intenciones_emojis:
-        await message.reply_text("por qué triste bebé? 😢 ven, yo te alegro... compra PREMIUM y te mimo 💋", parse_mode='Markdown')
-        return
-    if 'dinero' in intenciones_emojis:
-        await message.reply_text("hablando de 💰 bebé? Elige tu país y te paso precios 😏", reply_markup=get_menu(), parse_mode='Markdown')
+    if any(x in texto.lower() for x in ['comprar', 'compro', 'quiero', 'dame', 'pago', 'pagare', 'pagaré', 'yape', 'paypal', 'transfer']):
+        await avisar_interes(context, user_id, username, texto, "QUIERE COMPRAR YA 🤑")
+        await message.reply_text(f"Sii {nombre} 😘 Elige tu país para ver precios:", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
-    if any(x in texto_lower for x in ['hola', 'ola', 'buenas', 'hey', 'wenas', 'buenos dias', 'buenas tardes', 'buenas noches', 'q tal', 'que tal', 'qué tal', 'alo']):
-        await message.reply_text("olaaa bebé 😘 cómo estás? 💋", parse_mode='Markdown')
-        await asyncio.sleep(1)
-        await message.reply_text("Elige tu país para ver precios:", reply_markup=get_menu(), parse_mode='Markdown')
+    if any(x in texto.lower() for x in ['precio', 'cuanto', 'cuánto', 'vale', 'costo', 'cuesta', 'peru', 'soles', 's/', 'sol']):
+        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
+        VIO_PRECIOS[user_id] = datetime.now()
+        asyncio.create_task(follow_up_task(context.application, user_id, username))
+        await message.reply_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
         return
-    elif any(x in texto_lower for x in ['como estas', 'cómo estás', 'como andas', 'cómo andas']):
-        await message.reply_text("bien mi rey 😘 gracias x preguntar uwu y tú? 💋", parse_mode='Markdown')
+    elif any(x in texto.lower() for x in ['mexico', 'mxn', 'peso', 'méxico']):
+        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
+        VIO_PRECIOS[user_id] = datetime.now()
+        asyncio.create_task(follow_up_task(context.application, user_id, username))
+        await message.reply_text(MX_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
         return
-    elif any(x in texto_lower for x in ['gracias', 'ok', 'vale', 'bueno', 'dale', 'listo', 'perfecto', 'grax']):
-        await message.reply_text("de nada mi rey 😘 Xd cualquier coshita me avisas 💋", parse_mode='Markdown')
+    elif any(x in texto.lower() for x in ['usd', 'usa', 'eeuu', 'dolar', 'dólar', 'estados unidos']):
+        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
+        VIO_PRECIOS[user_id] = datetime.now()
+        asyncio.create_task(follow_up_task(context.application, user_id, username))
+        await message.reply_text(USA_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
         return
-    elif any(x in texto_lower for x in ['jaja', 'xd', 'jiji', 'jsjs', 'jjjj', 'lol', 'ksk']):
-        await message.reply_text("JSKSKSSKS 😘 de q te ríes bebé?", parse_mode='Markdown')
-        return
-    elif any(x in texto_lower for x in ['adios', 'adiós', 'chao', 'chau', 'bye', 'nos vemos', 'hasta luego', 'me voy', 'bay']):
-        despedidas = ["ya te vas? 😢 vuelve pronto mi rey 💋", "chao bebé 😘 me avisas cuando quieras más uwu", "adiós papi 🥺 te voy a extrañar... si cambias de opinión aquí estoy 🔥", "bye mi rey 😘 cuídate mucho Xd"]
-        await message.reply_text(random.choice(despedidas), parse_mode='Markdown')
-        return
-    elif any(x in texto_lower for x in ['linda', 'bonita', 'hermosa', 'sexy', 'rica', 'preciosa', 'guapa', 'bella', 'chula']):
-        await message.reply_text("aww coshita 🥺 gracias mi rey... tú también estás bien bueno 😏💋", parse_mode='Markdown')
-        return
-    elif any(x in texto_lower for x in ['eres hombre', 'eres chico', 'eres vato', 'eres wey', 'eres men', 'eres gay', 'voz de hombre', 'travesti']):
-        await message.reply_text("jajaja nooo bebé 😂 soy chica, tengo 18 añitos 💋 mira mis fotos Xd", parse_mode='Markdown')
-        return
-    elif any(x in texto_lower for x in ['eres real', 'eres bot', 'eres ia', 'robot', 'fake']):
-        await message.reply_text("claro que soy real papi 😏 de carne y hueso... quieres videollamada y te muestro? 🔥", parse_mode='Markdown')
-        return
-    elif any(x in texto_lower for x in ['tu edad', 'cuantos años', 'cuántos años tienes', 'edad']):
-        await message.reply_text("tengo 18 añitos recién cumplidos bebé 😘 por eso ando bien loquita 🔥", parse_mode='Markdown')
-        return
-    elif any(x in texto_lower for x in ['de donde eres', 'dónde vives', 'donde vives', 'país']):
-        await message.reply_text("de Perú bebé 🇵🇪 pero atiendo a todo el mundo uwu 💋", parse_mode='Markdown')
-        return
-    elif any(x in texto_lower for x in ['te amo', 'te quiero', 'enamoré', 'enamore', 'novia', 'mi amor']):
-        respuestas_amor = ["aww coshita 🥺 yo también te quiero... compra PREMIUM y somos novios virtuales 💋", "jiji me haces sonrojar 😳 si me quieres de verdad demuéstralo con el PREMIUM 🔥", "ay bebé 🥰 eres un amor... pero mi novio tiene que ser PREMIUM Xd 💦"]
-        await message.reply_text(random.choice(respuestas_amor), parse_mode='Markdown')
-        return
-    elif any(x in texto_lower for x in ['?', '??', '...', '..']):
-        await message.reply_text("dime bebé 😏 qué quieres saber? 💋", parse_mode='Markdown')
+    elif any(x in texto.lower() for x in ['otro', 'internacional', 'colombia', 'argentina', 'chile', 'españa', 'venezuela']):
+        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
+        VIO_PRECIOS[user_id] = datetime.now()
+        asyncio.create_task(follow_up_task(context.application, user_id, username))
+        await message.reply_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
         return
 
-    if 'intercambio' in intenciones:
+    if any(x in texto.lower() for x in ['intercambio', 'trueque', 'canje']):
         await avisar_interes(context, user_id, username, texto, "QUIERE INTERCAMBIO 👀")
-        await message.reply_text("bebé yo no cambio 😅 solo vendo\n\nPero si compras *PREMIUM* te doy 20 videos + 1 personalizado 🔥\n\nEs mejor que un intercambio Xd", reply_markup=get_menu(), parse_mode='Markdown')
+        await message.reply_text(f"Bebé yo no cambio 😅 solo vendo\n\nPero si compras *PREMIUM* te doy 20 videos + 1 personalizado 🔥\n\nEs mejor que un intercambio Xd", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
-    if 'gratis' in intenciones:
-        await message.reply_text(f"🎁 *FOTITOS GRATIS* 🔥\n\nToca el botón para verlas bebé:\n\n👉 Si te gustan, *ayúdame compartiendo* con tus amigos 🥺💋\n\n*Si quieres algo más hot...*\nCompra PREMIUM y te doy atención 1 a 1 😈", reply_markup=get_no_entiendo(), parse_mode='Markdown')
-        return
-
-    if 'referencias' in intenciones:
-        await avisar_interes(context, user_id, username, texto, "PIDE REFERENCIAS 👀")
-        await message.reply_text(f"claro bebé 😘 tengo referencias\n\nMira mi canal: {LINK_CANAL}\n\nAhí ves que soy real 🔥\n\nAhora elige tu país:", reply_markup=get_menu(), parse_mode='Markdown')
+    if any(x in texto.lower() for x in ['gratis', 'regalo', 'muestra', 'demo', 'calame']):
+        await message.reply_text(f"🎁 *FOTITOS GRATIS* 🔥\n\nToca el botón para verlas bebé:\n\n👉 Si te gustan, *ayúdame compartiendo* con tus amigos 🥺💋\n\n*Si quieres algo más hot...*\nCompra PREMIUM y te doy atención 1 a 1 😈", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📸 Ver Fotitos GRATIS", callback_data='fotitos')], [InlineKeyboardButton("🛍 Ver Precios", callback_data='volver')]]), parse_mode='Markdown')
         return
 
     es_vip = user_id in VIP_TEMPORAL and VIP_TEMPORAL[user_id] > ahora
     es_demo = user_id in DEMO_HOT and DEMO_HOT[user_id] > ahora
 
-    if any(palabra in texto_lower for palabra in PALABRAS_HOT):
-        await avisar_interes(context, user_id, username, texto, "CLIENTE CALIENTE 🔥")
-
-    if any(palabra in texto_lower for palabra in PALABRAS_COMPRA):
-        await avisar_interes(context, user_id, username, texto, "QUIERE COMPRAR YA 🤑")
-
-    if es_vip or es_demo:
+    if es_demo or es_vip:
         tiempo_restante = (VIP_TEMPORAL[user_id] - ahora).seconds // 60 if es_vip else (DEMO_HOT[user_id] - ahora).seconds // 60
         if not es_vip and tiempo_restante <= 2:
-            await message.reply_text("Ay papi se me va a acabar el tiempo 😢\n\n*Si quieres seguir caliente conmigo...*\n\nCompra *PREMIUM* y seguimos sin corte 🔥", reply_markup=get_menu(), parse_mode='Markdown')
+            await message.reply_text(f"Ay {nombre} se nos acaba el tiempo 😢\n\n*Mándame PREMIUM ahora* y seguimos sin corte bebé 🔥", reply_markup=get_menu(), parse_mode='Markdown')
             return
-        if any(x in texto_lower for x in ['mas tiempo', 'más tiempo', 'otro', 'renovar', 'seguir']):
-            await message.reply_text("Bebé se me está acabando 😢\n\nSi quieres seguir calientito...\n*PREMIUM y seguimos* sin corte 🔥", reply_markup=get_menu(), parse_mode='Markdown')
-            return
-        elif es_vip and tiempo_restante <= 5:
-            await message.reply_text("Ay no papi ya me voy a tener que ir 😢\n\nAprovecha rápido\n\nQué quieres que haga antes? 💋\n\n*Otro PREMIUM = seguimos más* 🔥", parse_mode='Markdown')
-            return
-        if any(x in texto_lower for x in ['que haces', 'qué haces']):
-            await message.reply_text("nada acá 🙈 pensando en ti Xd y tú?", parse_mode='Markdown')
-            return
-        elif any(x in texto_lower for x in ['estas sola', 'estás sola']):
-            await message.reply_text("sip solita 😈 xq?", parse_mode='Markdown')
-            return
-        elif any(x in texto_lower for x in ['que tienes puesto', 'ropa', 'desnuda', 'calata']):
-            await message.reply_text("mmm nada papi 😏 solo mi collar... te gusta así? o me pongo algo pa ti? 💋", parse_mode='Markdown')
-            return
-        elif any(x in texto_lower for x in ['tocate', 'tócate', 'dedos', 'juega']):
-            await message.reply_text("ufff ya me estoy tocando papi 💦 pensando en ti... sigo o te grabo? 😈", parse_mode='Markdown')
-            return
-        elif any(x in texto_lower for x in ['muestra', 'muestrame', 'ver', 'foto', 'video']):
-            await message.reply_text("mmm quieres verme? 🥵 dime EXACTO qué quieres ver y te lo hago 💦", parse_mode='Markdown')
-            return
-        elif any(x in texto_lower for x in ['ganas', 'caliente', 'cachonda', 'mojada']):
-            await message.reply_text("ay papi estoy que ardo 🥵 toda mojada... qué me haces? 💦", parse_mode='Markdown')
-            return
-        elif any(x in texto_lower for x in ['pene', 'verga', 'pito', 'pinga']):
-            await message.reply_text("uff papi me gustan los p... 😏 cómo tienes el tuyo? cuéntame 💦 Xd", parse_mode='Markdown')
-            return
-        elif any(x in texto_lower for x in ['tamaño', 'grande', 'cm', 'mide']):
-            await message.reply_text("mmm me gustan grandes papi 😏 cuántos cm tienes? dime y te digo si me entra 💦", parse_mode='Markdown')
-            return
-        else:
-            await message.reply_text("No entendí bien amor 😅\n\nElige qué quieres ver:", reply_markup=get_menu(), parse_mode='Markdown')
+        if es_vip and tiempo_restante <= 5:
+            await message.reply_text(f"Papi {tiempo_restante} min y me tengo que ir 😢\n\nQué quieres que haga antes de irme? 🥵\n\n*Otro PREMIUM = me quedo más tiempo* 💋", parse_mode='Markdown')
             return
 
-    if any(x in texto_lower for x in ['precio', 'cuanto', 'cuánto', 'vale', 'costo', 'cuesta', 'peru', 'soles', 's/', 'sol']):
-        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
-        VIO_PRECIOS[user_id] = datetime.now()
-        asyncio.create_task(follow_up_task(context.application, user_id, username))
-        await message.reply_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
-    elif any(x in texto_lower for x in ['mexico', 'mxn', 'peso', 'méxico']):
-        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
-        VIO_PRECIOS[user_id] = datetime.now()
-        asyncio.create_task(follow_up_task(context.application, user_id, username))
-        await message.reply_text(MX_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
-    elif any(x in texto_lower for x in ['usd', 'usa', 'eeuu', 'dolar', 'dólar', 'estados unidos']):
-        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
-        VIO_PRECIOS[user_id] = datetime.now()
-        asyncio.create_task(follow_up_task(context.application, user_id, username))
-        await message.reply_text(USA_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
-    elif any(x in texto_lower for x in ['otro', 'internacional', 'colombia', 'argentina', 'chile', 'españa', 'venezuela']):
-        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
-        VIO_PRECIOS[user_id] = datetime.now()
-        asyncio.create_task(follow_up_task(context.application, user_id, username))
-        await message.reply_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
-    elif any(x in texto_lower for x in ['comprar', 'compra', 'pagar', 'pago', 'quiero', 'dame']):
-        await avisar_interes(context, user_id, username, texto, "QUIERE COMPRAR 🤑")
-        await message.reply_text("Sii bebé 😘 Elige tu país para ver precios:", reply_markup=get_menu(), parse_mode='Markdown')
-    else:
-        await message.reply_text("No entendí amor 😅\n\nElige una opción:", reply_markup=get_menu(), parse_mode='Markdown')
+    respuesta = respuesta_hot(texto, nombre, user_id)
+    await message.reply_text(respuesta, parse_mode='Markdown')
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -521,23 +451,13 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
     elif data == 'fotitos':
         try:
+            await query.answer("Cargando fotitos... 🔥")
             await query.delete_message()
-            fotos_enviadas = []
-            fotos_faltantes = []
-            
-            for i in range(1, 7):
-                nombre_archivo = f'fotitos{i}.JPG'
-                if os.path.exists(nombre_archivo):
-                    fotos_enviadas.append(InputMediaPhoto(open(nombre_archivo, 'rb')))
-                else:
-                    fotos_faltantes.append(nombre_archivo)
-            
-            if fotos_enviadas:
-                for i in range(0, len(fotos_enviadas), 3):
-                    await context.bot.send_media_group(chat_id=query.from_user.id, media=fotos_enviadas[i:i+3])
-                    await asyncio.sleep(1)
-                    
-                texto_exito = f"""📸 *TUS FOTITOS GRATIS BEBÉ* 🥺💋
+
+            ruta_base = os.path.dirname(os.path.abspath(__file__))
+            fotos_cargadas = []
+
+            caption_tiktok = """📸 *TUS FOTITOS GRATIS BEBÉ* 🥺💋
 
 ¿Te gustaron? 😏
 
@@ -549,39 +469,62 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 2️⃣ En tu bio pon: *Tg: yanabicitasa* ✨
 3️⃣ Sube una fotito a tu story + frasita hot 😋
 4️⃣ Comenta coshitas en videos hot, unos 30-100 👀
-   *Así generamos vistas juntos*
 5️⃣ Mándame captura + videito cuando termines
 6️⃣ *Disfruta tus 20 videitos* :3 ❤️‍🔥
 
-*¿Te animas o ño?* 🥺
-(Me avisas cuando cumplas mi rey)"""
-                await context.bot.send_message(chat_id=query.from_user.id, text=texto_exito, parse_mode='Markdown', disable_web_page_preview=True, reply_markup=get_menu())
+*¿Te animas o ño?* 🥺"""
 
-                if fotos_faltantes:
-                    await context.bot.send_message(chat_id=ADMIN_ID, text=f"⚠️ *FOTOS FALTANTES*\n\nNo encontré: {', '.join(fotos_faltantes)}\n\nSúbelas a Render bebé", parse_mode='Markdown')
+            for i in range(1, 7):
+                nombre_archivo = f'fotitos{i}.JPG'
+                ruta_completa = os.path.join(ruta_base, nombre_archivo)
+
+                if os.path.isfile(ruta_completa):
+                    try:
+                        with open(ruta_completa, 'rb') as foto:
+                            if i == 1:
+                                fotos_cargadas.append(InputMediaPhoto(
+                                    media=foto.read(),
+                                    caption=caption_tiktok,
+                                    parse_mode='Markdown'
+                                ))
+                            else:
+                                fotos_cargadas.append(InputMediaPhoto(media=foto.read()))
+                    except Exception as e:
+                        logger.error(f"Error foto {i}: {e}")
+
+            if fotos_cargadas:
+                await context.bot.send_media_group(
+                    chat_id=query.from_user.id,
+                    media=fotos_cargadas
+                )
+                await context.bot.send_message(
+                    chat_id=query.from_user.id,
+                    text="Elige qué quieres ahora bebé 🔥",
+                    reply_markup=get_menu()
+                )
             else:
-                await context.bot.send_message(chat_id=query.from_user.id, text=f"""📸 *FOTITOS GRATIS BEBÉ* 🥺💋
-
-Ay bebé, estoy subiendo las fotitos nuevas Xd
-
-*Mientras tanto entra a mi canal:* {LINK_REGALITOS}
-
-✨ *QUIERES HASTA 20 VIDEITOS GRATIS?* ✨
-*Es por promocionarme en TikTok* ✅
-
-*Pasitos súper fáciles uwu:*
-1️⃣ Ponte un nombrecito + fotito tierna <33
-2️⃣ En tu bio pon: *Tg: yanabicitasa* ✨
-3️⃣ Sube una fotito a tu story + frasita hot 😋
-4️⃣ Comenta coshitas en videos hot, unos 30-100 👀
-5️⃣ Mándame captura + videito cuando termines
-6️⃣ *Disfruta tus 20 videitos* :3 ❤️‍🔥""", parse_mode='Markdown', disable_web_page_preview=True, reply_markup=get_menu())
-
-                await context.bot.send_message(chat_id=ADMIN_ID, text="❌ *ERROR CRÍTICO*\n\nNo hay NINGUNA fotito en el servidor\n\nSube fotitos1.JPG hasta fotitos6.JPG a Render", parse_mode='Markdown')
+                await context.bot.send_message(
+                    chat_id=query.from_user.id,
+                    text=f"📸 *FOTITOS GRATIS BEBÉ* 🥺💋\n\n"
+                         f"Ay bebé, estoy subiendo fotitos nuevas Xd\n\n"
+                         f"*Mientras entra a mi canal:* {LINK_REGALITOS}\n\n"
+                         f"✨ *O GANA 20 VIDEITOS GRATIS* ✨\n"
+                         f"Promocionándome en TikTok 🥺",
+                    parse_mode='Markdown',
+                    disable_web_page_preview=True,
+                    reply_markup=get_menu()
+                )
 
         except Exception as e:
-            logger.error(f"Error enviando fotitos: {e}")
-            await context.bot.send_message(chat_id=query.from_user.id, text=f"Ay bebé hubo un error 😢\n\nMejor entra directo a mi canal 👉 {LINK_REGALITOS}", reply_markup=get_volver())
+            logger.error(f"ERROR FOTITOS: {e}")
+            try:
+                await context.bot.send_message(
+                    chat_id=query.from_user.id,
+                    text=f"Ups bebé 😢 Error cargando fotos\n\nMejor entra a mi canal 👉 {LINK_REGALITOS}",
+                    reply_markup=get_volver()
+                )
+            except:
+                pass
     elif data == 'volver':
         await query.edit_message_text("Elige tu país para ver precios bebé:", reply_markup=get_menu(), parse_mode='Markdown')
 
@@ -595,7 +538,6 @@ async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15)
     PAGARON.add(user_id)
     DEMO_HOT.pop(user_id, None)
-    asyncio.create_task(auto_tease_task(context.application, user_id, 600, "vip"))
     await context.bot.send_message(user_id, "✅ *VIP ACTIVADO* 😈\n\nTienes *15 minutos* conmigo bebé\n\nHáblame rico 🔥")
     await update.message.reply_text(f"✅ VIP activado para {user_id}")
 
@@ -608,9 +550,7 @@ async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto = "📊 *USUARIOS REGISTRADOS* 📊\n\n"
     for uid, data in USUARIOS.items():
         estado = "💰 PAGÓ" if data['pago'] else "🔥 VIP" if data['es_vip'] else "💦 DEMO" if data['demo_usada'] else "👀 NUEVO"
-        texto += f"👤 {data['nombre']} @{data['username']}\n"
-        texto += f"🆔 `{uid}` | {estado}\n"
-        texto += f"⏰ {data['ultimo_mensaje']}\n\n"
+        texto += f"👤 {data['nombre']} @{data['username']}\n🆔 `{uid}` | {estado}\n⏰ {data['ultimo_mensaje']}\n\n"
     texto += f"*Total: {len(USUARIOS)} usuarios*"
     await update.message.reply_text(texto, parse_mode='Markdown')
 
@@ -634,7 +574,7 @@ def main():
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
     app.add_error_handler(error_handler)
-    logger.info("BOT PRENDIDO - AVISOS DE VENTA ACTIVOS ✅")
+    logger.info("BOT PRENDIDO - MODO HOT 24/7 ACTIVO ✅")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
