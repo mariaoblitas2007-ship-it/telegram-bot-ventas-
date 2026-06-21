@@ -6,7 +6,7 @@ from pagos import PAGOS
 from videos_gratis import COMO_GANAR_GRATIS, FOTOS_GRATIS
 from canal import CANAL_TELEGRAM
 
-TOKEN = os.getenv("8751695788:AAHk2RU2r5Ohjdb6nYUffSZBrFW1DxawYcs")
+TOKEN = os.getenv("8751695788:AAENlUN4KTzaBmVNdbDf3AAr0kmro3pM6VI")
 ADMIN_ID = 8783569348 # Tu ID para recibir notificaciones
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
