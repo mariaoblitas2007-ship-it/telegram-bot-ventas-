@@ -552,12 +552,4 @@ async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Uso: /vip ID_DEL_CLIENTE")
         return
     user_id = int(context.args[0])
-    VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15)
-    PAGARON.add(user_id)
-    DEMO_HOT.pop(user_id, None)
-    asyncio.create_task(auto_tease_task(context.application, user_id, 600, "vip"))
-    await context.bot.send_message(user_id, "✅ *VIP ACTIVADO* 😈\n\nTienes *15 minutos* conmigo bebé\n\nHáblame rico 🔥")
-    await update.message.reply_text(f"✅ VIP activado para {user_id}")
-
-async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id!= ADMIN_ID:
+    VIP_TEMPORAL[user_id
