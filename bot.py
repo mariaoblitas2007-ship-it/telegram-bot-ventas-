@@ -29,7 +29,6 @@ VIO_PRECIOS = {}
 FOLLOWUP_ENVIADO = set()
 ULTIMAS_3_RESPUESTAS = {}
 
-# FOTOS PARA EL BOTÓN GRATIS
 FOTOS_GRATIS = [
     "fotitos1.JPG", "fotitos2.JPG", "fotitos3.JPG",
     "fotitos4.JPG", "fotitos5.JPG", "fotitos6.JPG"
@@ -204,101 +203,14 @@ async def follow_up_task(app, user_id, username):
         return
     FOLLOWUP_ENVIADO.add(user_id)
     mensajes = [
-        f"Oye {username} 😊 ¿sigues ahí? Si compras TOP te doy 2 unidades extra 🎁",
-        f"Psst 👉👈 con PREMIUM te agrego un bonus exclusivo ✨",
-        f"Hola 🥺 te espero... con TOP te mando algo especial de regalo 🎁"
+        f"Oye {username} 😏 ¿sigues ahí? Si compras TOP te doy 2 unidades extra 🎁",
+        f"Psst 👉👈 con PREMIUM te agrego un bonus que te va a encantar ✨",
+        f"Hola 🥺 te espero... con TOP te mando algo especial 🙈"
     ]
     try:
         await app.bot.send_message(chat_id=user_id, text=random.choice(mensajes), reply_markup=get_menu(), parse_mode='Markdown')
     except:
         pass
-
-def respuesta_bot(texto_original, nombre, user_id):
-    texto = normalizar(texto_original)
-
-    def no_repetir(opciones):
-        historial = ULTIMAS_3_RESPUESTAS.get(user_id, [])
-        opciones_filtradas = [r for r in opciones if r not in historial]
-        if not opciones_filtradas:
-            opciones_filtradas = opciones
-            historial = []
-        respuesta = random.choice(opciones_filtradas)
-        historial.append(respuesta)
-        ULTIMAS_3_RESPUESTAS[user_id] = historial[-3:]
-        return respuesta
-
-    if any(x in texto for x in ['hola', 'ola', 'buenas', 'hey', 'wenas', 'info', 'buenos dias']):
-        return no_repetir([
-            f"¡Holaaa {nombre}! 😊✨ ¿Cómo estás? Bienvenido/a 💕",
-            f"Holis {nombre} 🥰 ¿En qué te puedo consentir hoy?",
-            f"Heyyy {nombre} 😄👋 ¿Qué se te ofrece?",
-            f"¡Buenaaas {nombre}! 😘 ¿Listo/a para ver cositas?",
-            f"Ola ola {nombre} 🙈✨ ¿Qué buscas hoy?"
-        ])
-
-    if any(x in texto for x in ['que haces', 'q haces', 'haciendo']):
-        return no_repetir([
-            f"Acá {nombre} 😊💕 atendiendo a mis amores. ¿Y tú?",
-            f"Ayudando clientes 🙈✨ ¿tú cómo andas?",
-            f"Esperándote {nombre} 😄💕 ¿en qué te ayudo?",
-            f"Acá activísima 🥰 ¿Qué necesitas?"
-        ])
-
-    if any(x in texto for x in ['muestra', 'muestrame', 'ver', 'foto', 'info', 'detalles', 'ensena']):
-        return no_repetir([
-            f"Obvio {nombre} 😏✨ dime... ¿qué pack te tienta más? 🔥",
-            f"Claro cielo 😘 ¿cuál quieres chismear primero?",
-            f"Uyyy {nombre} 🙈 ¿TOP o PREMIUM?",
-            f"Siii {nombre} 😄 ¿sobre qué pack quieres saber? 👇",
-            f"Ya {nombre} 😏 dime cuál te llama y te paso detalles"
-        ])
-
-    if any(x in texto for x in ['precio', 'cuanto', 'vale', 'costo', 'cuesta']):
-        return no_repetir([
-            f"Ya te los paso {nombre} 😘👇 son precios de infarto 💸",
-            f"Toma {nombre} 😄✨ mis packs más pedidos. ¿Cuál te tienta?",
-            f"Aquí tienes cielo 😏👇 mira qué ofertón",
-            f"Listo {nombre} 🙈 estos son mis precios. ¿Con cuál te quedas?"
-        ])
-
-    if any(x in texto for x in ['comprar', 'compro', 'quiero', 'pago', 'pagare', 'llevo']):
-        return no_repetir([
-            f"¡Siii {nombre}! 😍🔥 Me encanta. Elige tu pack 👇",
-            f"Así me gusta {nombre} 😏 decídete rápido 🙈",
-            f"¡Obvio cielo! 😘 ¿Cuál te llevas? 👇",
-            f"Perfecto {nombre} ✨ dime cuál y cerramos al toque"
-        ])
-
-    if any(x in texto for x in ['gracias', 'ok', 'vale', 'bueno', 'dale', 'listo']):
-        return no_repetir([
-            f"De nada mi {nombre} 😘✨ Para eso estoy",
-            f"A ti cielo 😄💕 me gritas cualquier cosa ¿ya?",
-            f"Okis {nombre} 😏 acá me quedo por si cambias de opinión 🙈",
-            f"Vale {nombre} 😄 que tengas un día hermoso ✨"
-        ])
-
-    if any(x in texto for x in ['jaja', 'xd', 'jiji', 'jsjs', 'lol', 'jeje']):
-        return no_repetir([
-            f"Jajaja 😄 me alegraste el día {nombre}. ¿Vemos los packs? 😏",
-            f"Jijiji 🙈✨ me encanta tu risa. ¿Te ayudo?",
-            f"Jsjsjs {nombre} 😘 eres un/una loquill@. ¿Qué necesitas?"
-        ])
-
-    if any(x in texto for x in ['adios', 'chao', 'chau', 'bye', 'nos vemos']):
-        return no_repetir([
-            f"¡Chau {nombre}! 😊 Vuelve cuando quieras 💕",
-            f"Nos vemos {nombre} 👋 que estés bien",
-            f"Adiós {nombre} ✨ aquí estaré si me necesitas"
-        ])
-
-    return no_repetir([
-        f"Dime {nombre} 😊 ¿En qué te ayudo hoy?",
-        f"Estoy aquí {nombre} ✨ ¿Qué necesitas saber?",
-        f"Cuéntame {nombre} 👇 ¿Qué estás buscando?",
-        f"{nombre} 😄 pregúntame lo que quieras",
-        f"Hola {nombre} 🙌 ¿Vemos los packs disponibles?",
-        f"Soy tu asesora {nombre} 😊 ¿Qué te interesa?"
-    ])
 
 async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message or update.business_message
@@ -317,11 +229,12 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text(f"¡Pago confirmado {nombre}! 😊\n\n✅ *LISTO*\n\n📩 *Escríbeme al privado*\n👉 {USERNAME_ADMIN}\n\nAhí coordinamos tu pedido", parse_mode='Markdown')
         return
 
-    # START SIN MENSAJE DE 10 MIN
+    # START NUEVO - MÁS HOT Y SIN "ASESORA"
     if message.text and message.text.lower() == '/start':
         DEMO_USADO.add(user_id)
-        await message.reply_text(f"¡Hola {nombre}! 😊 Bienvenido/a", parse_mode='Markdown')
-        await message.reply_text("Elige tu país para ver precios:", reply_markup=get_menu(), parse_mode='Markdown')
+        saludo = f"Mmmm {nombre}... 😏✨ llegaste justo cuando te pensaba 🙈"
+        await message.reply_text(saludo, parse_mode='Markdown')
+        await message.reply_text("¿Qué se te antoja hoy? 👇", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
     if message.photo:
@@ -352,11 +265,13 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     ULTIMO_MENSAJE[user_id] = texto.lower()
 
-    if any(x in normalizar(texto) for x in ['comprar', 'compro', 'quiero', 'pago', 'pagare']):
+    # DETECTA INTENCIÓN DE COMPRA
+    if any(x in normalizar(texto) for x in ['comprar', 'compro', 'quiero', 'pago', 'pagare', 'llevo', 'lo quiero']):
         await avisar_interes(context, user_id, username, texto, "QUIERE COMPRAR YA 🤑")
-        await message.reply_text(f"Perfecto {nombre} 😊 Elige tu opción:", reply_markup=get_menu(), parse_mode='Markdown')
+        await message.reply_text(f"¡Así me gusta {nombre}! 😍🔥 Elige tu pack 👇", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
+    # DETECTA PRECIOS
     if any(x in normalizar(texto) for x in ['precio', 'cuanto', 'vale', 'costo', 'cuesta', 'peru', 'soles']):
         await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
         VIO_PRECIOS[user_id] = datetime.now()
@@ -390,8 +305,8 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await message.reply_text(f"{nombre}, {tiempo_restante} min y me tengo que ir 😢\n\n¿Qué necesitas antes de irme? ✨", parse_mode='Markdown')
             return
 
-    respuesta = respuesta_bot(texto, nombre, user_id)
-    await message.reply_text(respuesta, parse_mode='Markdown')
+    # SI NO ENTIENDE NADA: SOLO MANDA LOS BOTONES SIN SPAM
+    await message.reply_text("Elige una opción 😏👇", reply_markup=get_menu(), parse_mode='Markdown')
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -425,7 +340,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=user_id, text="¡Listo! 😊 Sigue los pasos y me avisas", reply_markup=get_volver())
 
     elif data == 'volver':
-        await query.edit_message_text("Elige tu país para ver precios:", reply_markup=get_menu(), parse_mode='Markdown')
+        await query.edit_message_text("¿Qué se te antoja hoy? 👇", reply_markup=get_menu(), parse_mode='Markdown')
 
 async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id!= ADMIN_ID:
@@ -447,7 +362,7 @@ async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     texto = "📊 *USUARIOS REGISTRADOS* 📊\n\n"
     for uid, data in USUARIOS.items():
-        estado = "💰 PAGÓ" if data['pago'] else "🔥 VIP" if data['es_vip'] else "💦 DEMO" if data['demo_usada'] else "👀 NUEVO"
+        estado = "💰 PAGÓ" if data['pago'] else "🔥 VIP" if data['es_vip'] else "👀 NUEVO"
         texto += f"👤 {data['nombre']} @{data['username']}\n🆔 `{uid}` | {estado}\n⏰ {data['ultimo_mensaje']}\n\n"
     texto += f"*Total: {len(USUARIOS)} usuarios*"
     await update.message.reply_text(texto, parse_mode='Markdown')
