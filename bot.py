@@ -20,7 +20,6 @@ USERNAME_ADMIN = "@yanabicitasa"
 LINK_CANAL = "https://t.me/+ZWc0FAcw-hQ2MDZh"
 LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 
-DEMO_HOT = {}
 VIP_TEMPORAL = {}
 DEMO_USADO = set()
 USUARIOS = {}
@@ -230,7 +229,7 @@ def respuesta_bot(texto_original, nombre, user_id):
 
     if any(x in texto for x in ['hola', 'ola', 'buenas', 'hey', 'wenas', 'info', 'buenos dias']):
         return no_repetir([
-            f"¡Holaaa {nombre}! 😊✨ ¿Cómo amaneciste? Bienvenido/a 💕",
+            f"¡Holaaa {nombre}! 😊✨ ¿Cómo estás? Bienvenido/a 💕",
             f"Holis {nombre} 🥰 ¿En qué te puedo consentir hoy?",
             f"Heyyy {nombre} 😄👋 ¿Qué se te ofrece?",
             f"¡Buenaaas {nombre}! 😘 ¿Listo/a para ver cositas?",
@@ -318,15 +317,10 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text(f"¡Pago confirmado {nombre}! 😊\n\n✅ *LISTO*\n\n📩 *Escríbeme al privado*\n👉 {USERNAME_ADMIN}\n\nAhí coordinamos tu pedido", parse_mode='Markdown')
         return
 
+    # START SIN MENSAJE DE 10 MIN
     if message.text and message.text.lower() == '/start':
-        es_nuevo = user_id not in DEMO_USADO
-        if es_nuevo:
-            DEMO_USADO.add(user_id)
-            DEMO_HOT[user_id] = datetime.now() + timedelta(minutes=10)
-            saludo = f"¡Hola {nombre}! 😊 Bienvenido/a\n\n*Soy tu asesora online*\n\n*Tienes 10 min de atención prioritaria gratis* ✨\nAprovecha para consultar lo que quieras"
-            await message.reply_text(saludo, parse_mode='Markdown')
-        else:
-            await message.reply_text(f"¡Hola de nuevo {nombre}! 😊\n\nYa usaste tu demo, pero puedes ver los packs 👇", parse_mode='Markdown')
+        DEMO_USADO.add(user_id)
+        await message.reply_text(f"¡Hola {nombre}! 😊 Bienvenido/a", parse_mode='Markdown')
         await message.reply_text("Elige tu país para ver precios:", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
@@ -389,14 +383,10 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     es_vip = user_id in VIP_TEMPORAL and VIP_TEMPORAL[user_id] > ahora
-    es_demo = user_id in DEMO_HOT and DEMO_HOT[user_id] > ahora
 
-    if es_demo or es_vip:
-        tiempo_restante = (VIP_TEMPORAL[user_id] - ahora).seconds // 60 if es_vip else (DEMO_HOT[user_id] - ahora).seconds // 60
-        if not es_vip and tiempo_restante <= 2:
-            await message.reply_text(f"{nombre} se nos acaba el tiempo 😢\n\n*Mira el PREMIUM ahora* y seguimos sin corte ✨", reply_markup=get_menu(), parse_mode='Markdown')
-            return
-        if es_vip and tiempo_restante <= 5:
+    if es_vip:
+        tiempo_restante = (VIP_TEMPORAL[user_id] - ahora).seconds // 60
+        if tiempo_restante <= 5:
             await message.reply_text(f"{nombre}, {tiempo_restante} min y me tengo que ir 😢\n\n¿Qué necesitas antes de irme? ✨", parse_mode='Markdown')
             return
 
@@ -446,7 +436,6 @@ async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = int(context.args[0])
     VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15)
     PAGARON.add(user_id)
-    DEMO_HOT.pop(user_id, None)
     await context.bot.send_message(user_id, "✅ *CHAT VIP ACTIVADO* 😊\n\nTienes *15 minutos* de atención prioritaria\n\nPregúntame lo que quieras ✨")
     await update.message.reply_text(f"✅ VIP activado para {user_id}")
 
