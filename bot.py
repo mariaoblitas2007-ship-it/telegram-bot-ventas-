@@ -538,4 +538,4 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 (Me avisas cuando cumplas mi rey)""", parse_mode='Markdown', disable_web_page_preview=True, reply_markup=get_menu())
         except Exception as e:
             logger.error(f"Error enviando fotitos: {e}")
-            await context.bot.send_message(chat_id=query.from
+           
