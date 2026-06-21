@@ -552,4 +552,43 @@ async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Uso: /vip ID_DEL_CLIENTE")
         return
     user_id = int(context.args[0])
-    VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15
+    VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15)
+    PAGARON.add(user_id)
+    DEMO_HOT.pop(user_id, None)
+    asyncio.create_task(auto_tease_task(context.application, user_id, 600, "vip"))
+    await context.bot.send_message(user_id, "✅ *VIP ACTIVADO* 😈\n\nTienes *15 minutos* conmigo bebé\n\nHáblame rico 🔥")
+    await update.message.reply_text(f"✅ VIP activado para {user_id}")
+
+async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id!= ADMIN_ID:
+        return
+    if not USUARIOS:
+        await update.message.reply_text("No hay usuarios aún")
+        return
+    texto = "📊 *USUARIOS REGISTRADOS* 📊\n\n"
+    for uid, data in USUARIOS.items():
+        estado = "💰 PAGÓ" if data['pago'] else "🔥 VIP" if data['es_vip'] else "💦 DEMO" if data['demo_usada'] else "👀 NUEVO"
+        texto += f"👤 {data['nombre']} @{data['username']}\n"
+        texto += f"🆔 `{uid}` | {estado}\n"
+        texto += f"⏰ {data['ultimo_mensaje']}\n\n"
+    texto += f"*Total: {len(USUARIOS)} usuarios*"
+    await update.message.reply_text(texto, parse_mode='Markdown')
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    if isinstance(context.error, Conflict):
+        logger.error("⚠️ Conflicto: Otro bot está corriendo. Detenlo en Render/otros sitios")
+    else:
+        logger.error(f"Error: {context.error}", exc_info=context.error)
+
+def main():
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler('vip', vip))
+    app.add_handler(CommandHandler('usuarios', usuarios))
+    app.add_handler(CallbackQueryHandler(button))
+    app.add_handler(MessageHandler(filters.ALL, manejar_todo))
+    app.add_error_handler(error_handler)
+    logger.info("BOT PRENDIDO - AVISOS DE VENTA ACTIVOS ✅")
+    app.run_polling(drop_pending_updates=True)
+
+if __name__ == '__main__':
+    main()
