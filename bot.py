@@ -27,14 +27,12 @@ PAGARON = set()
 ULTIMO_MENSAJE = {}
 VIO_PRECIOS = {}
 FOLLOWUP_ENVIADO = set()
-ULTIMAS_3_RESPUESTAS = {}
 
 FOTOS_GRATIS = [
     "fotitos1.JPG", "fotitos2.JPG", "fotitos3.JPG",
     "fotitos4.JPG", "fotitos5.JPG", "fotitos6.JPG"
 ]
 
-# === PRECIOS PERÚ ===
 PE_PRECIOS = """
 🛍 *PACKS DISPONIBLES - PERÚ* 🇵🇪
 
@@ -60,7 +58,6 @@ S/ 80: 20 min
 1. Yapeas 2. Captura
 """
 
-# === PRECIOS MÉXICO ===
 MX_PRECIOS = """
 🛍 *PACKS DISPONIBLES - MÉXICO* 🇲🇽
 
@@ -90,7 +87,6 @@ $600 MXN: 20 min
 Mándame captura cuando pagues 😊
 """
 
-# === PRECIOS USA/USD ===
 USA_PRECIOS = """
 🛍 *PACKS DISPONIBLES - USA* 🇺🇸
 
@@ -123,7 +119,6 @@ Community Federal Savings Bank
 Avísame cuando envíes con el comprobante 😊
 """
 
-# === PRECIOS INTERNACIONAL ===
 OTRO_PRECIOS = f"""
 🛍 *PACKS DISPONIBLES - INTERNACIONAL* 🌎
 
@@ -141,7 +136,6 @@ $20 USD: 10 min | $30 USD: 20 min
 Avísame cuando envíes con el comprobante 😊
 """
 
-# === TEXTO BOTÓN GRATIS ===
 TEXTO_GRATIS = """
 🎁 *BONUS GRATIS* 😊
 
@@ -184,18 +178,25 @@ def registrar_usuario(user):
         'username': user.username or "sin_username",
         'ultimo_mensaje': datetime.now().strftime('%d/%m %H:%M'),
         'demo_usada': user.id in DEMO_USADO,
-        'es_vip': user.id in VIP_TEMPORAL and VIP_TEMPORAL[user.id] > datetime.now(),
+        'es_vip': user.id in VIP_TEMPORAL and VIP_TEMPORAL[user_id] > datetime.now(),
         'pago': user.id in PAGARON
     }
 
-async def avisar_interes(context, user_id, username, mensaje, tipo="INTERÉS"):
+async def avisar_pago(context, user_id, username, nombre, foto_id):
     try:
-        username_safe = str(username).replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
-        mensaje_safe = str(mensaje)[:100].replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
-        texto = f"🔥 *{tipo} DE COMPRA* 🔥\n\n👤 @{username_safe}\n🆔 `{user_id}`\n💬 Mensaje: `{mensaje_safe}`\n⏰ {datetime.now().strftime('%H:%M:%S')}\n\nHáblale rápido 🤑"
-        await context.bot.send_message(chat_id=ADMIN_ID, text=texto, parse_mode='Markdown')
-    except:
-        pass
+        username_display = f"@{username}" if username!= "sin_username" else f"{nombre}"
+        link_chat = f"tg://user?id={user_id}"
+
+        caption = f"💰 *PAGO RECIBIDO* 💰\n\n" \
+                  f"👤 {username_display}\n" \
+                  f"🆔 `{user_id}`\n" \
+                  f"⏰ {datetime.now().strftime('%H:%M:%S')}\n\n" \
+                  f"👉 [Escribirle al cliente]({link_chat})\n\n" \
+                  f"*Cliente enviado a tu privado* ✅"
+
+        await context.bot.send_photo(chat_id=ADMIN_ID, photo=foto_id, caption=caption, parse_mode='Markdown')
+    except Exception as e:
+        logger.error(f"Error enviando pago: {e}")
 
 async def follow_up_task(app, user_id, username):
     await asyncio.sleep(1800)
@@ -211,6 +212,17 @@ async def follow_up_task(app, user_id, username):
         await app.bot.send_message(chat_id=user_id, text=random.choice(mensajes), reply_markup=get_menu(), parse_mode='Markdown')
     except:
         pass
+
+async def enviar_gratis(chat_id, context):
+    await context.bot.send_message(chat_id=chat_id, text=TEXTO_GRATIS, parse_mode='Markdown')
+    for foto in FOTOS_GRATIS:
+        try:
+            with open(foto, 'rb') as f:
+                await context.bot.send_photo(chat_id=chat_id, photo=f)
+            await asyncio.sleep(0.5)
+        except Exception as e:
+            logger.error(f"No se pudo enviar {foto}: {e}")
+    await context.bot.send_message(chat_id=chat_id, text="¡Listo! 😊 Sigue los pasos y me avisas", reply_markup=get_volver())
 
 async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message or update.business_message
@@ -229,7 +241,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text(f"¡Pago confirmado {nombre}! 😊\n\n✅ *LISTO*\n\n📩 *Escríbeme al privado*\n👉 {USERNAME_ADMIN}\n\nAhí coordinamos tu pedido", parse_mode='Markdown')
         return
 
-    # START NUEVO - MÁS HOT Y SIN "ASESORA"
     if message.text and message.text.lower() == '/start':
         DEMO_USADO.add(user_id)
         saludo = f"Mmmm {nombre}... 😏✨ llegaste justo cuando te pensaba 🙈"
@@ -237,9 +248,11 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("¿Qué se te antoja hoy? 👇", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
+    # SOLO NOTIFICA SI ES FOTO = PAGO
     if message.photo:
         PAGARON.add(user_id)
-        await avisar_interes(context, user_id, username, "ENVÍO CAPTURA DE PAGO", "PAGO RECIBIDO 💰")
+        foto_id = message.photo[-1].file_id
+        await avisar_pago(context, user_id, username, nombre, foto_id)
         await message.reply_text(
             f"✅ *PAGO RECIBIDO* 😊\n\n"
             f"Gracias {nombre}\n\n"
@@ -249,11 +262,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"*No lo gestiono por aquí por seguridad*",
             parse_mode='Markdown'
         )
-        try:
-            caption = f"💰 *NUEVA CAPTURA - PAGO CONFIRMADO*\n\n👤 @{username}\n🆔 `{user_id}`\n⏰ {ahora.strftime('%H:%M:%S')}\n\n*Cliente enviado a tu privado* ✅"
-            await context.bot.send_photo(chat_id=ADMIN_ID, photo=message.photo[-1].file_id, caption=caption, parse_mode='Markdown')
-        except Exception as e:
-            logger.error(f"Error reenviando: {e}")
         return
 
     if not message.text:
@@ -265,33 +273,31 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     ULTIMO_MENSAJE[user_id] = texto.lower()
 
-    # DETECTA INTENCIÓN DE COMPRA
+    # NUEVO: SI ESCRIBE "GRATIS" LE MANDA EL MENSAJE + FOTOS
+    if any(x in normalizar(texto) for x in ['gratis', 'free', 'regalo', 'bonus', 'muestra gratis']):
+        await enviar_gratis(user_id, context)
+        return
+
     if any(x in normalizar(texto) for x in ['comprar', 'compro', 'quiero', 'pago', 'pagare', 'llevo', 'lo quiero']):
-        await avisar_interes(context, user_id, username, texto, "QUIERE COMPRAR YA 🤑")
         await message.reply_text(f"¡Así me gusta {nombre}! 😍🔥 Elige tu pack 👇", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
-    # DETECTA PRECIOS
     if any(x in normalizar(texto) for x in ['precio', 'cuanto', 'vale', 'costo', 'cuesta', 'peru', 'soles']):
-        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
         VIO_PRECIOS[user_id] = datetime.now()
         asyncio.create_task(follow_up_task(context.application, user_id, username))
         await message.reply_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
         return
     elif any(x in normalizar(texto) for x in ['mexico', 'mxn', 'peso']):
-        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
         VIO_PRECIOS[user_id] = datetime.now()
         asyncio.create_task(follow_up_task(context.application, user_id, username))
         await message.reply_text(MX_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
         return
     elif any(x in normalizar(texto) for x in ['usd', 'usa', 'eeuu', 'dolar', 'estados unidos']):
-        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
         VIO_PRECIOS[user_id] = datetime.now()
         asyncio.create_task(follow_up_task(context.application, user_id, username))
         await message.reply_text(USA_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
         return
     elif any(x in normalizar(texto) for x in ['otro', 'internacional', 'colombia', 'argentina', 'chile', 'mundial']):
-        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
         VIO_PRECIOS[user_id] = datetime.now()
         asyncio.create_task(follow_up_task(context.application, user_id, username))
         await message.reply_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
@@ -305,7 +311,7 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await message.reply_text(f"{nombre}, {tiempo_restante} min y me tengo que ir 😢\n\n¿Qué necesitas antes de irme? ✨", parse_mode='Markdown')
             return
 
-    # SI NO ENTIENDE NADA: SOLO MANDA LOS BOTONES SIN SPAM
+    # SI NO ENTIENDE: SOLO BOTONES
     await message.reply_text("Elige una opción 😏👇", reply_markup=get_menu(), parse_mode='Markdown')
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -313,12 +319,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     data = query.data
     user_id = query.from_user.id
-    username = query.from_user.username or "sin_username"
-
-    if data in ['pe', 'mx', 'usa', 'otro']:
-        await avisar_interes(context, user_id, username, f"Tocó botón: {data.upper()}", "VIO PRECIOS 👀")
-        VIO_PRECIOS[user_id] = datetime.now()
-        asyncio.create_task(follow_up_task(context.application, user_id, username))
 
     if data == 'pe':
         await query.edit_message_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
