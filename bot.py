@@ -1,237 +1,490 @@
 import os
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
+import sys
+import asyncio
+import random
+import logging
+import unicodedata
+import signal
+from datetime import datetime, timedelta
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, MessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes
+from telegram.error import Conflict
 
-TOKEN = os.getenv("8751695788:AAENlUN4KTzaBmVNdbDf3AAr0kmro3pM6VI")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+TOKEN = '8751695788:AAENlUN4KTzaBmVNdbDf3AAr0kmro3pM6VI'
 ADMIN_ID = 8783569348
+USERNAME_ADMIN = "@yanabicitasa"
 
-# ===== PRECIOS =====
-PRECIOS = {
-    "peru": {
-        "bandera": "🇵🇪",
-        "nombre": "Perú",
-        "basico": {"precio": "S/ 15", "detalle": "5 vds | S/ 3 c/u"},
-        "top": {"precio": "S/ 30", "detalle": "12 vds | S/ 2.50 c/u", "tag": "MÁS VENDIDO", "ahorro": "Ahorras 50%"},
-        "premium": {"precio": "S/ 60", "detalle": "1 personalizado + 20 vds\n→ incluye sexting 🥰", "ahorro": "Ahorras 67%"},
-        "videollamada_10": "S/ 60: 10 min",
-        "videollamada_20": "S/ 80: 20 min"
-    },
-    "mexico": {
-        "bandera": "🇲🇽",
-        "nombre": "México",
-        "basico": {"precio": "$100 MXN", "detalle": "5 vds | $20 c/u"},
-        "top": {"precio": "$200 MXN", "detalle": "12 vds | $16 c/u", "tag": "MÁS VENDIDO", "ahorro": "Ahorras 50%"},
-        "premium": {"precio": "$400 MXN", "detalle": "1 personalizado + 20 vds\n→ incluye sexting 🥰", "ahorro": "Ahorras 80%"},
-        "videollamada_10": "$400 MXN: 10 min",
-        "videollamada_20": "$600 MXN: 20 min"
-    },
-    "eeuu": {
-        "bandera": "🇺🇸",
-        "nombre": "Estados Unidos",
-        "basico": {"precio": "$5 USD", "detalle": "5 vds | $1 c/u"},
-        "top": {"precio": "$9 USD", "detalle": "12 vds | $0.75 c/u", "tag": "MÁS VENDIDO", "ahorro": "Ahorras 50%"},
-        "premium": {"precio": "$20 USD", "detalle": "1 personalizado + 20 vds\n→ incluye sexting 🥰", "ahorro": "Ahorras 60%"},
-        "videollamada_10": "$20 USD: 10 min",
-        "videollamada_20": "$30 USD: 20 min"
-    },
-    "mundial": {
-        "bandera": "🌎",
-        "nombre": "Todo el mundo",
-        "basico": {"precio": "$5 USD", "detalle": "5 vds | $1 c/u"},
-        "top": {"precio": "$9 USD", "detalle": "12 vds | $0.75 c/u", "tag": "MÁS VENDIDO", "ahorro": "Ahorras 50%"},
-        "premium": {"precio": "$20 USD", "detalle": "1 personalizado + 20 vds\n→ incluye sexting 🥰", "ahorro": "Ahorras 60%"},
-        "videollamada_10": "$20 USD: 10 min",
-        "videollamada_20": "$30 USD: 20 min"
-    }
-}
+LINK_CANAL = "https://t.me/+ZWc0FAcw-hQ2MDZh"
+LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 
-# ===== PAGOS =====
-PAGOS = {
-    "peru": {
-        "metodo": "YAPE/PLIN",
-        "numero": "923553612",
-        "instrucciones": "1. Yapeas 2. Captura\nCUENTO CON REFERENCIAS"
-    },
-    "mexico": {
-        "banco": "STP",
-        "clabe": "646180546711450910",
-        "concepto": "yanae",
-        "otros": "🇲🇽 También acepto: Transfer / Astropay\n→ Pídeme datos si usas otro método",
-        "instrucciones": "1. Pagas 2. Captura\nMándame captura cuando pagues bebé 🥰\nEn cuanto caiga te mando tu pack 🔥"
-    },
-    "eeuu": {
-        "paypal": "AbigailMaximoofO",
-        "paypal_qr": "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE",
-        "usdt": "Disponible",
-        "banco_nombre": "Community Federal Savings Bank",
-        "banco_direccion": "5 Penn Plaza, 14th Floor\nNew York, NY 10001, US",
-        "cuenta": "8338233469",
-        "routing": "026073150",
-        "tipo_cuenta": "Checking",
-        "instrucciones": "1. Pagas 2. Captura\nAvísame cuando envíes con el comprobante 🥰\nEn cuanto caiga te mando tu pack 🔥"
-    },
-    "mundial": {
-        "paypal": "AbigailMaximoofO",
-        "paypal_qr": "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE",
-        "usdt": "Disponible",
-        "instrucciones": "1. Pagas 2. Captura\nAvísame cuando envíes con el comprobante 🥰\nEn cuanto caiga te mando tu pack 🔥"
-    }
-}
+DEMO_HOT = {}
+VIP_TEMPORAL = {}
+DEMO_USADO = set()
+USUARIOS = {}
+PAGARON = set()
+ULTIMO_MENSAJE = {}
+VIO_PRECIOS = {}
+FOLLOWUP_ENVIADO = set()
+ULTIMAS_3_RESPUESTAS = {}
 
-# ===== VIDEOS GRATIS =====
-COMO_GANAR_GRATIS = """
-📸 *GRATIS* 🥺💋
-
-✨ *QUIERES HASTA 20 VIDEITOS GRATIS?* ✨
-Es por promocionarme en TikTok ✅
-
-*Pasitos súper fáciles uwu:*
-1️⃣ Ponte un nombrecito + fotito tierna <33
-2️⃣ En tu bio pon: `Tg: yanabicitasa` ✨
-3️⃣ Sube una fotito a tu story + frasita hot 😋
-4️⃣ Comenta coshitas en videos hot, unos 30-100 👀
-   Así generamos vistas juntos
-5️⃣ Mándame captura + videito cuando termines
-6️⃣ Disfruta de hasta 20 videitos :3 ❤️‍🔥
-
-¿Te animas o ño? 🥺
-(Me avisas cuando cumplas mi rey)
-"""
-
+# FOTOS PARA EL BOTÓN GRATIS
 FOTOS_GRATIS = [
-    "fotitos1.JPG",
-    "fotitos2.JPG", 
-    "fotitos3.JPG",
-    "fotitos4.JPG",
-    "fotitos5.JPG",
-    "fotitos6.JPG"
+    "fotitos1.JPG", "fotitos2.JPG", "fotitos3.JPG",
+    "fotitos4.JPG", "fotitos5.JPG", "fotitos6.JPG"
 ]
 
-CANAL_TELEGRAM = "https://t.me/+ZWc0FAcw-hQ2MDZh"
+# === PRECIOS PERÚ ===
+PE_PRECIOS = """
+🛍 *PACKS DISPONIBLES - PERÚ* 🇵🇪
 
-# ===== FUNCIONES DEL BOT =====
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("💰 Precios", callback_data='menu_precios')],
-        [InlineKeyboardButton("🎁 Videos Gratis", callback_data='gratis')],
-        [InlineKeyboardButton("📺 Canal VIP", url=CANAL_TELEGRAM)]
+🎂 *BÁSICO: S/ 15*
+→ 5 unidades | S/ 3 c/u
+
+🔥 *TOP: S/ 30* ← MÁS VENDIDO
+→ 12 unidades | S/ 2.50 c/u
+→ *Ahorras 50%*
+
+🏆 *PREMIUM: S/ 60*
+→ 20 unidades + 1 personalizado
+→ incluye chat 🥰
+→ *Ahorras 67%*
+
+📼 *LLAMADITAS* 📼
+S/ 60: 10 min
+S/ 80: 20 min
+
+💳 *PAGO:* *YAPE/PLIN:* 923553612
+*CUENTO CON REFERENCIAS*
+
+1. Yapeas 2. Captura
+"""
+
+# === PRECIOS MÉXICO ===
+MX_PRECIOS = """
+🛍 *PACKS DISPONIBLES - MÉXICO* 🇲🇽
+
+🎂 *BÁSICO: $100 MXN*
+→ 5 unidades | $20 c/u
+
+🔥 *TOP: $200 MXN* ← MÁS VENDIDO
+→ 12 unidades | $16 c/u
+→ *Ahorras 50%*
+
+🏆 *PREMIUM: $400 MXN*
+→ 20 unidades + 1 personalizado
+→ incluye chat 🥰
+→ *Ahorras 80%*
+
+📼 *LLAMADITAS* 📼
+$400 MXN: 10 min
+$600 MXN: 20 min
+
+🛍 *PAGO MXN:*
+🏦 *Banco:* STP
+🔢 *CLABE:* `646180546711450910`
+📝 *Referencia:* `yanae`
+
+🇲🇽 También acepto: Transfer / Astropay
+
+Mándame captura cuando pagues 😊
+"""
+
+# === PRECIOS USA/USD ===
+USA_PRECIOS = """
+🛍 *PACKS DISPONIBLES - USA* 🇺🇸
+
+🎂 *BÁSICO: $5 USD*
+→ 5 unidades | $1 c/u
+
+🔥 *TOP: $9 USD* ← MÁS VENDIDO
+→ 12 unidades | $0.75 c/u
+→ *Ahorras 50%*
+
+🏆 *PREMIUM: $20 USD*
+→ 20 unidades + 1 personalizado
+→ incluye chat 🥰
+→ *Ahorras 60%*
+
+📼 *LLAMADITAS* 📼
+$20 USD: 10 min
+$30 USD: 20 min
+
+🪙 *PAGO:*
+*PayPal:* AbigailMaximoofO
+
+🏦 *Bank EEUU:*
+Community Federal Savings Bank
+📍 *Address:* 5 Penn Plaza, 14th Floor New York, NY 10001
+0️⃣ *Account:* 8338233469
+0️⃣ *Routing:* 026073150
+✍️ *Type:* Checking
+
+Avísame cuando envíes con el comprobante 😊
+"""
+
+# === PRECIOS INTERNACIONAL ===
+OTRO_PRECIOS = f"""
+🛍 *PACKS DISPONIBLES - INTERNACIONAL* 🌎
+
+🎂 *BÁSICO: $5 USD* → 5 unidades | $1 c/u
+🔥 *TOP: $9 USD* ← MÁS VENDIDO → 12 unidades | $0.75 c/u
+🏆 *PREMIUM: $20 USD* → 20 unidades + 1 personalizado + chat 🥰
+
+📼 *LLAMADITAS* 📼
+$20 USD: 10 min | $30 USD: 20 min
+
+🪙 *PAGO:*
+*PayPal:* [Click aquí]({LINK_PAYPAL})
+/ USDT disponible
+
+Avísame cuando envíes con el comprobante 😊
+"""
+
+# === TEXTO BOTÓN GRATIS ===
+TEXTO_GRATIS = """
+🎁 *BONUS GRATIS* 😊
+
+✨ *¿QUIERES UNA RECOMPENSA GRATIS?* ✨
+Ayúdame promocionando en TikTok ✅
+
+*Pasitos súper fáciles:*
+1️⃣ Ponte un nombre + foto de perfil linda
+2️⃣ En tu bio pon: `Tg: yanabicitasa` ✨
+3️⃣ Sube una foto a tu story mencionándome
+4️⃣ Comenta en videos relacionados, unos 30-100 👀
+   Así generamos alcance juntos
+5️⃣ Mándame captura cuando termines
+6️⃣ Disfruta de tu bonus gratis 🎁
+
+¿Te animas? 😊
+(Me avisas cuando cumplas)
+"""
+
+def get_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🛍 Precios Perú 🇵🇪", callback_data='pe')],
+        [InlineKeyboardButton("🛍 Precios México 🇲🇽", callback_data='mx')],
+        [InlineKeyboardButton("🛍 Precios USA 🇺🇸", callback_data='usa')],
+        [InlineKeyboardButton("🌎 Otro País", callback_data='otro')],
+        [InlineKeyboardButton("🎁 Gratis", callback_data='gratis')],
+        [InlineKeyboardButton("🔥 Canal Oficial", url=LINK_CANAL)]
+    ])
+
+def get_volver():
+    return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Volver al Menú", callback_data='volver')]])
+
+def normalizar(texto):
+    texto = unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode('ascii')
+    return texto.lower()
+
+def registrar_usuario(user):
+    USUARIOS[user.id] = {
+        'nombre': user.first_name,
+        'username': user.username or "sin_username",
+        'ultimo_mensaje': datetime.now().strftime('%d/%m %H:%M'),
+        'demo_usada': user.id in DEMO_USADO,
+        'es_vip': user.id in VIP_TEMPORAL and VIP_TEMPORAL[user.id] > datetime.now(),
+        'pago': user.id in PAGARON
+    }
+
+async def avisar_interes(context, user_id, username, mensaje, tipo="INTERÉS"):
+    try:
+        username_safe = str(username).replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
+        mensaje_safe = str(mensaje)[:100].replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
+        texto = f"🔥 *{tipo} DE COMPRA* 🔥\n\n👤 @{username_safe}\n🆔 `{user_id}`\n💬 Mensaje: `{mensaje_safe}`\n⏰ {datetime.now().strftime('%H:%M:%S')}\n\nHáblale rápido 🤑"
+        await context.bot.send_message(chat_id=ADMIN_ID, text=texto, parse_mode='Markdown')
+    except:
+        pass
+
+async def follow_up_task(app, user_id, username):
+    await asyncio.sleep(1800)
+    if user_id in PAGARON or user_id in FOLLOWUP_ENVIADO:
+        return
+    FOLLOWUP_ENVIADO.add(user_id)
+    mensajes = [
+        f"Oye {username} 😊 ¿sigues ahí? Si compras TOP te doy 2 unidades extra 🎁",
+        f"Psst 👉👈 con PREMIUM te agrego un bonus exclusivo ✨",
+        f"Hola 🥺 te espero... con TOP te mando algo especial de regalo 🎁"
     ]
-    await update.message.reply_text(
-        "Hola bebé 🥺💋 ¿Qué quieres ver hoy?\n\nCuando pagues mándame captura + monto aquí mismo",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    try:
+        await app.bot.send_message(chat_id=user_id, text=random.choice(mensajes), reply_markup=get_menu(), parse_mode='Markdown')
+    except:
+        pass
 
-async def menu_precios(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def respuesta_bot(texto_original, nombre, user_id):
+    texto = normalizar(texto_original)
+
+    def no_repetir(opciones):
+        historial = ULTIMAS_3_RESPUESTAS.get(user_id, [])
+        opciones_filtradas = [r for r in opciones if r not in historial]
+        if not opciones_filtradas:
+            opciones_filtradas = opciones
+            historial = []
+        respuesta = random.choice(opciones_filtradas)
+        historial.append(respuesta)
+        ULTIMAS_3_RESPUESTAS[user_id] = historial[-3:]
+        return respuesta
+
+    if any(x in texto for x in ['hola', 'ola', 'buenas', 'hey', 'wenas', 'info', 'buenos dias']):
+        return no_repetir([
+            f"¡Holaaa {nombre}! 😊✨ ¿Cómo amaneciste? Bienvenido/a 💕",
+            f"Holis {nombre} 🥰 ¿En qué te puedo consentir hoy?",
+            f"Heyyy {nombre} 😄👋 ¿Qué se te ofrece?",
+            f"¡Buenaaas {nombre}! 😘 ¿Listo/a para ver cositas?",
+            f"Ola ola {nombre} 🙈✨ ¿Qué buscas hoy?"
+        ])
+
+    if any(x in texto for x in ['que haces', 'q haces', 'haciendo']):
+        return no_repetir([
+            f"Acá {nombre} 😊💕 atendiendo a mis amores. ¿Y tú?",
+            f"Ayudando clientes 🙈✨ ¿tú cómo andas?",
+            f"Esperándote {nombre} 😄💕 ¿en qué te ayudo?",
+            f"Acá activísima 🥰 ¿Qué necesitas?"
+        ])
+
+    if any(x in texto for x in ['muestra', 'muestrame', 'ver', 'foto', 'info', 'detalles', 'ensena']):
+        return no_repetir([
+            f"Obvio {nombre} 😏✨ dime... ¿qué pack te tienta más? 🔥",
+            f"Claro cielo 😘 ¿cuál quieres chismear primero?",
+            f"Uyyy {nombre} 🙈 ¿TOP o PREMIUM?",
+            f"Siii {nombre} 😄 ¿sobre qué pack quieres saber? 👇",
+            f"Ya {nombre} 😏 dime cuál te llama y te paso detalles"
+        ])
+
+    if any(x in texto for x in ['precio', 'cuanto', 'vale', 'costo', 'cuesta']):
+        return no_repetir([
+            f"Ya te los paso {nombre} 😘👇 son precios de infarto 💸",
+            f"Toma {nombre} 😄✨ mis packs más pedidos. ¿Cuál te tienta?",
+            f"Aquí tienes cielo 😏👇 mira qué ofertón",
+            f"Listo {nombre} 🙈 estos son mis precios. ¿Con cuál te quedas?"
+        ])
+
+    if any(x in texto for x in ['comprar', 'compro', 'quiero', 'pago', 'pagare', 'llevo']):
+        return no_repetir([
+            f"¡Siii {nombre}! 😍🔥 Me encanta. Elige tu pack 👇",
+            f"Así me gusta {nombre} 😏 decídete rápido 🙈",
+            f"¡Obvio cielo! 😘 ¿Cuál te llevas? 👇",
+            f"Perfecto {nombre} ✨ dime cuál y cerramos al toque"
+        ])
+
+    if any(x in texto for x in ['gracias', 'ok', 'vale', 'bueno', 'dale', 'listo']):
+        return no_repetir([
+            f"De nada mi {nombre} 😘✨ Para eso estoy",
+            f"A ti cielo 😄💕 me gritas cualquier cosa ¿ya?",
+            f"Okis {nombre} 😏 acá me quedo por si cambias de opinión 🙈",
+            f"Vale {nombre} 😄 que tengas un día hermoso ✨"
+        ])
+
+    if any(x in texto for x in ['jaja', 'xd', 'jiji', 'jsjs', 'lol', 'jeje']):
+        return no_repetir([
+            f"Jajaja 😄 me alegraste el día {nombre}. ¿Vemos los packs? 😏",
+            f"Jijiji 🙈✨ me encanta tu risa. ¿Te ayudo?",
+            f"Jsjsjs {nombre} 😘 eres un/una loquill@. ¿Qué necesitas?"
+        ])
+
+    if any(x in texto for x in ['adios', 'chao', 'chau', 'bye', 'nos vemos']):
+        return no_repetir([
+            f"¡Chau {nombre}! 😊 Vuelve cuando quieras 💕",
+            f"Nos vemos {nombre} 👋 que estés bien",
+            f"Adiós {nombre} ✨ aquí estaré si me necesitas"
+        ])
+
+    return no_repetir([
+        f"Dime {nombre} 😊 ¿En qué te ayudo hoy?",
+        f"Estoy aquí {nombre} ✨ ¿Qué necesitas saber?",
+        f"Cuéntame {nombre} 👇 ¿Qué estás buscando?",
+        f"{nombre} 😄 pregúntame lo que quieras",
+        f"Hola {nombre} 🙌 ¿Vemos los packs disponibles?",
+        f"Soy tu asesora {nombre} 😊 ¿Qué te interesa?"
+    ])
+
+async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.message or update.business_message
+    if not message or not message.from_user or message.from_user.is_bot:
+        return
+    user = message.from_user
+    user_id = user.id
+    if user_id == ADMIN_ID:
+        return
+    username = user.username or "sin_username"
+    registrar_usuario(user)
+    ahora = datetime.now()
+    nombre = user.first_name
+
+    if user_id in PAGARON:
+        await message.reply_text(f"¡Pago confirmado {nombre}! 😊\n\n✅ *LISTO*\n\n📩 *Escríbeme al privado*\n👉 {USERNAME_ADMIN}\n\nAhí coordinamos tu pedido", parse_mode='Markdown')
+        return
+
+    if message.text and message.text.lower() == '/start':
+        es_nuevo = user_id not in DEMO_USADO
+        if es_nuevo:
+            DEMO_USADO.add(user_id)
+            DEMO_HOT[user_id] = datetime.now() + timedelta(minutes=10)
+            saludo = f"¡Hola {nombre}! 😊 Bienvenido/a\n\n*Soy tu asesora online*\n\n*Tienes 10 min de atención prioritaria gratis* ✨\nAprovecha para consultar lo que quieras"
+            await message.reply_text(saludo, parse_mode='Markdown')
+        else:
+            await message.reply_text(f"¡Hola de nuevo {nombre}! 😊\n\nYa usaste tu demo, pero puedes ver los packs 👇", parse_mode='Markdown')
+        await message.reply_text("Elige tu país para ver precios:", reply_markup=get_menu(), parse_mode='Markdown')
+        return
+
+    if message.photo:
+        PAGARON.add(user_id)
+        await avisar_interes(context, user_id, username, "ENVÍO CAPTURA DE PAGO", "PAGO RECIBIDO 💰")
+        await message.reply_text(
+            f"✅ *PAGO RECIBIDO* 😊\n\n"
+            f"Gracias {nombre}\n\n"
+            f"📩 *AHORA ESCRÍBEME AL PRIVADO*\n"
+            f"👉 {USERNAME_ADMIN}\n\n"
+            f"Ahí coordinamos tu pedido sin demora\n\n"
+            f"*No lo gestiono por aquí por seguridad*",
+            parse_mode='Markdown'
+        )
+        try:
+            caption = f"💰 *NUEVA CAPTURA - PAGO CONFIRMADO*\n\n👤 @{username}\n🆔 `{user_id}`\n⏰ {ahora.strftime('%H:%M:%S')}\n\n*Cliente enviado a tu privado* ✅"
+            await context.bot.send_photo(chat_id=ADMIN_ID, photo=message.photo[-1].file_id, caption=caption, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"Error reenviando: {e}")
+        return
+
+    if not message.text:
+        return
+
+    texto = message.text.strip()
+
+    if ULTIMO_MENSAJE.get(user_id) == texto.lower():
+        return
+    ULTIMO_MENSAJE[user_id] = texto.lower()
+
+    if any(x in normalizar(texto) for x in ['comprar', 'compro', 'quiero', 'pago', 'pagare']):
+        await avisar_interes(context, user_id, username, texto, "QUIERE COMPRAR YA 🤑")
+        await message.reply_text(f"Perfecto {nombre} 😊 Elige tu opción:", reply_markup=get_menu(), parse_mode='Markdown')
+        return
+
+    if any(x in normalizar(texto) for x in ['precio', 'cuanto', 'vale', 'costo', 'cuesta', 'peru', 'soles']):
+        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
+        VIO_PRECIOS[user_id] = datetime.now()
+        asyncio.create_task(follow_up_task(context.application, user_id, username))
+        await message.reply_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
+        return
+    elif any(x in normalizar(texto) for x in ['mexico', 'mxn', 'peso']):
+        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
+        VIO_PRECIOS[user_id] = datetime.now()
+        asyncio.create_task(follow_up_task(context.application, user_id, username))
+        await message.reply_text(MX_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
+        return
+    elif any(x in normalizar(texto) for x in ['usd', 'usa', 'eeuu', 'dolar', 'estados unidos']):
+        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
+        VIO_PRECIOS[user_id] = datetime.now()
+        asyncio.create_task(follow_up_task(context.application, user_id, username))
+        await message.reply_text(USA_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
+        return
+    elif any(x in normalizar(texto) for x in ['otro', 'internacional', 'colombia', 'argentina', 'chile', 'mundial']):
+        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
+        VIO_PRECIOS[user_id] = datetime.now()
+        asyncio.create_task(follow_up_task(context.application, user_id, username))
+        await message.reply_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
+        return
+
+    es_vip = user_id in VIP_TEMPORAL and VIP_TEMPORAL[user_id] > ahora
+    es_demo = user_id in DEMO_HOT and DEMO_HOT[user_id] > ahora
+
+    if es_demo or es_vip:
+        tiempo_restante = (VIP_TEMPORAL[user_id] - ahora).seconds // 60 if es_vip else (DEMO_HOT[user_id] - ahora).seconds // 60
+        if not es_vip and tiempo_restante <= 2:
+            await message.reply_text(f"{nombre} se nos acaba el tiempo 😢\n\n*Mira el PREMIUM ahora* y seguimos sin corte ✨", reply_markup=get_menu(), parse_mode='Markdown')
+            return
+        if es_vip and tiempo_restante <= 5:
+            await message.reply_text(f"{nombre}, {tiempo_restante} min y me tengo que ir 😢\n\n¿Qué necesitas antes de irme? ✨", parse_mode='Markdown')
+            return
+
+    respuesta = respuesta_bot(texto, nombre, user_id)
+    await message.reply_text(respuesta, parse_mode='Markdown')
+
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    keyboard = [
-        [InlineKeyboardButton("🇵🇪 Perú", callback_data='precio_peru')],
-        [InlineKeyboardButton("🇲🇽 México", callback_data='precio_mexico')],
-        [InlineKeyboardButton("🇺🇸 EEUU", callback_data='precio_eeuu')],
-        [InlineKeyboardButton("🌎 Todo el mundo", callback_data='precio_mundial')],
-        [InlineKeyboardButton("⬅️ Volver", callback_data='volver')]
-    ]
-    await query.edit_message_text(
-        "Elige tu país para ver precios y métodos de pago:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    data = query.data
+    user_id = query.from_user.id
+    username = query.from_user.username or "sin_username"
 
-async def mostrar_precio(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    pais = query.data.split('_')[1]
-    p = PRECIOS[pais]
-    pg = PAGOS[pais]
+    if data in ['pe', 'mx', 'usa', 'otro']:
+        await avisar_interes(context, user_id, username, f"Tocó botón: {data.upper()}", "VIO PRECIOS 👀")
+        VIO_PRECIOS[user_id] = datetime.now()
+        asyncio.create_task(follow_up_task(context.application, user_id, username))
 
-    texto = f"🛍 *VIDEOS* 🛒\n\n"
-    texto += f"{p['bandera']} *{p['nombre']}*\n\n"
-    texto += f"🎂 *BÁSICO: {p['basico']['precio']}*\n→ {p['basico']['detalle']}\n\n"
-    texto += f"🔥 *TOP: {p['top']['precio']}* ← {p['top']['tag']}\n→ {p['top']['detalle']}\n→ {p['top']['ahorro']}\n\n"
-    texto += f"🏆 *PREMIUM: {p['premium']['precio']}*\n→ {p['premium']['detalle']}\n→ {p['premium']['ahorro']}\n\n"
-    texto += f"📼 *VIDEOLLAMADAS* 📼\n{p['videollamada_10']}\n{p['videollamada_20']}\n\n"
-    texto += "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n\n"
+    if data == 'pe':
+        await query.edit_message_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
+    elif data == 'mx':
+        await query.edit_message_text(MX_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
+    elif data == 'usa':
+        await query.edit_message_text(USA_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
+    elif data == 'otro':
+        await query.edit_message_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
+    elif data == 'gratis':
+        await query.edit_message_text(TEXTO_GRATIS, parse_mode='Markdown')
+        for foto in FOTOS_GRATIS:
+            try:
+                with open(foto, 'rb') as f:
+                    await context.bot.send_photo(chat_id=user_id, photo=f)
+                await asyncio.sleep(0.5)
+            except Exception as e:
+                logger.error(f"No se pudo enviar {foto}: {e}")
+        await context.bot.send_message(chat_id=user_id, text="¡Listo! 😊 Sigue los pasos y me avisas", reply_markup=get_volver())
 
-    if pais == "peru":
-        texto += f"{pg['numero']}\n\n{pg['metodo']}\n\n{pg['instrucciones']}\n"
-    elif pais == "mexico":
-        texto += f"🛍 *PAGO MXN:*\n🏦 Banco: {pg['banco']}\n🔢 CLABE:\n{pg['clabe']}\n📝 Referencia/Concepto: {pg['concepto']}\n\n{pg['otros']}\n\n{pg['instrucciones']}"
-    elif pais == "eeuu":
-        texto += f"🪙 *PAGO:*\nPayPal:\n{pg['paypal']}\n\n🏦 *Bank EEUU:*\n{pg['banco_nombre']}\n📍 Bank Address:\n{pg['banco_direccion']}\n0️⃣ Account Number:\n{pg['cuenta']}\n0️⃣ Routing Number / ABA:\n{pg['routing']}\n✍️ Account Type:\n{pg['tipo_cuenta']}\n\n{pg['instrucciones']}"
-    elif pais == "mundial":
-        texto += f"🪙 *PAGO:*\nPayPal:\n{pg['paypal']}\n\n{pg['paypal_qr']}\n\n/ USDT\n\n{pg['instrucciones']}"
+    elif data == 'volver':
+        await query.edit_message_text("Elige tu país para ver precios:", reply_markup=get_menu(), parse_mode='Markdown')
 
-    keyboard = [[InlineKeyboardButton("⬅️ Volver", callback_data='menu_precios')]]
-    await query.edit_message_text(
-        texto,
-        parse_mode='Markdown',
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        disable_web_page_preview=True
-    )
+async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id!= ADMIN_ID:
+        return
+    if not context.args:
+        await update.message.reply_text("Uso: /vip ID_DEL_CLIENTE")
+        return
+    user_id = int(context.args[0])
+    VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15)
+    PAGARON.add(user_id)
+    DEMO_HOT.pop(user_id, None)
+    await context.bot.send_message(user_id, "✅ *CHAT VIP ACTIVADO* 😊\n\nTienes *15 minutos* de atención prioritaria\n\nPregúntame lo que quieras ✨")
+    await update.message.reply_text(f"✅ VIP activado para {user_id}")
 
-async def videos_gratis(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id!= ADMIN_ID:
+        return
+    if not USUARIOS:
+        await update.message.reply_text("No hay usuarios aún")
+        return
+    texto = "📊 *USUARIOS REGISTRADOS* 📊\n\n"
+    for uid, data in USUARIOS.items():
+        estado = "💰 PAGÓ" if data['pago'] else "🔥 VIP" if data['es_vip'] else "💦 DEMO" if data['demo_usada'] else "👀 NUEVO"
+        texto += f"👤 {data['nombre']} @{data['username']}\n🆔 `{uid}` | {estado}\n⏰ {data['ultimo_mensaje']}\n\n"
+    texto += f"*Total: {len(USUARIOS)} usuarios*"
+    await update.message.reply_text(texto, parse_mode='Markdown')
 
-    media_group = []
-    for foto in FOTOS_GRATIS:
-        media_group.append(InputMediaPhoto(open(foto, 'rb')))
-    await query.message.reply_media_group(media=media_group)
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    if isinstance(context.error, Conflict):
+        logger.error("⚠️ Conflicto: Otro bot está corriendo. Detenlo en Render/otros sitios")
+    else:
+        logger.error(f"Error: {context.error}", exc_info=context.error)
 
-    keyboard = [[InlineKeyboardButton("⬅️ Volver", callback_data='volver')]]
-    await query.message.reply_text(
-        COMO_GANAR_GRATIS,
-        parse_mode='Markdown',
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-    await query.delete_message()
+def shutdown_handler(signum, frame):
+    logger.info("Apagando bot...")
+    sys.exit(0)
 
-async def volver(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    keyboard = [
-        [InlineKeyboardButton("💰 Precios", callback_data='menu_precios')],
-        [InlineKeyboardButton("🎁 Videos Gratis", callback_data='gratis')],
-        [InlineKeyboardButton("📺 Canal VIP", url=CANAL_TELEGRAM)]
-    ]
-    await query.edit_message_text(
-        "Hola bebé 🥺💋 ¿Qué quieres ver hoy?\n\nCuando pagues mándame captura + monto aquí mismo",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-async def recibir_comprobante(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.message.from_user
-    caption = update.message.caption or "Sin descripción"
-
-    await context.bot.send_photo(
-        chat_id=ADMIN_ID,
-        photo=update.message.photo[-1].file_id,
-        caption=f"💸 *NUEVO PAGO RECIBIDO*\n\n"
-                f"👤 Cliente: @{user.username or 'Sin username'}\n"
-                f"🆔 ID: `{user.id}`\n"
-                f"📝 Nombre: {user.first_name}\n"
-                f"💬 Mensaje: {caption}\n\n"
-                f"Responde a este mensaje para contactarlo.",
-        parse_mode='Markdown'
-    )
-
-    await update.message.reply_text(
-        "Amor, recibí tu captura 🥺❤️‍🔥\n"
-        "Déjame verificar y en un ratito te mando tu pack\n"
-        "Gracias por tu compra 😘"
-    )
+signal.signal(signal.SIGINT, shutdown_handler)
+signal.signal(signal.SIGTERM, shutdown_handler)
 
 def main():
     app = Application.builder().token(TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(menu_precios, pattern='^menu_precios$'))
-    app.add_handler(CallbackQueryHandler(mostrar_precio, pattern='^precio_'))
-    app.add_handler(CallbackQueryHandler(videos_gratis, pattern='^gratis$'))
-    app.add_handler(CallbackQueryHandler(volver, pattern='^volver$'))
-    app.add_handler(MessageHandler(filters.PHOTO, recibir_comprobante))
-
-    print("Bot iniciado...")
-    app.run_polling()
+    app.add_handler(CommandHandler('vip', vip))
+    app.add_handler(CommandHandler('usuarios', usuarios))
+    app.add_handler(CallbackQueryHandler(button))
+    app.add_handler(MessageHandler(filters.ALL, manejar_todo))
+    app.add_error_handler(error_handler)
+    logger.info("BOT PRENDIDO - MODO 24/7 ACTIVO ✅")
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
     main()
