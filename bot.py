@@ -1,4 +1,4 @@
-import os
+ import os
 import asyncio
 import random
 import logging
@@ -8,7 +8,10 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMe
 from telegram.ext import Application, MessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes
 from telegram.error import Conflict
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 TOKEN = '8751695788:AAFg5vFlt2EYvR5zOZ_tn29T0KZLYvTZs74'
@@ -28,6 +31,7 @@ ULTIMO_MENSAJE = {}
 VIO_PRECIOS = {}
 FOLLOWUP_ENVIADO = set()
 
+# ✅ DICCIONARIO CALLEJERO NUEVO
 SINONIMOS = {
     'intercambio': ['cambiamos', 'cambias', 'cambio', 'intercambio', 'trueque', 'trueke', 'canje', 'canjeamos', 'inter', 'cambio x cambio'],
     'gratis': ['regalitos', 'regalo', 'muestra', 'muestras', 'gratis', 'free', 'preview', 'adelanto', 'probadita', 'demo', 'sample', 'calame', 'calis'],
@@ -37,6 +41,7 @@ SINONIMOS = {
     'referencias': ['refe', 'referencias', 'referencia', 'refs', 'confiable', 'real', 'seguro', 'estafa', 'legit', 'verdad']
 }
 
+# ✅ EMOJIS CALIENTES NUEVO
 EMOJIS_CALIENTES = {
     'hot': ['🥵', '🔥', '😈', '👿', '😏', '🤤', '🥴'],
     'mojada': ['💦', '💧', '🌊', '💨'],
@@ -197,6 +202,7 @@ def get_no_entiendo():
         [InlineKeyboardButton("🛍 Ver Precios", callback_data='volver')]
     ])
 
+# ✅ FUNCIONES NUEVAS
 def entender_mensaje(texto):
     texto = texto.lower()
     intenciones = []
@@ -234,6 +240,7 @@ async def avisar_interes(context, user_id, username, mensaje, tipo="INTERÉS"):
     except Exception as e:
         logger.error(f"Error avisando interés: {e}")
 
+# ✅ FOLLOW UP CON EXTRAS NUEVO
 async def follow_up_task(app, user_id, username):
     await asyncio.sleep(1800)
     if user_id in PAGARON or user_id in FOLLOWUP_ENVIADO:
@@ -317,6 +324,7 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto = message.text.strip()
     texto_lower = texto.lower()
 
+    # ✅ ANTI-REPETICIÓN NUEVO
     if ULTIMO_MENSAJE.get(user_id) == texto_lower:
         return
     ULTIMO_MENSAJE[user_id] = texto_lower
@@ -327,6 +335,7 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     intenciones = entender_mensaje(texto_lower)
     intenciones_emojis = entender_emojis(texto)
 
+    # ✅ EMOJIS CALIENTES NUEVO
     if 'hot' in intenciones_emojis:
         await message.reply_text("ufff bebé 🥵 estás caliente? Yo también... qué quieres ver? 💦", parse_mode='Markdown')
         await message.reply_text("Elige qué te calienta más:", reply_markup=get_menu(), parse_mode='Markdown')
@@ -357,6 +366,7 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("hablando de 💰 bebé? Elige tu país y te paso precios 😏", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
+    # ✅ SALUDOS/DESPEDIDAS AMPLIADOS
     if any(x in texto_lower for x in ['hola', 'ola', 'buenas', 'hey', 'wenas', 'buenos dias', 'buenas tardes', 'buenas noches', 'q tal', 'que tal', 'qué tal', 'alo']):
         await message.reply_text("olaaa bebé 😘 cómo estás? 💋", parse_mode='Markdown')
         await asyncio.sleep(1)
@@ -398,6 +408,7 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("dime bebé 😏 qué quieres saber? 💋", parse_mode='Markdown')
         return
 
+    # ✅ DICCIONARIO CALLEJERO NUEVO
     if 'intercambio' in intenciones:
         await avisar_interes(context, user_id, username, texto, "QUIERE INTERCAMBIO 👀")
         await message.reply_text("bebé yo no cambio 😅 solo vendo\n\nPero si compras *PREMIUM* te doy 20 videos + 1 personalizado 🔥\n\nEs mejor que un intercambio Xd", reply_markup=get_menu(), parse_mode='Markdown')
@@ -409,7 +420,7 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if 'referencias' in intenciones:
         await avisar_interes(context, user_id, username, texto, "PIDE REFERENCIAS 👀")
-        await message.reply_text(f"claro bebé 😘 tengo referencias\n\nMira mi canal: {LINK_CANAL}\n\nAhí ves que soy real 🔥\n\nAhora elige tu país:", reply_markup=get_menu(), parse_mode='Markdown')
+        await message.reply_text(f"claro bebé 😘 tengo referencias\nMira mi canal: {LINK_CANAL}\n\nAhí ves que soy real 🔥\n\nAhora elige tu país:", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
     es_vip = user_id in VIP_TEMPORAL and VIP_TEMPORAL[user_id] > ahora
@@ -533,9 +544,3 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
    *Así generamos vistas juntos*
 5️⃣ Mándame captura + videito cuando termines
 6️⃣ *Disfruta tus 20 videitos* :3 ❤️‍🔥
-
-*¿Te animas o ño?* 🥺
-(Me avisas cuando cumplas mi rey)""", parse_mode='Markdown', disable_web_page_preview=True, reply_markup=get_menu())
-        except Exception as e:
-            logger.error(f"Error enviando fotitos: {e}")
-           
