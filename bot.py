@@ -106,7 +106,6 @@ S/ 80: 20 min
 1. Yapeas 2. Captura
 """
 
-# ============= ACTUALIZADO SIN NOMBRE =============
 MX_PRECIOS = """
 🛍 *VIDEOS - MÉXICO* 🇲🇽
 
@@ -206,6 +205,7 @@ En cuanto caiga te mando tu pack 🔥
 """
 
 async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # ✅ ESTA LÍNEA YA AGARRA MENSAJES NORMALES Y DE BUSINESS
     message = update.message or update.business_message
     if not message:
         return
@@ -346,7 +346,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == 'otro':
         await query.edit_message_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
     
-    # ============= MANDA LAS 6 FOTITOS.JPG MAYÚSCULA =============
     elif data == 'fotitos':
         try:
             await query.delete_message()
@@ -365,7 +364,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         media=fotos_enviadas[i:i+3]
                     )
             
-            # TU MENSAJE TIERNO DE PROMOCIÓN
             await context.bot.send_message(
                 chat_id=query.from_user.id,
                 text=f"""📸 *TUS FOTITOS GRATIS BEBÉ* 🥺💋
@@ -438,16 +436,22 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = Application.builder().token(TOKEN).build()
 
-    app.add_handler(MessageHandler(filters.ALL, manejar_todo))
+    # ✅ HANDLERS CORREGIDOS PARA BUSINESS
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_todo)) # DM normal
+    app.add_handler(MessageHandler(filters.UpdateType.BUSINESS_MESSAGE, manejar_todo)) # Telegram Business
+    app.add_handler(MessageHandler(filters.PHOTO, manejar_todo)) # Para capturas
+    app.add_handler(MessageHandler(filters.COMMAND, manejar_todo)) # Para /start
+    
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(CommandHandler("vip", vip))
     app.add_handler(CommandHandler("usuarios", usuarios))
     app.add_error_handler(error_handler)
     
-    logger.info("BOT PRENDIDO - SIN NOMBRE MX + CLABE STP + REFERENCIA YANAE")
+    logger.info("BOT PRENDIDO - CON SOPORTE BUSINESS ✅")
     
     try:
-        app.run_polling(drop_pending_updates=True)
+        # ✅ IMPORTANTE: allowed_updates para que Telegram mande los business_message
+        app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
     except Conflict:
         logger.error("Hay otra instancia corriendo. Cerrando esta...")
         os._exit(1)
