@@ -282,7 +282,8 @@ async def auto_tease_task(app, user_id, delay, tipo):
             await app.bot.send_message(chat_id=user_id, text="¿Otro PREMIUM? 😈", reply_markup=get_menu())
     except Exception as e:
         logger.error(f"Error en auto-tease: {e}")
-        async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message or update.business_message
     if not message or not message.from_user or message.from_user.is_bot:
         return
