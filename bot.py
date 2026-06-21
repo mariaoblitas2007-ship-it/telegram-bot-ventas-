@@ -25,6 +25,8 @@ DEMO_HOT = {}
 VIP_TEMPORAL = {}
 DEMO_USADO = set()
 USUARIOS = {}
+PAGARON = set()
+ULTIMO_MENSAJE = {}
 
 def get_menu():
     return InlineKeyboardMarkup([
@@ -51,12 +53,29 @@ def registrar_usuario(user):
         'username': user.username or "sin_username",
         'ultimo_mensaje': datetime.now().strftime('%d/%m %H:%M'),
         'demo_usada': user.id in DEMO_USADO,
-        'es_vip': user.id in VIP_TEMPORAL and VIP_TEMPORAL[user.id] > datetime.now()
+        'es_vip': user.id in VIP_TEMPORAL and VIP_TEMPORAL[user.id] > datetime.now(),
+        'pago': user.id in PAGARON
     }
+
+# ✅ NUEVO: TE AVISA CUANDO ALGUIEN ESTÁ CALIENTE
+async def avisar_interes(context, user_id, username, mensaje, tipo="INTERÉS"):
+    try:
+        texto = f"🔥 *{tipo} DE COMPRA* 🔥\n\n"
+        texto += f"👤 @{username}\n"
+        texto += f"🆔 `{user_id}`\n"
+        texto += f"💬 Mensaje: `{mensaje[:100]}`\n"
+        texto += f"⏰ {datetime.now().strftime('%H:%M:%S')}\n\n"
+        texto += f"Háblale rápido antes que se enfríe 🤑"
+        
+        await context.bot.send_message(chat_id=ADMIN_ID, text=texto, parse_mode='Markdown')
+    except Exception as e:
+        logger.error(f"Error avisando interés: {e}")
 
 async def auto_tease_task(app, user_id, delay, tipo):
     await asyncio.sleep(delay)
     ahora = datetime.now()
+    if user_id in PAGARON:
+        return
     if tipo == "demo":
         if user_id not in DEMO_HOT or DEMO_HOT[user_id] < ahora:
             return
@@ -205,15 +224,28 @@ En cuanto caiga te mando tu pack 🔥
 """
 
 async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # ✅ AGARRA MENSAJES NORMALES Y DE BUSINESS
     message = update.message or update.business_message
-    if not message:
+    if not message or not message.from_user or message.from_user.is_bot:
         return
         
     user = message.from_user
     user_id = user.id
+    username = user.username or "sin_username"
+    
+    if user_id == ADMIN_ID and message.chat.type == "private":
+        return
+    
     registrar_usuario(user)
     ahora = datetime.now()
+
+    if user_id in PAGARON:
+        await message.reply_text(
+            "Amor ya recibí tu pago 😘\n\n"
+            f"Estoy revisando y te mando tu pack en unos minutos\n\n"
+            f"Cualquier cosa háblame a {USERNAME_ADMIN} 💋",
+            parse_mode='Markdown'
+        )
+        return
 
     if message.text and message.text.lower() == '/start':
         es_nuevo = user_id not in DEMO_USADO
@@ -230,17 +262,20 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if message.photo:
-        username = user.username or "sin_username"
+        PAGARON.add(user_id)
+        # ✅ TE AVISA QUE PAGÓ
+        await avisar_interes(context, user_id, username, "ENVÍO CAPTURA DE PAGO", "PAGO RECIBIDO 💰")
+        
         await message.reply_text(
             f"Recibí tu captura amor 😘\n\n"
-            f"⚠️ *IMPORTANTE:*\n"
-            f"1️⃣ Escríbeme el *MONTO EXACTO* que pagaste\n"
-            f"2️⃣ Háblame a mi perfil {USERNAME_ADMIN}\n\n"
-            f"*Por ahí te envío tus videitos* 🔥",
+            f"✅ *PAGO EN REVISIÓN*\n"
+            f"Te mando tu pack en 5-10 min\n\n"
+            f"Si demora más de 20min háblame a {USERNAME_ADMIN}\n\n"
+            f"*Gracias por confiar* 🔥",
             parse_mode='Markdown'
         )
         try:
-            caption = f"💰 *NUEVA CAPTURA*\n\n👤 @{username}\n🆔 `{user_id}`\n⏰ {ahora.strftime('%H:%M:%S')}"
+            caption = f"💰 *NUEVA CAPTURA - MARCAR COMO PAGADO*\n\n👤 @{username}\n🆔 `{user_id}`\n⏰ {ahora.strftime('%H:%M:%S')}"
             await context.bot.send_photo(chat_id=ADMIN_ID, photo=message.photo[-1].file_id, caption=caption, parse_mode='Markdown')
         except Exception as e:
             logger.error(f"Error reenviando: {e}")
@@ -249,7 +284,15 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not message.text:
         return
 
-    texto = message.text.lower()
+    texto = message.text.lower().strip()
+    
+    if ULTIMO_MENSAJE.get(user_id) == texto:
+        return
+    ULTIMO_MENSAJE[user_id] = texto
+    
+    if len(texto) < 2:
+        return
+        
     es_vip = user_id in VIP_TEMPORAL and VIP_TEMPORAL[user_id] > ahora
     es_demo = user_id in DEMO_HOT and DEMO_HOT[user_id] > ahora
 
@@ -309,26 +352,39 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         else:
             await message.reply_text(
-                "No entendí bien amor 😅\n\n🥺 *Mientras me explicas mejor...*\n\n¿Ya viste mis *fotitos GRATIS*?\n\n👉 Toca el botón y si te gustan *ayúdame compartiendo* con tus amigos 🥺💋",
-                reply_markup=get_no_entiendo(),
+                "No entendí bien amor 😅\n\nElige qué quieres ver:",
+                reply_markup=get_menu(),
                 parse_mode='Markdown'
             )
             return
 
-    if any(x in texto for x in ['precio', 'peru', 'soles', 's/']):
+    # ✅ AVISA CUANDO PREGUNTAN PRECIO
+    if any(x in texto for x in ['precio', 'cuanto', 'cuánto', 'vale', 'costo', 'cuesta', 'peru', 'soles', 's/']):
+        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
         await message.reply_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
     elif any(x in texto for x in ['mexico', 'mxn', 'peso']):
+        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
         await message.reply_text(MX_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
-    elif any(x in texto for x in ['usd', 'usa', 'eeuu']):
+    elif any(x in texto for x in ['usd', 'usa', 'eeuu', 'dolar', 'dólar']):
+        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
         await message.reply_text(USA_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
     elif any(x in texto for x in ['otro', 'internacional', 'colombia', 'argentina', 'chile', 'españa']):
+        await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
         await message.reply_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
+    elif any(x in texto for x in ['comprar', 'compra', 'pagar', 'pago', 'quiero', 'dame']):
+        # ✅ AVISA CUANDO DICEN QUE QUIEREN COMPRAR
+        await avisar_interes(context, user_id, username, texto, "QUIERE COMPRAR 🤑")
+        await message.reply_text(
+            "Sii bebé 😘 Elige tu país para ver precios:",
+            reply_markup=get_menu(),
+            parse_mode='Markdown'
+        )
     elif any(x in texto for x in ['gratis', 'free', 'muestra', 'regalo', 'fotitos']):
         await message.reply_text(f"🎁 *FOTITOS GRATIS* 🔥\n\nToca el botón para verlas bebé:\n\n👉 Si te gustan, *ayúdame compartiendo* con tus amigos 🥺💋\n\n*Si quieres algo más hot...*\nCompra PREMIUM y te doy atención 1 a 1 😈", reply_markup=get_no_entiendo(), parse_mode='Markdown')
     else:
         await message.reply_text(
-            "No entendí amor 😅\n\n🥺 *Mientras me dices qué quieres...*\n\n¿Ya viste mis *fotitos GRATIS*?\n\n👉 Toca el botón y si te gustan *ayúdame compartiendo* 🥺💋",
-            reply_markup=get_no_entiendo(),
+            "No entendí amor 😅\n\nElige una opción:",
+            reply_markup=get_menu(),
             parse_mode='Markdown'
         )
 
@@ -336,6 +392,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
+    user_id = query.from_user.id
+    username = query.from_user.username or "sin_username"
+    
+    # ✅ AVISA CUANDO TOCAN BOTONES DE PRECIO
+    if data in ['pe', 'mx', 'usa', 'otro']:
+        await avisar_interes(context, user_id, username, f"Tocó botón: {data.upper()}", "VIO PRECIOS 👀")
     
     if data == 'pe':
         await query.edit_message_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
@@ -407,6 +469,7 @@ async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = int(context.args[0])
     VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15)
+    PAGARON.add(user_id)
     DEMO_HOT.pop(user_id, None)
     asyncio.create_task(auto_tease_task(context.application, user_id, 600, "vip"))
     await context.bot.send_message(user_id, "✅ *VIP ACTIVADO* 😈\n\nTienes *15 minutos* conmigo bebé\n\nHáblame rico 🔥")
@@ -422,12 +485,12 @@ async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     texto = "📊 *USUARIOS QUE HABLARON CON EL BOT*\n\n"
     for user_id, datos in list(USUARIOS.items())[-20:]:
-        estado = "🔥 VIP" if datos['es_vip'] else "💦 DEMO" if datos['demo_usada'] else "👀 Nuevo"
+        estado = "💰 PAGÓ" if user_id in PAGARON else "🔥 VIP" if datos['es_vip'] else "💦 DEMO" if datos['demo_usada'] else "👀 Nuevo"
         texto += f"*{datos['nombre']}* @{datos['username']}\n"
         texto += f"ID: `{user_id}` | {estado}\n"
         texto += f"Último: {datos['ultimo_mensaje']}\n\n"
 
-    texto += f"\n*Total: {len(USUARIOS)} usuarios*"
+    texto += f"\n*Total: {len(USUARIOS)} usuarios | Pagaron: {len(PAGARON)}*"
     await update.message.reply_text(texto, parse_mode='Markdown')
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
@@ -436,18 +499,15 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = Application.builder().token(TOKEN).build()
 
-    # ✅ HANDLERS CORREGIDOS - AHORA SÍ AGARRA BUSINESS
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
-    
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(CommandHandler("vip", vip))
     app.add_handler(CommandHandler("usuarios", usuarios))
     app.add_error_handler(error_handler)
     
-    logger.info("BOT PRENDIDO - CON SOPORTE BUSINESS ✅")
+    logger.info("BOT PRENDIDO - AVISOS DE VENTA ACTIVOS ✅")
     
     try:
-        # ✅ ESTA LÍNEA ES LA CLAVE - SIN ESTO NO FUNCIONA BUSINESS
         app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
     except Conflict:
         logger.error("Hay otra instancia corriendo. Cerrando esta...")
