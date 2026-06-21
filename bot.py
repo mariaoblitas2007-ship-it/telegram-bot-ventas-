@@ -28,76 +28,7 @@ USUARIOS = {}
 PAGARON = set()
 ULTIMO_MENSAJE = {}
 
-def get_menu():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🛍 VIDEOS - PERÚ 🇵🇪", callback_data='pe')],
-        [InlineKeyboardButton("🛍 VIDEOS - MÉXICO 🇲🇽", callback_data='mx')],
-        [InlineKeyboardButton("🛍 VIDEOS - USA 🇺🇸", callback_data='usa')],
-        [InlineKeyboardButton("🌎 OTRO PAÍS", callback_data='otro')],
-        [InlineKeyboardButton("📸 Fotitos GRATIS", callback_data='fotitos')],
-        [InlineKeyboardButton("🔥 Mi Canal VIP", url=LINK_CANAL)]
-    ])
-
-def get_volver():
-    return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Volver al Menú", callback_data='volver')]])
-
-def get_no_entiendo():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📸 Ver Fotitos GRATIS", callback_data='fotitos')],
-        [InlineKeyboardButton("🛍 Ver Precios", callback_data='volver')]
-    ])
-
-def registrar_usuario(user):
-    USUARIOS[user.id] = {
-        'nombre': user.first_name,
-        'username': user.username or "sin_username",
-        'ultimo_mensaje': datetime.now().strftime('%d/%m %H:%M'),
-        'demo_usada': user.id in DEMO_USADO,
-        'es_vip': user.id in VIP_TEMPORAL and VIP_TEMPORAL[user.id] > datetime.now(),
-        'pago': user.id in PAGARON
-    }
-
-# ✅ NUEVO: TE AVISA CUANDO ALGUIEN ESTÁ CALIENTE
-async def avisar_interes(context, user_id, username, mensaje, tipo="INTERÉS"):
-    try:
-        texto = f"🔥 *{tipo} DE COMPRA* 🔥\n\n"
-        texto += f"👤 @{username}\n"
-        texto += f"🆔 `{user_id}`\n"
-        texto += f"💬 Mensaje: `{mensaje[:100]}`\n"
-        texto += f"⏰ {datetime.now().strftime('%H:%M:%S')}\n\n"
-        texto += f"Háblale rápido antes que se enfríe 🤑"
-        
-        await context.bot.send_message(chat_id=ADMIN_ID, text=texto, parse_mode='Markdown')
-    except Exception as e:
-        logger.error(f"Error avisando interés: {e}")
-
-async def auto_tease_task(app, user_id, delay, tipo):
-    await asyncio.sleep(delay)
-    ahora = datetime.now()
-    if user_id in PAGARON:
-        return
-    if tipo == "demo":
-        if user_id not in DEMO_HOT or DEMO_HOT[user_id] < ahora:
-            return
-    else:
-        if user_id not in VIP_TEMPORAL or VIP_TEMPORAL[user_id] < ahora:
-            return
-
-    teases = [
-        "oye... Xd no dejo de pensar en ti 😳",
-        "papi me distraje en clase x tu culpa 😈 JSKSKS",
-        "toy aburrida... qué haces? 💦 uwu",
-        "me puse a verme al espejo y... 🙈 JSKSKSSKS",
-        "tengo calor 😰 o eres tú? uwu"
-    ]
-
-    try:
-        await app.bot.send_message(chat_id=user_id, text=random.choice(teases))
-        if tipo == "vip":
-            await app.bot.send_message(chat_id=user_id, text="¿Otro PREMIUM? 😈", reply_markup=get_menu())
-    except Exception as e:
-        logger.error(f"Error en auto-tease: {e}")
-
+# ✅ PRECIOS COMPLETOS
 PE_PRECIOS = """
 🛍 *VIDEOS - PERÚ* 🇵🇪
 
@@ -223,6 +154,75 @@ En cuanto caiga te mando tu pack 🔥
 1. Pagas 2. Captura
 """
 
+def get_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🛍 VIDEOS - PERÚ 🇵🇪", callback_data='pe')],
+        [InlineKeyboardButton("🛍 VIDEOS - MÉXICO 🇲🇽", callback_data='mx')],
+        [InlineKeyboardButton("🛍 VIDEOS - USA 🇺🇸", callback_data='usa')],
+        [InlineKeyboardButton("🌎 OTRO PAÍS", callback_data='otro')],
+        [InlineKeyboardButton("📸 Fotitos GRATIS", callback_data='fotitos')],
+        [InlineKeyboardButton("🔥 Mi Canal VIP", url=LINK_CANAL)]
+    ])
+
+def get_volver():
+    return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Volver al Menú", callback_data='volver')]])
+
+def get_no_entiendo():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📸 Ver Fotitos GRATIS", callback_data='fotitos')],
+        [InlineKeyboardButton("🛍 Ver Precios", callback_data='volver')]
+    ])
+
+def registrar_usuario(user):
+    USUARIOS[user.id] = {
+        'nombre': user.first_name,
+        'username': user.username or "sin_username",
+        'ultimo_mensaje': datetime.now().strftime('%d/%m %H:%M'),
+        'demo_usada': user.id in DEMO_USADO,
+        'es_vip': user.id in VIP_TEMPORAL and VIP_TEMPORAL[user.id] > datetime.now(),
+        'pago': user.id in PAGARON
+    }
+
+async def avisar_interes(context, user_id, username, mensaje, tipo="INTERÉS"):
+    try:
+        texto = f"🔥 *{tipo} DE COMPRA* 🔥\n\n"
+        texto += f"👤 @{username}\n"
+        texto += f"🆔 `{user_id}`\n"
+        texto += f"💬 Mensaje: `{mensaje[:100]}`\n"
+        texto += f"⏰ {datetime.now().strftime('%H:%M:%S')}\n\n"
+        texto += f"Háblale rápido antes que se enfríe 🤑"
+        
+        await context.bot.send_message(chat_id=ADMIN_ID, text=texto, parse_mode='Markdown')
+    except Exception as e:
+        logger.error(f"Error avisando interés: {e}")
+
+async def auto_tease_task(app, user_id, delay, tipo):
+    await asyncio.sleep(delay)
+    ahora = datetime.now()
+    if user_id in PAGARON:
+        return
+    if tipo == "demo":
+        if user_id not in DEMO_HOT or DEMO_HOT[user_id] < ahora:
+            return
+    else:
+        if user_id not in VIP_TEMPORAL or VIP_TEMPORAL[user_id] < ahora:
+            return
+
+    teases = [
+        "oye... Xd no dejo de pensar en ti 😳",
+        "papi me distraje en clase x tu culpa 😈 JSKSKS",
+        "toy aburrida... qué haces? 💦 uwu",
+        "me puse a verme al espejo y... 🙈 JSKSKSSKS",
+        "tengo calor 😰 o eres tú? uwu"
+    ]
+
+    try:
+        await app.bot.send_message(chat_id=user_id, text=random.choice(teases))
+        if tipo == "vip":
+            await app.bot.send_message(chat_id=user_id, text="¿Otro PREMIUM? 😈", reply_markup=get_menu())
+    except Exception as e:
+        logger.error(f"Error en auto-tease: {e}")
+
 async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message or update.business_message
     if not message or not message.from_user or message.from_user.is_bot:
@@ -230,11 +230,12 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     user = message.from_user
     user_id = user.id
-    username = user.username or "sin_username"
     
-    if user_id == ADMIN_ID and message.chat.type == "private":
+    # ✅ NO PROCESAR TUS MENSAJES
+    if user_id == ADMIN_ID:
         return
     
+    username = user.username or "sin_username"
     registrar_usuario(user)
     ahora = datetime.now()
 
@@ -263,7 +264,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if message.photo:
         PAGARON.add(user_id)
-        # ✅ TE AVISA QUE PAGÓ
         await avisar_interes(context, user_id, username, "ENVÍO CAPTURA DE PAGO", "PAGO RECIBIDO 💰")
         
         await message.reply_text(
@@ -358,7 +358,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-    # ✅ AVISA CUANDO PREGUNTAN PRECIO
     if any(x in texto for x in ['precio', 'cuanto', 'cuánto', 'vale', 'costo', 'cuesta', 'peru', 'soles', 's/']):
         await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
         await message.reply_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
@@ -372,7 +371,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await avisar_interes(context, user_id, username, texto, "PREGUNTÓ PRECIO")
         await message.reply_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
     elif any(x in texto for x in ['comprar', 'compra', 'pagar', 'pago', 'quiero', 'dame']):
-        # ✅ AVISA CUANDO DICEN QUE QUIEREN COMPRAR
         await avisar_interes(context, user_id, username, texto, "QUIERE COMPRAR 🤑")
         await message.reply_text(
             "Sii bebé 😘 Elige tu país para ver precios:",
@@ -395,7 +393,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     username = query.from_user.username or "sin_username"
     
-    # ✅ AVISA CUANDO TOCAN BOTONES DE PRECIO
     if data in ['pe', 'mx', 'usa', 'otro']:
         await avisar_interes(context, user_id, username, f"Tocó botón: {data.upper()}", "VIO PRECIOS 👀")
     
