@@ -205,7 +205,7 @@ En cuanto caiga te mando tu pack 🔥
 """
 
 async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # ✅ ESTA LÍNEA YA AGARRA MENSAJES NORMALES Y DE BUSINESS
+    # ✅ AGARRA MENSAJES NORMALES Y DE BUSINESS
     message = update.message or update.business_message
     if not message:
         return
@@ -436,11 +436,8 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = Application.builder().token(TOKEN).build()
 
-    # ✅ HANDLERS CORREGIDOS PARA BUSINESS
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_todo)) # DM normal
-    app.add_handler(MessageHandler(filters.UpdateType.BUSINESS_MESSAGE, manejar_todo)) # Telegram Business
-    app.add_handler(MessageHandler(filters.PHOTO, manejar_todo)) # Para capturas
-    app.add_handler(MessageHandler(filters.COMMAND, manejar_todo)) # Para /start
+    # ✅ HANDLERS CORREGIDOS - AHORA SÍ AGARRA BUSINESS
+    app.add_handler(MessageHandler(filters.ALL, manejar_todo))
     
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(CommandHandler("vip", vip))
@@ -450,7 +447,7 @@ def main():
     logger.info("BOT PRENDIDO - CON SOPORTE BUSINESS ✅")
     
     try:
-        # ✅ IMPORTANTE: allowed_updates para que Telegram mande los business_message
+        # ✅ ESTA LÍNEA ES LA CLAVE - SIN ESTO NO FUNCIONA BUSINESS
         app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
     except Conflict:
         logger.error("Hay otra instancia corriendo. Cerrando esta...")
