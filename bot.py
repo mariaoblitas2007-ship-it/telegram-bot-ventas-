@@ -23,7 +23,7 @@ LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 VIP_TEMPORAL = {}
 DEMO_USADO = set()
 USUARIOS = {}
-PAGARON = set()
+PAGARON = set() # MODIFICACIÓN 3: Si está aquí, el bot no responde
 ULTIMO_MENSAJE = {}
 VIO_PRECIOS = {}
 FOLLOWUP_ENVIADO = set()
@@ -255,7 +255,8 @@ async def avisar_pago(context, user_id, username, nombre, foto_id):
                   f"🆔 `{user_id}`\n" \
                   f"⏰ {datetime.now().strftime('%H:%M:%S')}\n\n" \
                   f"👉 [Escribirle al cliente]({link_chat})\n\n" \
-                  f"*Cliente enviado a tu privado* ✅"
+                  f"*Cliente enviado a tu privado* ✅\n\n" \
+                  f"Usa `/activar {user_id}` para reactivar el bot en ese chat"
 
         await context.bot.send_photo(chat_id=ADMIN_ID, photo=foto_id, caption=caption, parse_mode='Markdown')
     except Exception as e:
@@ -293,16 +294,19 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user = message.from_user
     user_id = user.id
+
+    # MODIFICACIÓN 3: Si ya pagó, el bot no responde NADA a menos que lo reactives
+    if user_id in PAGARON and user_id!= ADMIN_ID:
+        return # Bot muerto para ese usuario
+
     if user_id == ADMIN_ID:
-        return
-    username = user.username or "sin_username"
-    registrar_usuario(user)
+        pass # Admin siempre puede hablar
+    else:
+        username = user.username or "sin_username"
+        registrar_usuario(user)
+
     ahora = datetime.now()
     nombre = user.first_name
-
-    if user_id in PAGARON:
-        await message.reply_text(f"¡Pago confirmado {nombre}! 😊\n\n✅ *LISTO*\n\n📩 *Escríbeme al privado*\n👉 {USERNAME_ADMIN}\n\nAhí coordinamos tu pedido", parse_mode='Markdown')
-        return
 
     if message.text and message.text.lower() == '/start':
         DEMO_USADO.add(user_id)
@@ -311,21 +315,21 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("¿Qué se te antoja hoy? 👇", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
-    # SOLO NOTIFICA SI ES FOTO = PAGO
+    # MODIFICACIÓN 3: Al recibir foto = pago = bot se desactiva para ese user
     if message.photo:
-        PAGARON.add(user_id)
+        PAGARON.add(user_id) # Se agrega a lista de "pagados/desactivados"
         foto_id = message.photo[-1].file_id
         await avisar_pago(context, user_id, username, nombre, foto_id)
         await message.reply_text(
             f"✅ *PAGO RECIBIDO* 😊\n\n"
-            f"Gracias {nombre}\n\n"
+            f"Gracias {nombre}, ya te registro\n"
             f"📩 *AHORA ESCRÍBEME AL PRIVADO*\n"
             f"👉 {USERNAME_ADMIN}\n\n"
-            f"Ahí coordinamos tu pedido sin demora\n\n"
-            f"*No lo gestiono por aquí por seguridad*",
+            f"Ahí coordinamos tu pedido 😏\n\n"
+            f"*El bot se desactiva aquí por seguridad*",
             parse_mode='Markdown'
         )
-        return
+        return # Después de esto ya no responde más
 
     if not message.text:
         return
@@ -336,7 +340,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     ULTIMO_MENSAJE[user_id] = texto.lower()
 
-    # NUEVO: SI ESCRIBE "GRATIS" LE MANDA EL MENSAJE + FOTOS
     if any(x in normalizar(texto) for x in ['gratis', 'free', 'regalo', 'bonus', 'muestra gratis']):
         await enviar_gratis(user_id, context)
         return
@@ -374,7 +377,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await message.reply_text(f"{nombre}, {tiempo_restante} min y me tengo que ir 😢\n\n¿Qué necesitas antes de irme? ✨", parse_mode='Markdown')
             return
 
-    # SI NO ENTIENDE: SOLO BOTONES
     await message.reply_text("Elige una opción 😏👇", reply_markup=get_menu(), parse_mode='Markdown')
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -382,6 +384,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     data = query.data
     user_id = query.from_user.id
+
+    # MODIFICACIÓN 3: Si ya pagó, no responde botones tampoco
+    if user_id in PAGARON and user_id!= ADMIN_ID:
+        return
 
     if data == 'pe':
         await query.edit_message_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
@@ -392,7 +398,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == 'otro':
         await query.edit_message_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
     elif data == 'gratis':
-        await query.edit_message_text(TEXTO_GRATIS, parse_mode='Markdown')
+        # MODIFICACIÓN 2: Botón volver va en el mismo mensaje del texto
+        await query.edit_message_text(TEXTO_GRATIS, reply_markup=get_volver(), parse_mode='Markdown')
         for foto in FOTOS_GRATIS:
             try:
                 with open(foto, 'rb') as f:
@@ -400,7 +407,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await asyncio.sleep(0.5)
             except Exception as e:
                 logger.error(f"No se pudo enviar {foto}: {e}")
-        await context.bot.send_message(chat_id=user_id, text="¡Listo! 😊 Sigue los pasos y me avisas", reply_markup=get_volver())
 
     elif data == 'volver':
         await query.edit_message_text("¿Qué se te antoja hoy? 👇", reply_markup=get_menu(), parse_mode='Markdown')
@@ -413,9 +419,23 @@ async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = int(context.args[0])
     VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15)
-    PAGARON.add(user_id)
     await context.bot.send_message(user_id, "✅ *CHAT VIP ACTIVADO* 😊\n\nTienes *15 minutos* de atención prioritaria\n\nPregúntame lo que quieras ✨")
     await update.message.reply_text(f"✅ VIP activado para {user_id}")
+
+# MODIFICACIÓN 3: Comando para reactivar el bot en un chat después del pago
+async def activar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id!= ADMIN_ID:
+        return
+    if not context.args:
+        await update.message.reply_text("Uso: /activar ID_DEL_CLIENTE")
+        return
+    user_id = int(context.args[0])
+    if user_id in PAGARON:
+        PAGARON.remove(user_id)
+        await context.bot.send_message(user_id, "😏 Bot reactivado. ¿En qué te ayudo?")
+        await update.message.reply_text(f"✅ Bot reactivado para {user_id}")
+    else:
+        await update.message.reply_text(f"⚠️ El usuario {user_id} no estaba desactivado")
 
 async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id!= ADMIN_ID:
@@ -425,7 +445,7 @@ async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     texto = "📊 *USUARIOS REGISTRADOS* 📊\n\n"
     for uid, data in USUARIOS.items():
-        estado = "💰 PAGÓ" if data['pago'] else "🔥 VIP" if data['es_vip'] else "👀 NUEVO"
+        estado = "💰 PAGÓ/DESACTIVADO" if data['pago'] else "🔥 VIP" if data['es_vip'] else "👀 NUEVO"
         texto += f"👤 {data['nombre']} @{data['username']}\n🆔 `{uid}` | {estado}\n⏰ {data['ultimo_mensaje']}\n\n"
     texto += f"*Total: {len(USUARIOS)} usuarios*"
     await update.message.reply_text(texto, parse_mode='Markdown')
@@ -446,6 +466,7 @@ signal.signal(signal.SIGTERM, shutdown_handler)
 def main():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler('vip', vip))
+    app.add_handler(CommandHandler('activar', activar)) # MODIFICACIÓN 3: Nuevo comando
     app.add_handler(CommandHandler('usuarios', usuarios))
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
