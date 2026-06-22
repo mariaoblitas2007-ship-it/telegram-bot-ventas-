@@ -277,16 +277,20 @@ async def follow_up_task(app, user_id, username):
     except:
         pass
 
+# EDIT 1: Fix botón volver + anti-crash si faltan fotos
 async def enviar_gratis(chat_id, context):
-    await context.bot.send_message(chat_id=chat_id, text=TEXTO_GRATIS, parse_mode='Markdown')
+    # Mando el texto CON el botón volver desde el inicio
+    await context.bot.send_message(chat_id=chat_id, text=TEXTO_GRATIS, parse_mode='Markdown', reply_markup=get_volver())
+    # Intento mandar fotos pero no crasheo si no existen
     for foto in FOTOS_GRATIS:
         try:
             with open(foto, 'rb') as f:
                 await context.bot.send_photo(chat_id=chat_id, photo=f)
             await asyncio.sleep(0.5)
+        except FileNotFoundError:
+            logger.warning(f"Foto {foto} no encontrada, saltando...")
         except Exception as e:
             logger.error(f"No se pudo enviar {foto}: {e}")
-    await context.bot.send_message(chat_id=chat_id, text="¡Listo! 😊 Sigue los pasos y me avisas", reply_markup=get_volver())
 
 async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message or update.business_message
@@ -295,7 +299,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = message.from_user
     user_id = user.id
 
-    # FIX 1: Si ya pagó, el bot no responde NADA excepto al admin
     if user_id in PAGARON and user_id!= ADMIN_ID:
         logger.info(f"Usuario {user_id} bloqueado por pago")
         return
@@ -313,7 +316,6 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if message.photo:
-        # FIX 2: Admin no se bloquea aunque mande fotos
         if user_id!= ADMIN_ID:
             PAGARON.add(user_id)
         foto_id = message.photo[-1].file_id
@@ -377,13 +379,13 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await message.reply_text("Elige una opción 😏👇", reply_markup=get_menu(), parse_mode='Markdown')
 
+# EDIT 2: Fix botón "Gratis" para que no se pierda el volver
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
     user_id = query.from_user.id
 
-    # FIX 3: Si ya pagó, los botones tampoco responden
     if user_id in PAGARON and user_id!= ADMIN_ID:
         logger.info(f"Botón ignorado: usuario {user_id} bloqueado por pago")
         return
@@ -399,12 +401,15 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == 'otro':
         await query.edit_message_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
     elif data == 'gratis':
+        # FIX: Edito el mensaje con texto + botón volver, luego mando fotos
         await query.edit_message_text(TEXTO_GRATIS, reply_markup=get_volver(), parse_mode='Markdown')
         for foto in FOTOS_GRATIS:
             try:
                 with open(foto, 'rb') as f:
                     await context.bot.send_photo(chat_id=user_id, photo=f)
                 await asyncio.sleep(0.5)
+            except FileNotFoundError:
+                logger.warning(f"Foto {foto} no encontrada, saltando...")
             except Exception as e:
                 logger.error(f"No se pudo enviar {foto}: {e}")
 
