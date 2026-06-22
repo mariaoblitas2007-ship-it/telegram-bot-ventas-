@@ -34,77 +34,120 @@ FOTOS_GRATIS = [
 ]
 
 PE_PRECIOS = """
-🛍 *PACKS DISPONIBLES - PERÚ* 🇵🇪
+🛍 *PACKS DISPONIBLES - PERÚ* 🇵🇪😏
 
-🎂 *BÁSICO: S/ 15*
-→ 5 unidades | S/ 3 c/u
+💦 *PRUEBA: S/ 5*
+→ 3 fotitos | S/ 1.66 c/u
+→ Para que me conozcas 🙈
 
-🔥 *TOP: S/ 30* ← MÁS VENDIDO
-→ 12 unidades | S/ 2.50 c/u
+🎂 *BÁSICO: S/ 10*
+→ 6 unidades | S/ 1.66 c/u
+→ *+1 foto extra HOY*
+
+🔥 *TOP: S/ 20* ← MÁS VENDIDO
+→ 12 unidades | S/ 1.66 c/u
+→ *Ahorras 50%*
+→ *REGALO: 2 fotos extra*
+
+🏆 *PREMIUM: S/ 35*
+→ 20 unidades + 1 personalizado
+→ incluye chat privado 24h 🥰
 → *Ahorras 50%*
 
-🏆 *PREMIUM: S/ 60*
-→ 20 unidades + 1 personalizado
-→ incluye chat 🥰
-→ *Ahorras 67%*
+👑 *VIP: S/ 50* ← MÁXIMO 28 UNIDADES
+→ 28 unidades + 2 personalizados
+→ Chat 3 días + videollamada 5min
+→ *TODO INCLUIDO* 😈
 
 📼 *LLAMADITAS* 📼
-S/ 60: 10 min
-S/ 80: 20 min
+S/ 30: 10 min 😈
+S/ 50: 20 min + 3 fotos
+
+⚡ *COMBO FLASH: S/ 45*
+→ Pack PREMIUM + Llamada 10min
+→ *Ahorras S/ 20*
 
 💳 *PAGO:* *YAPE/PLIN:* 923553612
-*CUENTO CON REFERENCIAS*
+*100% REAL - PIDEME REFERENCIAS*
 
-1. Yapeas 2. Captura
+1. Yapeas 2. Captura 3. Disfrutas 😏
 """
 
 MX_PRECIOS = """
-🛍 *PACKS DISPONIBLES - MÉXICO* 🇲🇽
+🛍 *PACKS DISPONIBLES - MÉXICO* 🇲🇽😏
 
-🎂 *BÁSICO: $100 MXN*
-→ 5 unidades | $20 c/u
+💦 *PRUEBA: $60 MXN*
+→ 3 fotitos | $20 c/u
+→ Para que me conozcas 🙈
+→ *Precio final con comisión*
 
-🔥 *TOP: $200 MXN* ← MÁS VENDIDO
-→ 12 unidades | $16 c/u
+🎂 *BÁSICO: $90 MXN*
+→ 6 unidades | $15 c/u
+→ *+1 foto extra HOY*
+→ *Precio final con comisión*
+
+🔥 *TOP: $145 MXN* ← MÁS VENDIDO
+→ 12 unidades | $12 c/u
 → *Ahorras 50%*
+→ *REGALO: 2 fotos extra*
+→ *Precio final con comisión*
 
-🏆 *PREMIUM: $400 MXN*
+🏆 *PREMIUM: $230 MXN*
 → 20 unidades + 1 personalizado
-→ incluye chat 🥰
-→ *Ahorras 80%*
+→ incluye chat privado 24h 🥰
+→ *Ahorras 50%*
+→ *Precio final con comisión*
+
+👑 *VIP: $320 MXN* ← MÁXIMO 28 UNIDADES
+→ 28 unidades + 2 personalizados
+→ Chat 3 días + videollamada 5min
+→ *TODO INCLUIDO* 😈
+→ *Precio final con comisión*
 
 📼 *LLAMADITAS* 📼
-$400 MXN: 10 min
-$600 MXN: 20 min
+$205 MXN: 10 min 😈
+$320 MXN: 20 min + 3 fotos
 
 🛍 *PAGO MXN:*
 🏦 *Banco:* STP
 🔢 *CLABE:* `646180546711450910`
 📝 *Referencia:* `yanae`
 
-🇲🇽 También acepto: Transfer / Astropay
+🇲🇽 También: Transfer / Astropay
+⚠️ *Precio final - incluye comisión bancaria*
 
 Mándame captura cuando pagues 😊
 """
 
 USA_PRECIOS = """
-🛍 *PACKS DISPONIBLES - USA* 🇺🇸
+🛍 *PACKS DISPONIBLES - USA* 🇺🇸😏
 
-🎂 *BÁSICO: $5 USD*
-→ 5 unidades | $1 c/u
+💦 *PRUEBA: $2 USD*
+→ 3 fotitos | $0.66 c/u
+→ Para que me pruebes 🙈
 
-🔥 *TOP: $9 USD* ← MÁS VENDIDO
-→ 12 unidades | $0.75 c/u
+🎂 *BÁSICO: $3.50 USD*
+→ 6 unidades | $0.58 c/u
+→ *+1 foto extra HOY*
+
+🔥 *TOP: $7 USD* ← MÁS VENDIDO
+→ 12 unidades | $0.58 c/u
+→ *Ahorras 50%*
+→ *REGALO: 2 fotos extra*
+
+🏆 *PREMIUM: $12 USD*
+→ 20 unidades + 1 personalizado
+→ incluye chat privado 24h 🥰
 → *Ahorras 50%*
 
-🏆 *PREMIUM: $20 USD*
-→ 20 unidades + 1 personalizado
-→ incluye chat 🥰
-→ *Ahorras 60%*
+👑 *VIP: $20 USD* ← MÁXIMO 28 UNIDADES
+→ 28 unidades + 2 personalizados
+→ Chat 3 días + videollamada 5min
+→ *MEJOR VALOR* 😈
 
 📼 *LLAMADITAS* 📼
-$20 USD: 10 min
-$30 USD: 20 min
+$10 USD: 10 min 😈
+$20 USD: 20 min + 3 fotos
 
 🪙 *PAGO:*
 *PayPal:* AbigailMaximoofO
@@ -120,14 +163,34 @@ Avísame cuando envíes con el comprobante 😊
 """
 
 OTRO_PRECIOS = f"""
-🛍 *PACKS DISPONIBLES - INTERNACIONAL* 🌎
+🛍 *PACKS DISPONIBLES - INTERNACIONAL* 🌎😏
 
-🎂 *BÁSICO: $5 USD* → 5 unidades | $1 c/u
-🔥 *TOP: $9 USD* ← MÁS VENDIDO → 12 unidades | $0.75 c/u
-🏆 *PREMIUM: $20 USD* → 20 unidades + 1 personalizado + chat 🥰
+💦 *PRUEBA: $2 USD*
+→ 3 fotitos | $0.66 c/u
+→ Para que me conozcas 🙈
+
+🎂 *BÁSICO: $3.50 USD*
+→ 6 unidades | $0.58 c/u
+→ *+1 foto extra HOY*
+
+🔥 *TOP: $7 USD* ← MÁS VENDIDO
+→ 12 unidades | $0.58 c/u
+→ *Ahorras 50%*
+→ *REGALO: 2 fotos extra*
+
+🏆 *PREMIUM: $12 USD*
+→ 20 unidades + 1 personalizado
+→ incluye chat privado 24h 🥰
+→ *Ahorras 50%*
+
+👑 *VIP: $20 USD* ← MÁXIMO 28 UNIDADES
+→ 28 unidades + 2 personalizados
+→ Chat 3 días + videollamada 5min
+→ *MEJOR VALOR* 😈
 
 📼 *LLAMADITAS* 📼
-$20 USD: 10 min | $30 USD: 20 min
+$10 USD: 10 min 😈
+$20 USD: 20 min + 3 fotos
 
 🪙 *PAGO:*
 *PayPal:* [Click aquí]({LINK_PAYPAL})
@@ -178,7 +241,7 @@ def registrar_usuario(user):
         'username': user.username or "sin_username",
         'ultimo_mensaje': datetime.now().strftime('%d/%m %H:%M'),
         'demo_usada': user.id in DEMO_USADO,
-        'es_vip': user.id in VIP_TEMPORAL and VIP_TEMPORAL[user_id] > datetime.now(),
+        'es_vip': user.id in VIP_TEMPORAL and VIP_TEMPORAL[user.id] > datetime.now(),
         'pago': user.id in PAGARON
     }
 
