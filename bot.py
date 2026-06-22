@@ -13,7 +13,7 @@ from telegram.error import Conflict
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-TOKEN = '8751695788:AAENlUN4KTzaBmVNdbDf3AAr0kmro3pM6VI'
+TOKEN = '8751695788:AAGVEh616rdbifTD_Fvhloe10jJ2dTPYnMg' # <-- PEGA TU TOKEN AQUÍ
 ADMIN_ID = 8783569348
 USERNAME_ADMIN = "@yanabicitasa"
 
@@ -23,7 +23,7 @@ LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 VIP_TEMPORAL = {}
 DEMO_USADO = set()
 USUARIOS = {}
-PAGARON = set() # MODIFICACIÓN 3: Si está aquí, el bot no responde
+PAGARON = set()
 ULTIMO_MENSAJE = {}
 VIO_PRECIOS = {}
 FOLLOWUP_ENVIADO = set()
@@ -295,16 +295,13 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = message.from_user
     user_id = user.id
 
-    # MODIFICACIÓN 3: Si ya pagó, el bot no responde NADA a menos que lo reactives
+    # FIX 1: Si ya pagó, el bot no responde NADA excepto al admin
     if user_id in PAGARON and user_id!= ADMIN_ID:
-        return # Bot muerto para ese usuario
+        logger.info(f"Usuario {user_id} bloqueado por pago")
+        return
 
-    if user_id == ADMIN_ID:
-        pass # Admin siempre puede hablar
-    else:
-        username = user.username or "sin_username"
-        registrar_usuario(user)
-
+    username = user.username or "sin_username"
+    registrar_usuario(user)
     ahora = datetime.now()
     nombre = user.first_name
 
@@ -315,9 +312,10 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("¿Qué se te antoja hoy? 👇", reply_markup=get_menu(), parse_mode='Markdown')
         return
 
-    # MODIFICACIÓN 3: Al recibir foto = pago = bot se desactiva para ese user
     if message.photo:
-        PAGARON.add(user_id) # Se agrega a lista de "pagados/desactivados"
+        # FIX 2: Admin no se bloquea aunque mande fotos
+        if user_id!= ADMIN_ID:
+            PAGARON.add(user_id)
         foto_id = message.photo[-1].file_id
         await avisar_pago(context, user_id, username, nombre, foto_id)
         await message.reply_text(
@@ -329,7 +327,7 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"*El bot se desactiva aquí por seguridad*",
             parse_mode='Markdown'
         )
-        return # Después de esto ya no responde más
+        return
 
     if not message.text:
         return
@@ -385,9 +383,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
     user_id = query.from_user.id
 
-    # MODIFICACIÓN 3: Si ya pagó, no responde botones tampoco
+    # FIX 3: Si ya pagó, los botones tampoco responden
     if user_id in PAGARON and user_id!= ADMIN_ID:
+        logger.info(f"Botón ignorado: usuario {user_id} bloqueado por pago")
         return
+
+    logger.info(f"Botón presionado: {data} por {user_id}")
 
     if data == 'pe':
         await query.edit_message_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
@@ -398,7 +399,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == 'otro':
         await query.edit_message_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
     elif data == 'gratis':
-        # MODIFICACIÓN 2: Botón volver va en el mismo mensaje del texto
         await query.edit_message_text(TEXTO_GRATIS, reply_markup=get_volver(), parse_mode='Markdown')
         for foto in FOTOS_GRATIS:
             try:
@@ -422,7 +422,6 @@ async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(user_id, "✅ *CHAT VIP ACTIVADO* 😊\n\nTienes *15 minutos* de atención prioritaria\n\nPregúntame lo que quieras ✨")
     await update.message.reply_text(f"✅ VIP activado para {user_id}")
 
-# MODIFICACIÓN 3: Comando para reactivar el bot en un chat después del pago
 async def activar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id!= ADMIN_ID:
         return
@@ -466,7 +465,7 @@ signal.signal(signal.SIGTERM, shutdown_handler)
 def main():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler('vip', vip))
-    app.add_handler(CommandHandler('activar', activar)) # MODIFICACIÓN 3: Nuevo comando
+    app.add_handler(CommandHandler('activar', activar))
     app.add_handler(CommandHandler('usuarios', usuarios))
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
