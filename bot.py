@@ -13,9 +13,10 @@ from telegram.error import Conflict
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-TOKEN = '8751695788:AAGVEh616rdbifTD_Fvhloe10jJ2dTPYnMg' # <-- PEGA TU TOKEN AQUÍ
+TOKEN = '8751695788:AAGVEh616rdbifTD_Fvhloe10jJ2dTPYnMg'
 ADMIN_ID = 8783569348
 USERNAME_ADMIN = "@yanabicitasa"
+CANAL_ID = -1004473732783
 
 LINK_CANAL = "https://t.me/+ZWc0FAcw-hQ2MDZh"
 LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
@@ -27,6 +28,10 @@ PAGARON = set()
 ULTIMO_MENSAJE = {}
 VIO_PRECIOS = {}
 FOLLOWUP_ENVIADO = set()
+
+# Sistema de referidos
+REFERIDOS = {}
+INVITACIONES = {}
 
 FOTOS_GRATIS = [
     "fotitos1.JPG", "fotitos2.JPG", "fotitos3.JPG",
@@ -79,30 +84,25 @@ MX_PRECIOS = """
 💦 *PRUEBA: $60 MXN*
 → 3 fotitos | $20 c/u
 → Para que me conozcas 🙈
-→ *Precio final con comisión*
 
 🎂 *BÁSICO: $90 MXN*
 → 6 unidades | $15 c/u
 → *+1 foto extra HOY*
-→ *Precio final con comisión*
 
 🔥 *TOP: $145 MXN* ← MÁS VENDIDO
 → 12 unidades | $12 c/u
 → *Ahorras 50%*
 → *REGALO: 2 fotos extra*
-→ *Precio final con comisión*
 
 🏆 *PREMIUM: $230 MXN*
 → 20 unidades + 1 personalizado
 → incluye chat privado 24h 🥰
 → *Ahorras 50%*
-→ *Precio final con comisión*
 
 👑 *VIP: $320 MXN* ← MÁXIMO 28 UNIDADES
 → 28 unidades + 2 personalizados
 → Chat 3 días + videollamada 5min
 → *TODO INCLUIDO* 😈
-→ *Precio final con comisión*
 
 📼 *LLAMADITAS* 📼
 $205 MXN: 10 min 😈
@@ -114,7 +114,6 @@ $320 MXN: 20 min + 3 fotos
 📝 *Referencia:* `yanae`
 
 🇲🇽 También: Transfer / Astropay
-⚠️ *Precio final - incluye comisión bancaria*
 
 Mándame captura cuando pagues 😊
 """
@@ -200,32 +199,44 @@ Avísame cuando envíes con el comprobante 😊
 """
 
 TEXTO_GRATIS = """
-🎁 *BONUS GRATIS* 😊
+🎁 *VIDEOS GRATIS SIN PAGAR #HORMO* 🎁
 
-✨ *¿QUIERES UNA RECOMPENSA GRATIS?* ✨
-Ayúdame promocionando en TikTok ✅
+No tienes plata? Suda por tu premio 😈
 
-*Pasitos súper fáciles:*
-1️⃣ Ponte un nombre + foto de perfil linda
-2️⃣ En tu bio pon: `Tg: yanabicitasa` ✨
-3️⃣ Sube una foto a tu story mencionándome
-4️⃣ Comenta en videos relacionados, unos 30-100 👀
-   Así generamos alcance juntos
-5️⃣ Mándame captura cuando termines
-6️⃣ Disfruta de tu bonus gratis 🎁
+*OPCIÓN 1 - RECLUTAS:* 5 miembros = Video 30s
+*OPCIÓN 2 - INVASIÓN:* Spam 4 grupos = Video con nombre
+*OPCIÓN 3 - LEYENDA:* 200 referidos = Video 3min + Audio
 
-¿Te animas? 😊
-(Me avisas cuando cumplas)
+¿Tienes plata y quieres YA? Toca "💎 COMPRAR" 🔥
+
+*Pide tu link en "🔗 MI LINK" para empezar*
 """
+
+# Premios por referidos
+PREMIOS_REFERIDOS = {
+    5: "Video 30s 🥉",
+    20: "Video 1min + nombre 🥈",
+    50: "Pack 3 videos 🥇",
+    100: "Video 2min + 2 audios 💎",
+    200: "Video 3min + Audio + Prioridad 7 días 👑"
+}
 
 def get_menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🛍 Precios Perú 🇵🇪", callback_data='pe')],
-        [InlineKeyboardButton("🛍 Precios México 🇲🇽", callback_data='mx')],
-        [InlineKeyboardButton("🛍 Precios USA 🇺🇸", callback_data='usa')],
-        [InlineKeyboardButton("🌎 Otro País", callback_data='otro')],
-        [InlineKeyboardButton("🎁 Gratis", callback_data='gratis')],
+        [InlineKeyboardButton("💎 COMPRAR PACKS", callback_data='comprar')],
+        [InlineKeyboardButton("🎁 GRATIS - Misiones", callback_data='gratis')],
+        [InlineKeyboardButton("🔗 MI LINK - Referidos", callback_data='milink')],
+        [InlineKeyboardButton("📊 RANKING", callback_data='ranking')],
         [InlineKeyboardButton("🔥 Canal Oficial", url=LINK_CANAL)]
+    ])
+
+def get_precios_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🇵🇪 Perú", callback_data='pe')],
+        [InlineKeyboardButton("🇲🇽 México", callback_data='mx')],
+        [InlineKeyboardButton("🇺🇸 USA/Otros", callback_data='usa')],
+        [InlineKeyboardButton("🌎 Internacional", callback_data='otro')],
+        [InlineKeyboardButton("⬅️ Volver", callback_data='volver')]
     ])
 
 def get_volver():
@@ -277,11 +288,52 @@ async def follow_up_task(app, user_id, username):
     except:
         pass
 
-# EDIT 1: Fix botón volver + anti-crash si faltan fotos
+# Crear link único para referidos
+async def crear_link_referido(context, user_id, username):
+    try:
+        if user_id in REFERIDOS:
+            return REFERIDOS[user_id]['link']
+
+        link_name = f"ref-{username}" if username!= "sin_username" else f"ref-{user_id}"
+        invite_link = await context.bot.create_chat_invite_link(
+            chat_id=CANAL_ID,
+            name=link_name,
+            creates_join_request=False
+        )
+        REFERIDOS[user_id] = {
+            'link': invite_link.invite_link,
+            'contador': 0,
+            'username': f"@{username}" if username!= "sin_username" else f"ID:{user_id}"
+        }
+        INVITACIONES[invite_link.invite_link] = user_id
+        return invite_link.invite_link
+    except Exception as e:
+        logger.error(f"Error creando link: {e}")
+        return None
+
+# Chequear premios
+async def chequear_premio(context, user_id):
+    if user_id not in REFERIDOS:
+        return
+
+    contador = REFERIDOS[user_id]['contador']
+    for meta, premio in sorted(PREMIOS_REFERIDOS.items()):
+        if contador == meta:
+            username = REFERIDOS[user_id]['username']
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"🏆 *META ALCANZADA* 🏆\n\nLlegaste a {meta} REFERIDOS\nPremio: {premio}\n\nTe escribo al pv en 10min para darte tu premio 😏\n\nSiguiente meta: sigue invitando con /milink",
+                parse_mode='Markdown'
+            )
+            # Aviso al admin
+            await context.bot.send_message(
+                chat_id=ADMIN_ID,
+                text=f"🎁 *PREMIO DESBLOQUEADO* 🎁\n\n👤 {username}\n🆔 `{user_id}`\n📊 {meta} referidos\n🎁 {premio}\n\n👉 [Escribirle](tg://user?id={user_id})",
+                parse_mode='Markdown'
+            )
+
 async def enviar_gratis(chat_id, context):
-    # Mando el texto CON el botón volver desde el inicio
     await context.bot.send_message(chat_id=chat_id, text=TEXTO_GRATIS, parse_mode='Markdown', reply_markup=get_volver())
-    # Intento mandar fotos pero no crasheo si no existen
     for foto in FOTOS_GRATIS:
         try:
             with open(foto, 'rb') as f:
@@ -299,6 +351,30 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = message.from_user
     user_id = user.id
 
+    # Detectar si entró por link de referido
+    if message.new_chat_members:
+        for member in message.new_chat_members:
+            if member.id == context.bot.id:
+                continue
+            if message.chat.id == CANAL_ID:
+                try:
+                    chat_member = await context.bot.get_chat_member(CANAL_ID, member.id)
+                    if hasattr(chat_member, 'invite_link') and chat_member.invite_link:
+                        link_usado = chat_member.invite_link.invite_link
+                        if link_usado in INVITACIONES:
+                            referidor_id = INVITACIONES[link_usado]
+                            if referidor_id in REFERIDOS:
+                                REFERIDOS[referidor_id]['contador'] += 1
+                                await context.bot.send_message(
+                                    chat_id=referidor_id,
+                                    text=f"🔥 *+1 REFERIDO #HORMO* 🔥\n\n{member.first_name} entró con tu link\nProgreso: {REFERIDOS[referidor_id]['contador']}/200\n\nSigue así bebé 😈",
+                                    parse_mode='Markdown'
+                                )
+                                await chequear_premio(context, referidor_id)
+                except Exception as e:
+                    logger.error(f"Error contando referido: {e}")
+        return
+
     if user_id in PAGARON and user_id!= ADMIN_ID:
         logger.info(f"Usuario {user_id} bloqueado por pago")
         return
@@ -313,6 +389,49 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         saludo = f"Mmmm {nombre}... 😏✨ llegaste justo cuando te pensaba 🙈"
         await message.reply_text(saludo, parse_mode='Markdown')
         await message.reply_text("¿Qué se te antoja hoy? 👇", reply_markup=get_menu(), parse_mode='Markdown')
+        return
+
+    # Comando /milink
+    if message.text and message.text.lower() == '/milink':
+        link = await crear_link_referido(context, user_id, username)
+        if link:
+            contador = REFERIDOS[user_id]['contador'] if user_id in REFERIDOS else 0
+            await message.reply_text(
+                f"🔗 *TU LINK ÚNICO #HORMO* 🔗\n\n{link}\n\n📊 *TU PROGRESO:*\nReferidos: {contador}/200\nNivel: Bronce 🥉\n\n🎯 *PREMIOS:*\n5 = Video 30s\n20 = Video 1min + nombre\n50 = Pack 3 videos\n100 = Video 2min + 2 audios\n200 = Video 3min + Audio + Prioridad 7 días 👑\n\n⚠️ *REGLAS:*\nSolo cuentan usuarios reales +24h en el canal\nBots = ban permanente ❌\n\nCopia tu link y empieza 🔥",
+                parse_mode='Markdown',
+                reply_markup=get_volver()
+            )
+        else:
+            await message.reply_text("❌ Error creando link. Asegúrate que el bot sea admin del canal con permiso de 'Invitar usuarios'.", parse_mode='Markdown')
+        return
+
+    # Comando /misreferidos
+    if message.text and message.text.lower() == '/misreferidos':
+        if user_id in REFERIDOS:
+            contador = REFERIDOS[user_id]['contador']
+            link = REFERIDOS[user_id]['link']
+            await message.reply_text(
+                f"📊 *TUS REFERIDOS #HORMO* 📊\n\n👤 Usuario: @{username}\n👥 Han entrado: {contador}/200\n🎯 Te faltan: {200-contador} para LEYENDA 👑\n\n*Premio al llegar:* Video 3min + Audio + Prioridad 7 días\n\nTu link: {link}\n\nSigue spameando 🔥",
+                parse_mode='Markdown',
+                reply_markup=get_volver()
+            )
+        else:
+            await message.reply_text("Aún no tienes link. Usa /milink para crear uno 😏", parse_mode='Markdown')
+        return
+
+    # Comando /ranking
+    if message.text and message.text.lower() == '/ranking':
+        if not REFERIDOS:
+            await message.reply_text("Aún no hay promotores 😢 Sé el primero con /milink", parse_mode='Markdown')
+            return
+
+        top = sorted(REFERIDOS.items(), key=lambda x: x[1]['contador'], reverse=True)[:10]
+        texto = "🏆 *TOP PROMOTORES #HORMO - SEMANA* 🏆\n\n"
+        for i, (uid, data) in enumerate(top, 1):
+            nivel = "👑" if data['contador'] >= 200 else "💎" if data['contador'] >= 100 else "🥇" if data['contador'] >= 50 else "🥈" if data['contador'] >= 20 else "🥉"
+            texto += f"{i}. {data['username']} - {data['contador']} refs {nivel}\n"
+        texto += "\n¿Vas a dejar que te ganen? Usa /milink 😈"
+        await message.reply_text(texto, parse_mode='Markdown', reply_markup=get_volver())
         return
 
     if message.photo:
@@ -345,7 +464,7 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if any(x in normalizar(texto) for x in ['comprar', 'compro', 'quiero', 'pago', 'pagare', 'llevo', 'lo quiero']):
-        await message.reply_text(f"¡Así me gusta {nombre}! 😍🔥 Elige tu pack 👇", reply_markup=get_menu(), parse_mode='Markdown')
+        await message.reply_text(f"¡Así me gusta {nombre}! 😍🔥 Elige tu pack 👇", reply_markup=get_precios_menu(), parse_mode='Markdown')
         return
 
     if any(x in normalizar(texto) for x in ['precio', 'cuanto', 'vale', 'costo', 'cuesta', 'peru', 'soles']):
@@ -379,12 +498,12 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await message.reply_text("Elige una opción 😏👇", reply_markup=get_menu(), parse_mode='Markdown')
 
-# EDIT 2: Fix botón "Gratis" para que no se pierda el volver
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
     user_id = query.from_user.id
+    username = query.from_user.username or "sin_username"
 
     if user_id in PAGARON and user_id!= ADMIN_ID:
         logger.info(f"Botón ignorado: usuario {user_id} bloqueado por pago")
@@ -392,7 +511,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     logger.info(f"Botón presionado: {data} por {user_id}")
 
-    if data == 'pe':
+    if data == 'comprar':
+        await query.edit_message_text("💎 *ELIGE TU PAÍS* 💎\n\nToca tu bandera para ver precios 👇", reply_markup=get_precios_menu(), parse_mode='Markdown')
+    elif data == 'pe':
         await query.edit_message_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
     elif data == 'mx':
         await query.edit_message_text(MX_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
@@ -401,7 +522,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == 'otro':
         await query.edit_message_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
     elif data == 'gratis':
-        # FIX: Edito el mensaje con texto + botón volver, luego mando fotos
         await query.edit_message_text(TEXTO_GRATIS, reply_markup=get_volver(), parse_mode='Markdown')
         for foto in FOTOS_GRATIS:
             try:
@@ -412,6 +532,33 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.warning(f"Foto {foto} no encontrada, saltando...")
             except Exception as e:
                 logger.error(f"No se pudo enviar {foto}: {e}")
+
+    # Botón MI LINK
+    elif data == 'milink':
+        link = await crear_link_referido(context, user_id, username)
+        if link:
+            contador = REFERIDOS[user_id]['contador']
+            await query.edit_message_text(
+                f"🔗 *TU LINK ÚNICO #HORMO* 🔗\n\n{link}\n\n📊 *TU PROGRESO:*\nReferidos: {contador}/200\nNivel: {'👑' if contador>=200 else '💎' if contador>=100 else '🥇' if contador>=50 else '🥈' if contador>=20 else '🥉'}\n\n🎯 *PREMIOS:*\n5 = Video 30s\n20 = Video 1min + nombre\n50 = Pack 3 videos\n100 = Video 2min + 2 audios\n200 = Video 3min + Audio + Prioridad 7 días\n\n⚠️ *REGLAS:*\nSolo cuentan usuarios reales +24h en el canal\nBots = ban permanente ❌\n\nCopia tu link y empieza 🔥",
+                parse_mode='Markdown',
+                reply_markup=get_volver()
+            )
+        else:
+            await query.edit_message_text("❌ Error creando link. Asegúrate que el bot sea admin del canal con permiso de 'Invitar usuarios'.", parse_mode='Markdown', reply_markup=get_volver())
+
+    # Botón RANKING
+    elif data == 'ranking':
+        if not REFERIDOS:
+            await query.edit_message_text("Aún no hay promotores 😢 Sé el primero con /milink", parse_mode='Markdown', reply_markup=get_volver())
+            return
+
+        top = sorted(REFERIDOS.items(), key=lambda x: x[1]['contador'], reverse=True)[:10]
+        texto = "🏆 *TOP PROMOTORES #HORMO - SEMANA* 🏆\n\n"
+        for i, (uid, data_ref) in enumerate(top, 1):
+            nivel = "👑" if data_ref['contador'] >= 200 else "💎" if data_ref['contador'] >= 100 else "🥇" if data_ref['contador'] >= 50 else "🥈" if data_ref['contador'] >= 20 else "🥉"
+            texto += f"{i}. {data_ref['username']} - {data_ref['contador']} refs {nivel}\n"
+        texto += "\n¿Vas a dejar que te ganen? Toca 🔗 MI LINK 😈"
+        await query.edit_message_text(texto, parse_mode='Markdown', reply_markup=get_volver())
 
     elif data == 'volver':
         await query.edit_message_text("¿Qué se te antoja hoy? 👇", reply_markup=get_menu(), parse_mode='Markdown')
@@ -450,7 +597,8 @@ async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto = "📊 *USUARIOS REGISTRADOS* 📊\n\n"
     for uid, data in USUARIOS.items():
         estado = "💰 PAGÓ/DESACTIVADO" if data['pago'] else "🔥 VIP" if data['es_vip'] else "👀 NUEVO"
-        texto += f"👤 {data['nombre']} @{data['username']}\n🆔 `{uid}` | {estado}\n⏰ {data['ultimo_mensaje']}\n\n"
+        refs = f" | {REFERIDOS[uid]['contador']} refs" if uid in REFERIDOS else ""
+        texto += f"👤 {data['nombre']} @{data['username']}\n🆔 `{uid}` | {estado}{refs}\n⏰ {data['ultimo_mensaje']}\n\n"
     texto += f"*Total: {len(USUARIOS)} usuarios*"
     await update.message.reply_text(texto, parse_mode='Markdown')
 
