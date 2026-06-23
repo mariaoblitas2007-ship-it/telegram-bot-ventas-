@@ -199,26 +199,38 @@ Avísame cuando envíes con el comprobante 😊
 """
 
 TEXTO_GRATIS = """
-🎁 *VIDEOS GRATIS SIN PAGAR #HORMO* 🎁
+🔥 *VIDEOS GRATIS #HORMO - SÚBEME LA TEMP* 🔥
 
-No tienes plata? Suda por tu premio 😈
+¿Sin plata bebé? 😏 Trabaja por mí y te mojo...
 
-*OPCIÓN 1 - RECLUTAS:* 5 miembros = Video 30s
-*OPCIÓN 2 - INVASIÓN:* Spam 4 grupos = Video con nombre
-*OPCIÓN 3 - LEYENDA:* 200 referidos = Video 3min + Audio
+*🥉 NIVEL TIBIO - 5 MIEMBROS:*
+1 videito pa que me pruebes 🥵
 
-¿Tienes plata y quieres YA? Toca "💎 COMPRAR" 🔥
+*🥈 NIVEL CALIENTE - 20 MIEMBROS:*
+2-3 videitos... ya me pones nerviosa 🔥
 
-*Pide tu link en "🔗 MI LINK" para empezar*
+*🥇 NIVEL ARDIENDO - 50 MIEMBROS:*
+4-10 videitos 😈 Te voy a dejar sin aire
+
+*💎 NIVEL INFIERNO - 100 MIEMBROS:*
+10-20 videitos 🥵 Ya estoy toda tuya
+
+*👑 NIVEL DIABLA - 200 MIEMBROS:*
++20 videitos + *VIDEO FETICHE* solo para ti 😈🍑
+*Aquí me entrego completa...*
+
+¿Caliente y con prisa? Toca "💎 COMPRAR" y te atiendo YA 🔥
+
+*Saca tu link en "🔗 MI LINK" y ponte a reclutar #HORMOS* 😏
 """
 
-# Premios por referidos
+# Premios por referidos ESCALONADOS Y PICANTES
 PREMIOS_REFERIDOS = {
-    5: "Video 30s 🥉",
-    20: "Video 1min + nombre 🥈",
-    50: "Pack 3 videos 🥇",
-    100: "Video 2min + 2 audios 💎",
-    200: "Video 3min + Audio + Prioridad 7 días 👑"
+    5: "1 videito pa calentar 🥵",
+    20: "2-3 videitos... ya me mojo 🔥",
+    50: "4-10 videitos 😈 te dejo sin aire",
+    100: "10-20 videitos 🥵 ya soy tuya",
+    200: "+20 videitos + VIDEO FETICHE 👑🍑"
 }
 
 def get_menu():
@@ -311,7 +323,7 @@ async def crear_link_referido(context, user_id, username):
         logger.error(f"Error creando link: {e}")
         return None
 
-# Chequear premios
+# Chequear premios ESCALONADOS
 async def chequear_premio(context, user_id):
     if user_id not in REFERIDOS:
         return
@@ -320,15 +332,22 @@ async def chequear_premio(context, user_id):
     for meta, premio in sorted(PREMIOS_REFERIDOS.items()):
         if contador == meta:
             username = REFERIDOS[user_id]['username']
+            mensajes_meta = {
+                5: f"🔥 *NIVEL TIBIO DESBLOQUEADO* 🔥\n\n{contador} #HORMOS metiste 😏\nPremio: {premio}\n\nTe lo mando al pv en 10min... pa que me pruebes 🥵",
+                20: f"🔥 *NIVEL CALIENTE DESBLOQUEADO* 🔥\n\n{contador} #HORMOS 😈\nPremio: {premio}\n\nYa me pones nerviosa... te escribo al pv 🥵",
+                50: f"😈 *NIVEL ARDIENDO DESBLOQUEADO* 😈\n\n{contador} #HORMOS 🔥\nPremio: {premio}\n\nMe tienes sin aire... voy al pv ya 🥵",
+                100: f"🥵 *NIVEL INFIERNO DESBLOQUEADO* 🥵\n\n{contador} #HORMOS 😈\nPremio: {premio}\n\nYa soy toda tuya... revisa tu pv 🔥",
+                200: f"👑 *NIVEL DIABLA DESBLOQUEADO* 👑\n\n{contador} #HORMOS 🍑\nPremio: {premio}\n\n*ME ENTREGO COMPLETA*... video fetiche + todo\nRevisa tu pv YA 😈🥵"
+            }
             await context.bot.send_message(
                 chat_id=user_id,
-                text=f"🏆 *META ALCANZADA* 🏆\n\nLlegaste a {meta} REFERIDOS\nPremio: {premio}\n\nTe escribo al pv en 10min para darte tu premio 😏\n\nSiguiente meta: sigue invitando con /milink",
+                text=mensajes_meta.get(meta, f"🏆 META {meta} ALCANZADA 🏆\n\nPremio: {premio}\n\nTe escribo al pv 😏"),
                 parse_mode='Markdown'
             )
             # Aviso al admin
             await context.bot.send_message(
                 chat_id=ADMIN_ID,
-                text=f"🎁 *PREMIO DESBLOQUEADO* 🎁\n\n👤 {username}\n🆔 `{user_id}`\n📊 {meta} referidos\n🎁 {premio}\n\n👉 [Escribirle](tg://user?id={user_id})",
+                text=f"🔥 *PREMIO DESBLOQUEADO* 🔥\n\n👤 {username}\n🆔 `{user_id}`\n📊 {meta} miembros\n🎁 {premio}\n\n👉 [Escribirle](tg://user?id={user_id})",
                 parse_mode='Markdown'
             )
 
@@ -365,9 +384,10 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             referidor_id = INVITACIONES[link_usado]
                             if referidor_id in REFERIDOS:
                                 REFERIDOS[referidor_id]['contador'] += 1
+                                nivel = '👑 DIABLA' if REFERIDOS[referidor_id]['contador']>=200 else '🥵 INFIERNO' if REFERIDOS[referidor_id]['contador']>=100 else '😈 ARDIENDO' if REFERIDOS[referidor_id]['contador']>=50 else '🔥 CALIENTE' if REFERIDOS[referidor_id]['contador']>=20 else '🥵 TIBIO'
                                 await context.bot.send_message(
                                     chat_id=referidor_id,
-                                    text=f"🔥 *+1 REFERIDO #HORMO* 🔥\n\n{member.first_name} entró con tu link\nProgreso: {REFERIDOS[referidor_id]['contador']}/200\n\nSigue así bebé 😈",
+                                    text=f"🔥 *+1 #HORMO* 🔥\n\n{member.first_name} cayó por tu link 😏\nProgreso: {REFERIDOS[referidor_id]['contador']}/200\nNivel: {nivel}\n\nMe tienes más caliente... sigue 🥵",
                                     parse_mode='Markdown'
                                 )
                                 await chequear_premio(context, referidor_id)
@@ -396,8 +416,9 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         link = await crear_link_referido(context, user_id, username)
         if link:
             contador = REFERIDOS[user_id]['contador'] if user_id in REFERIDOS else 0
+            nivel = '👑 DIABLA' if contador>=200 else '🥵 INFIERNO' if contador>=100 else '😈 ARDIENDO' if contador>=50 else '🔥 CALIENTE' if contador>=20 else '🥵 TIBIO' if contador>=5 else '🥉 FRÍO'
             await message.reply_text(
-                f"🔗 *TU LINK ÚNICO #HORMO* 🔗\n\n{link}\n\n📊 *TU PROGRESO:*\nReferidos: {contador}/200\nNivel: Bronce 🥉\n\n🎯 *PREMIOS:*\n5 = Video 30s\n20 = Video 1min + nombre\n50 = Pack 3 videos\n100 = Video 2min + 2 audios\n200 = Video 3min + Audio + Prioridad 7 días 👑\n\n⚠️ *REGLAS:*\nSolo cuentan usuarios reales +24h en el canal\nBots = ban permanente ❌\n\nCopia tu link y empieza 🔥",
+                f"🔗 *TU LINK #HORMO* 🔗\n\n{link}\n\n📊 *TU PROGRESO:*\nMiembros: {contador}/200\nNivel: {nivel}\n\n🎯 *PREMIOS ESCALONADOS:*\n5 = 1 videito 🥵\n20 = 2-3 videitos 🔥\n50 = 4-10 videitos 😈\n100 = 10-20 videitos 🥵\n200 = +20 videitos + *VIDEO FETICHE* 👑🍑\n\n⚠️ *REGLAS:*\nSolo cuentan reales +24h en el canal\nBots = te baneo y no hay nada ❌\n\n*Spamea tu link y me vas desnudando* 😈🔥",
                 parse_mode='Markdown',
                 reply_markup=get_volver()
             )
@@ -410,27 +431,28 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user_id in REFERIDOS:
             contador = REFERIDOS[user_id]['contador']
             link = REFERIDOS[user_id]['link']
+            nivel = '👑 DIABLA' if contador>=200 else '🥵 INFIERNO' if contador>=100 else '😈 ARDIENDO' if contador>=50 else '🔥 CALIENTE' if contador>=20 else '🥵 TIBIO' if contador>=5 else '🥉 FRÍO'
             await message.reply_text(
-                f"📊 *TUS REFERIDOS #HORMO* 📊\n\n👤 Usuario: @{username}\n👥 Han entrado: {contador}/200\n🎯 Te faltan: {200-contador} para LEYENDA 👑\n\n*Premio al llegar:* Video 3min + Audio + Prioridad 7 días\n\nTu link: {link}\n\nSigue spameando 🔥",
+                f"📊 *TUS #HORMOS* 📊\n\n👤 Usuario: @{username}\n👥 Has metido: {contador}/200\n🎯 Te faltan: {200-contador} para mi *VIDEO FETICHE* 👑\nNivel actual: {nivel}\n\nTu link: {link}\n\n*Sigue caliente y sigue spameando* 🔥",
                 parse_mode='Markdown',
                 reply_markup=get_volver()
             )
         else:
-            await message.reply_text("Aún no tienes link. Usa /milink para crear uno 😏", parse_mode='Markdown')
+            await message.reply_text("Aún no tienes link bebé 😏 Usa /milink para crear uno y empezar a ganar", parse_mode='Markdown')
         return
 
     # Comando /ranking
     if message.text and message.text.lower() == '/ranking':
         if not REFERIDOS:
-            await message.reply_text("Aún no hay promotores 😢 Sé el primero con /milink", parse_mode='Markdown')
+            await message.reply_text("Aún no hay #HORMOS activos 😢 Sé el primero en mojarme con /milink", parse_mode='Markdown')
             return
 
         top = sorted(REFERIDOS.items(), key=lambda x: x[1]['contador'], reverse=True)[:10]
-        texto = "🏆 *TOP PROMOTORES #HORMO - SEMANA* 🏆\n\n"
+        texto = "🏆 *TOP #HORMOS MÁS CALIENTES* 🏆\n\n"
         for i, (uid, data) in enumerate(top, 1):
-            nivel = "👑" if data['contador'] >= 200 else "💎" if data['contador'] >= 100 else "🥇" if data['contador'] >= 50 else "🥈" if data['contador'] >= 20 else "🥉"
-            texto += f"{i}. {data['username']} - {data['contador']} refs {nivel}\n"
-        texto += "\n¿Vas a dejar que te ganen? Usa /milink 😈"
+            nivel = "👑 DIABLA" if data['contador'] >= 200 else "🥵 INFIERNO" if data['contador'] >= 100 else "😈 ARDIENDO" if data['contador'] >= 50 else "🔥 CALIENTE" if data['contador'] >= 20 else "🥵 TIBIO" if data['contador'] >= 5 else "🥉 FRÍO"
+            texto += f"{i}. {data['username']} - {data['contador']} miembros {nivel}\n"
+        texto += "\n¿Vas a dejar que te ganen mi *VIDEO FETICHE*? Usa /milink 😈🍑"
         await message.reply_text(texto, parse_mode='Markdown', reply_markup=get_volver())
         return
 
@@ -533,31 +555,32 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.error(f"No se pudo enviar {foto}: {e}")
 
-    # Botón MI LINK
+    # Botón MI LINK PICANTE
     elif data == 'milink':
         link = await crear_link_referido(context, user_id, username)
         if link:
             contador = REFERIDOS[user_id]['contador']
+            nivel = '👑 DIABLA' if contador>=200 else '🥵 INFIERNO' if contador>=100 else '😈 ARDIENDO' if contador>=50 else '🔥 CALIENTE' if contador>=20 else '🥵 TIBIO' if contador>=5 else '🥉 FRÍO'
             await query.edit_message_text(
-                f"🔗 *TU LINK ÚNICO #HORMO* 🔗\n\n{link}\n\n📊 *TU PROGRESO:*\nReferidos: {contador}/200\nNivel: {'👑' if contador>=200 else '💎' if contador>=100 else '🥇' if contador>=50 else '🥈' if contador>=20 else '🥉'}\n\n🎯 *PREMIOS:*\n5 = Video 30s\n20 = Video 1min + nombre\n50 = Pack 3 videos\n100 = Video 2min + 2 audios\n200 = Video 3min + Audio + Prioridad 7 días\n\n⚠️ *REGLAS:*\nSolo cuentan usuarios reales +24h en el canal\nBots = ban permanente ❌\n\nCopia tu link y empieza 🔥",
+                f"🔗 *TU LINK #HORMO* 🔗\n\n{link}\n\n📊 *TU PROGRESO:*\nMiembros: {contador}/200\nNivel: {nivel}\n\n🎯 *PREMIOS ESCALONADOS:*\n5 = 1 videito 🥵\n20 = 2-3 videitos 🔥\n50 = 4-10 videitos 😈\n100 = 10-20 videitos 🥵\n200 = +20 videitos + *VIDEO FETICHE* 👑🍑\n\n⚠️ *REGLAS:*\nSolo cuentan reales +24h en el canal\nBots = te baneo y no hay nada ❌\n\n*Spamea tu link y me vas desnudando* 😈🔥",
                 parse_mode='Markdown',
                 reply_markup=get_volver()
             )
         else:
             await query.edit_message_text("❌ Error creando link. Asegúrate que el bot sea admin del canal con permiso de 'Invitar usuarios'.", parse_mode='Markdown', reply_markup=get_volver())
 
-    # Botón RANKING
+    # Botón RANKING PICANTE
     elif data == 'ranking':
         if not REFERIDOS:
-            await query.edit_message_text("Aún no hay promotores 😢 Sé el primero con /milink", parse_mode='Markdown', reply_markup=get_volver())
+            await query.edit_message_text("Aún no hay #HORMOS activos 😢 Sé el primero en mojarme con /milink", parse_mode='Markdown', reply_markup=get_volver())
             return
 
         top = sorted(REFERIDOS.items(), key=lambda x: x[1]['contador'], reverse=True)[:10]
-        texto = "🏆 *TOP PROMOTORES #HORMO - SEMANA* 🏆\n\n"
+        texto = "🏆 *TOP #HORMOS MÁS CALIENTES* 🏆\n\n"
         for i, (uid, data_ref) in enumerate(top, 1):
-            nivel = "👑" if data_ref['contador'] >= 200 else "💎" if data_ref['contador'] >= 100 else "🥇" if data_ref['contador'] >= 50 else "🥈" if data_ref['contador'] >= 20 else "🥉"
-            texto += f"{i}. {data_ref['username']} - {data_ref['contador']} refs {nivel}\n"
-        texto += "\n¿Vas a dejar que te ganen? Toca 🔗 MI LINK 😈"
+            nivel = "👑 DIABLA" if data_ref['contador'] >= 200 else "🥵 INFIERNO" if data_ref['contador'] >= 100 else "😈 ARDIENDO" if data_ref['contador'] >= 50 else "🔥 CALIENTE" if data_ref['contador'] >= 20 else "🥵 TIBIO" if data_ref['contador'] >= 5 else "🥉 FRÍO"
+            texto += f"{i}. {data_ref['username']} - {data_ref['contador']} miembros {nivel}\n"
+        texto += "\n¿Vas a dejar que te ganen mi *VIDEO FETICHE*? Toca 🔗 MI LINK 😈🍑"
         await query.edit_message_text(texto, parse_mode='Markdown', reply_markup=get_volver())
 
     elif data == 'volver':
@@ -597,7 +620,7 @@ async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto = "📊 *USUARIOS REGISTRADOS* 📊\n\n"
     for uid, data in USUARIOS.items():
         estado = "💰 PAGÓ/DESACTIVADO" if data['pago'] else "🔥 VIP" if data['es_vip'] else "👀 NUEVO"
-        refs = f" | {REFERIDOS[uid]['contador']} refs" if uid in REFERIDOS else ""
+        refs = f" | {REFERIDOS[uid]['contador']} miembros" if uid in REFERIDOS else ""
         texto += f"👤 {data['nombre']} @{data['username']}\n🆔 `{uid}` | {estado}{refs}\n⏰ {data['ultimo_mensaje']}\n\n"
     texto += f"*Total: {len(USUARIOS)} usuarios*"
     await update.message.reply_text(texto, parse_mode='Markdown')
