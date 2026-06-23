@@ -6,8 +6,8 @@ import logging
 import unicodedata
 import signal
 from datetime import datetime, timedelta
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, MessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatMemberUpdated
+from telegram.ext import Application, MessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes, ChatMemberHandler
 from telegram.error import Conflict
 
 logging.basicConfig(level=logging.INFO)
@@ -206,14 +206,14 @@ TEXTO_GRATIS = """
 *🥉 NIVEL TIBIO - 5 MIEMBROS:*
 1 videito pa que me pruebes 🥵
 
-*🥈 NIVEL CALIENTE - 20 MIEMBROS:*
-2-3 videitos... ya me pones nerviosa 🔥
+*🔥 NIVEL CALIENTE - 20 MIEMBROS:*
+2-3 videitos... ya me pones nerviosa 😈
 
-*🥇 NIVEL ARDIENDO - 50 MIEMBROS:*
-4-10 videitos 😈 Te voy a dejar sin aire
+*😈 NIVEL ARDIENDO - 50 MIEMBROS:*
+4-10 videitos 🥵 Te voy a dejar sin aire
 
-*💎 NIVEL INFIERNO - 100 MIEMBROS:*
-10-20 videitos 🥵 Ya estoy toda tuya
+*🥵 NIVEL INFIERNO - 100 MIEMBROS:*
+10-20 videitos 🔥 Ya soy toda tuya
 
 *👑 NIVEL DIABLA - 200 MIEMBROS:*
 +20 videitos + *VIDEO FETICHE* solo para ti 😈🍑
@@ -363,37 +363,35 @@ async def enviar_gratis(chat_id, context):
         except Exception as e:
             logger.error(f"No se pudo enviar {foto}: {e}")
 
+# NUEVO: Detectar joins en el canal con ChatMemberHandler - ESTA ES LA CLAVE
+async def track_join(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    result = update.chat_member
+    # Solo nos interesa cuando alguien entra al canal
+    if result.new_chat_member.status == "member" and result.old_chat_member.status in ["left", "kicked"]:
+        user = result.new_chat_member.user
+        if user.is_bot:
+            return
+
+        # Verificar si entró por link de referido
+        if result.invite_link and result.invite_link.invite_link in INVITACIONES:
+            referidor_id = INVITACIONES[result.invite_link.invite_link]
+            if referidor_id in REFERIDOS:
+                REFERIDOS[referidor_id]['contador'] += 1
+                nivel = '👑 DIABLA' if REFERIDOS[referidor_id]['contador']>=200 else '🥵 INFIERNO' if REFERIDOS[referidor_id]['contador']>=100 else '😈 ARDIENDO' if REFERIDOS[referidor_id]['contador']>=50 else '🔥 CALIENTE' if REFERIDOS[referidor_id]['contador']>=20 else '🥵 TIBIO' if REFERIDOS[referidor_id]['contador']>=5 else '🥉 FRÍO'
+                await context.bot.send_message(
+                    chat_id=referidor_id,
+                    text=f"🔥 *+1 #HORMO* 🔥\n\n{user.first_name} cayó por tu link 😏\nProgreso: {REFERIDOS[referidor_id]['contador']}/200\nNivel: {nivel}\n\nMe tienes más caliente... sigue 🥵",
+                    parse_mode='Markdown'
+                )
+                await chequear_premio(context, referidor_id)
+                logger.info(f"Referido contado: {user.first_name} para {referidor_id}. Total: {REFERIDOS[referidor_id]['contador']}")
+
 async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message or update.business_message
     if not message or not message.from_user or message.from_user.is_bot:
         return
     user = message.from_user
     user_id = user.id
-
-    # Detectar si entró por link de referido
-    if message.new_chat_members:
-        for member in message.new_chat_members:
-            if member.id == context.bot.id:
-                continue
-            if message.chat.id == CANAL_ID:
-                try:
-                    chat_member = await context.bot.get_chat_member(CANAL_ID, member.id)
-                    if hasattr(chat_member, 'invite_link') and chat_member.invite_link:
-                        link_usado = chat_member.invite_link.invite_link
-                        if link_usado in INVITACIONES:
-                            referidor_id = INVITACIONES[link_usado]
-                            if referidor_id in REFERIDOS:
-                                REFERIDOS[referidor_id]['contador'] += 1
-                                nivel = '👑 DIABLA' if REFERIDOS[referidor_id]['contador']>=200 else '🥵 INFIERNO' if REFERIDOS[referidor_id]['contador']>=100 else '😈 ARDIENDO' if REFERIDOS[referidor_id]['contador']>=50 else '🔥 CALIENTE' if REFERIDOS[referidor_id]['contador']>=20 else '🥵 TIBIO'
-                                await context.bot.send_message(
-                                    chat_id=referidor_id,
-                                    text=f"🔥 *+1 #HORMO* 🔥\n\n{member.first_name} cayó por tu link 😏\nProgreso: {REFERIDOS[referidor_id]['contador']}/200\nNivel: {nivel}\n\nMe tienes más caliente... sigue 🥵",
-                                    parse_mode='Markdown'
-                                )
-                                await chequear_premio(context, referidor_id)
-                except Exception as e:
-                    logger.error(f"Error contando referido: {e}")
-        return
 
     if user_id in PAGARON and user_id!= ADMIN_ID:
         logger.info(f"Usuario {user_id} bloqueado por pago")
@@ -644,10 +642,13 @@ def main():
     app.add_handler(CommandHandler('activar', activar))
     app.add_handler(CommandHandler('usuarios', usuarios))
     app.add_handler(CallbackQueryHandler(button))
+    # ESTA LÍNEA ES LA QUE HACE QUE CUENTEN LOS REFERIDOS EN CANALES
+    app.add_handler(ChatMemberHandler(track_join, ChatMemberHandler.CHAT_MEMBER))
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
     app.add_error_handler(error_handler)
     logger.info("BOT PRENDIDO - MODO 24/7 ACTIVO ✅")
-    app.run_polling(drop_pending_updates=True)
+    # IMPORTANTE: allowed_updates para que Telegram mande los eventos de miembros
+    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     main()
