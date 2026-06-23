@@ -5,10 +5,11 @@ import random
 import logging
 import unicodedata
 import signal
+import re
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatMemberUpdated
 from telegram.ext import Application, MessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes, ChatMemberHandler
-from telegram.error import Conflict
+from telegram.error import Conflict, Forbidden
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,80 +39,84 @@ FOTOS_GRATIS = [
     "fotitos4.JPG", "fotitos5.JPG", "fotitos6.JPG"
 ]
 
-PE_PRECIOS = """
-🛍 *PACKS DISPONIBLES - PERÚ* 🇵🇪😏
+def escape_md(text):
+    """Escapa caracteres especiales de Markdown"""
+    return re.sub(r'([_*\[\]()~`>#+\-=|{}.!])', r'\\\1', text)
 
-💦 *PRUEBA: S/ 5*
+PE_PRECIOS = """
+🛍 PACKS DISPONIBLES - PERÚ 🇵🇪😏
+
+💦 PRUEBA: S/ 5
 → 3 fotitos | S/ 1.66 c/u
 → Para que me conozcas 🙈
 
-🎂 *BÁSICO: S/ 10*
+🎂 BÁSICO: S/ 10
 → 6 unidades | S/ 1.66 c/u
-→ *+1 foto extra HOY*
+→ +1 foto extra HOY
 
-🔥 *TOP: S/ 20* ← MÁS VENDIDO
+🔥 TOP: S/ 20 ← MÁS VENDIDO
 → 12 unidades | S/ 1.66 c/u
-→ *Ahorras 50%*
-→ *REGALO: 2 fotos extra*
+→ Ahorras 50%
+→ REGALO: 2 fotos extra
 
-🏆 *PREMIUM: S/ 35*
+🏆 PREMIUM: S/ 35
 → 20 unidades + 1 personalizado
 → incluye chat privado 24h 🥰
-→ *Ahorras 50%*
+→ Ahorras 50%
 
-👑 *VIP: S/ 50* ← MÁXIMO 28 UNIDADES
+👑 VIP: S/ 50 ← MÁXIMO 28 UNIDADES
 → 28 unidades + 2 personalizados
 → Chat 3 días + videollamada 5min
-→ *TODO INCLUIDO* 😈
+→ TODO INCLUIDO 😈
 
-📼 *LLAMADITAS* 📼
+📼 LLAMADITAS 📼
 S/ 30: 10 min 😈
 S/ 50: 20 min + 3 fotos
 
-⚡ *COMBO FLASH: S/ 45*
+⚡ COMBO FLASH: S/ 45
 → Pack PREMIUM + Llamada 10min
-→ *Ahorras S/ 20*
+→ Ahorras S/ 20
 
-💳 *PAGO:* *YAPE/PLIN:* 923553612
-*100% REAL - PIDEME REFERENCIAS*
+💳 PAGO: YAPE/PLIN: 923553612
+100% REAL - PIDEME REFERENCIAS
 
 1. Yapeas 2. Captura 3. Disfrutas 😏
 """
 
 MX_PRECIOS = """
-🛍 *PACKS DISPONIBLES - MÉXICO* 🇲🇽😏
+🛍 PACKS DISPONIBLES - MÉXICO 🇲🇽😏
 
-💦 *PRUEBA: $60 MXN*
+💦 PRUEBA: $60 MXN
 → 3 fotitos | $20 c/u
 → Para que me conozcas 🙈
 
-🎂 *BÁSICO: $90 MXN*
+🎂 BÁSICO: $90 MXN
 → 6 unidades | $15 c/u
-→ *+1 foto extra HOY*
+→ +1 foto extra HOY
 
-🔥 *TOP: $145 MXN* ← MÁS VENDIDO
+🔥 TOP: $145 MXN ← MÁS VENDIDO
 → 12 unidades | $12 c/u
-→ *Ahorras 50%*
-→ *REGALO: 2 fotos extra*
+→ Ahorras 50%
+→ REGALO: 2 fotos extra
 
-🏆 *PREMIUM: $230 MXN*
+🏆 PREMIUM: $230 MXN
 → 20 unidades + 1 personalizado
 → incluye chat privado 24h 🥰
-→ *Ahorras 50%*
+→ Ahorras 50%
 
-👑 *VIP: $320 MXN* ← MÁXIMO 28 UNIDADES
+👑 VIP: $320 MXN ← MÁXIMO 28 UNIDADES
 → 28 unidades + 2 personalizados
 → Chat 3 días + videollamada 5min
-→ *TODO INCLUIDO* 😈
+→ TODO INCLUIDO 😈
 
-📼 *LLAMADITAS* 📼
+📼 LLAMADITAS 📼
 $205 MXN: 10 min 😈
 $320 MXN: 20 min + 3 fotos
 
-🛍 *PAGO MXN:*
-🏦 *Banco:* STP
-🔢 *CLABE:* `646180546711450910`
-📝 *Referencia:* `yanae`
+🛍 PAGO MXN:
+🏦 Banco: STP
+🔢 CLABE: 646180546711450910
+📝 Referencia: yanae
 
 🇲🇽 También: Transfer / Astropay
 
@@ -119,109 +124,109 @@ Mándame captura cuando pagues 😊
 """
 
 USA_PRECIOS = """
-🛍 *PACKS DISPONIBLES - USA* 🇺🇸😏
+🛍 PACKS DISPONIBLES - USA 🇺🇸😏
 
-💦 *PRUEBA: $2 USD*
+💦 PRUEBA: $2 USD
 → 3 fotitos | $0.66 c/u
 → Para que me pruebes 🙈
 
-🎂 *BÁSICO: $3.50 USD*
+🎂 BÁSICO: $3.50 USD
 → 6 unidades | $0.58 c/u
-→ *+1 foto extra HOY*
+→ +1 foto extra HOY
 
-🔥 *TOP: $7 USD* ← MÁS VENDIDO
+🔥 TOP: $7 USD ← MÁS VENDIDO
 → 12 unidades | $0.58 c/u
-→ *Ahorras 50%*
-→ *REGALO: 2 fotos extra*
+→ Ahorras 50%
+→ REGALO: 2 fotos extra
 
-🏆 *PREMIUM: $12 USD*
+🏆 PREMIUM: $12 USD
 → 20 unidades + 1 personalizado
 → incluye chat privado 24h 🥰
-→ *Ahorras 50%*
+→ Ahorras 50%
 
-👑 *VIP: $20 USD* ← MÁXIMO 28 UNIDADES
+👑 VIP: $20 USD ← MÁXIMO 28 UNIDADES
 → 28 unidades + 2 personalizados
 → Chat 3 días + videollamada 5min
-→ *MEJOR VALOR* 😈
+→ MEJOR VALOR 😈
 
-📼 *LLAMADITAS* 📼
+📼 LLAMADITAS 📼
 $10 USD: 10 min 😈
 $20 USD: 20 min + 3 fotos
 
-🪙 *PAGO:*
-*PayPal:* AbigailMaximoofO
+🪙 PAGO:
+PayPal: AbigailMaximoofO
 
-🏦 *Bank EEUU:*
+🏦 Bank EEUU:
 Community Federal Savings Bank
-📍 *Address:* 5 Penn Plaza, 14th Floor New York, NY 10001
-0️⃣ *Account:* 8338233469
-0️⃣ *Routing:* 026073150
-✍️ *Type:* Checking
+📍 Address: 5 Penn Plaza, 14th Floor New York, NY 10001
+0️⃣ Account: 8338233469
+0️⃣ Routing: 026073150
+✍️ Type: Checking
 
 Avísame cuando envíes con el comprobante 😊
 """
 
 OTRO_PRECIOS = f"""
-🛍 *PACKS DISPONIBLES - INTERNACIONAL* 🌎😏
+🛍 PACKS DISPONIBLES - INTERNACIONAL 🌎😏
 
-💦 *PRUEBA: $2 USD*
+💦 PRUEBA: $2 USD
 → 3 fotitos | $0.66 c/u
 → Para que me conozcas 🙈
 
-🎂 *BÁSICO: $3.50 USD*
+🎂 BÁSICO: $3.50 USD
 → 6 unidades | $0.58 c/u
-→ *+1 foto extra HOY*
+→ +1 foto extra HOY
 
-🔥 *TOP: $7 USD* ← MÁS VENDIDO
+🔥 TOP: $7 USD ← MÁS VENDIDO
 → 12 unidades | $0.58 c/u
-→ *Ahorras 50%*
-→ *REGALO: 2 fotos extra*
+→ Ahorras 50%
+→ REGALO: 2 fotos extra
 
-🏆 *PREMIUM: $12 USD*
+🏆 PREMIUM: $12 USD
 → 20 unidades + 1 personalizado
 → incluye chat privado 24h 🥰
-→ *Ahorras 50%*
+→ Ahorras 50%
 
-👑 *VIP: $20 USD* ← MÁXIMO 28 UNIDADES
+👑 VIP: $20 USD ← MÁXIMO 28 UNIDADES
 → 28 unidades + 2 personalizados
 → Chat 3 días + videollamada 5min
-→ *MEJOR VALOR* 😈
+→ MEJOR VALOR 😈
 
-📼 *LLAMADITAS* 📼
+📼 LLAMADITAS 📼
 $10 USD: 10 min 😈
 $20 USD: 20 min + 3 fotos
 
-🪙 *PAGO:*
-*PayPal:* [Click aquí]({LINK_PAYPAL})
+🪙 PAGO:
+PayPal: {LINK_PAYPAL}
 / USDT disponible
 
 Avísame cuando envíes con el comprobante 😊
 """
 
 TEXTO_GRATIS = """
-🔥 *VIDEOS GRATIS #HORMO - SÚBEME LA TEMP* 🔥
+🔥 VIDEOS GRATIS #HORMO - SÚBEME LA TEMP 🔥
 
 ¿Sin plata bebé? 😏 Trabaja por mí y te mojo...
 
-*🥉 NIVEL TIBIO - 5 MIEMBROS:*
+🥉 NIVEL TIBIO - 5 MIEMBROS:
 1 videito pa que me pruebes 🥵
 
-*🔥 NIVEL CALIENTE - 20 MIEMBROS:*
+🔥 NIVEL CALIENTE - 20 MIEMBROS:
 2-3 videitos... ya me pones nerviosa 😈
 
-*😈 NIVEL ARDIENDO - 50 MIEMBROS:*
+😈 NIVEL ARDIENDO - 50 MIEMBROS:
 4-10 videitos 🥵 Te voy a dejar sin aire
 
-*🥵 NIVEL INFIERNO - 100 MIEMBROS:*
+🥵 NIVEL INFIERNO - 100 MIEMBROS:
 10-20 videitos 🔥 Ya soy toda tuya
 
-*👑 NIVEL DIABLA - 200 MIEMBROS:*
-+20 videitos + *VIDEO FETICHE* solo para ti 😈🍑
-*Aquí me entrego completa...*
+👑 NIVEL DIABLA - 200 MIEMBROS:
++20 videitos + VIDEO FETICHE solo para ti 😈🍑
+Aquí me entrego completa...
 
 ¿Caliente y con prisa? Toca "💎 COMPRAR" y te atiendo YA 🔥
 
-*Saca tu link en "🔗 MI LINK" y ponte a reclutar #HORMOS* 😏
+Saca tu link en "🔗 MI LINK" y ponte a reclutar #HORMOS 😏
 """
 
 # Premios por referidos ESCALONADOS Y PICANTES
@@ -273,15 +278,15 @@ async def avisar_pago(context, user_id, username, nombre, foto_id):
         username_display = f"@{username}" if username!= "sin_username" else f"{nombre}"
         link_chat = f"tg://user?id={user_id}"
 
-        caption = f"💰 *PAGO RECIBIDO* 💰\n\n" \
+        caption = f"💰 PAGO RECIBIDO 💰\n\n" \
                   f"👤 {username_display}\n" \
-                  f"🆔 `{user_id}`\n" \
+                  f"🆔 {user_id}\n" \
                   f"⏰ {datetime.now().strftime('%H:%M:%S')}\n\n" \
-                  f"👉 [Escribirle al cliente]({link_chat})\n\n" \
-                  f"*Cliente enviado a tu privado* ✅\n\n" \
-                  f"Usa `/activar {user_id}` para reactivar el bot en ese chat"
+                  f"👉 Escribirle al cliente: {link_chat}\n\n" \
+                  f"Cliente enviado a tu privado ✅\n\n" \
+                  f"Usa /activar {user_id} para reactivar el bot en ese chat"
 
-        await context.bot.send_photo(chat_id=ADMIN_ID, photo=foto_id, caption=caption, parse_mode='Markdown')
+        await context.bot.send_photo(chat_id=ADMIN_ID, photo=foto_id, caption=caption)
     except Exception as e:
         logger.error(f"Error enviando pago: {e}")
 
@@ -296,7 +301,7 @@ async def follow_up_task(app, user_id, username):
         f"Hola 🥺 te espero... con TOP te mando algo especial 🙈"
     ]
     try:
-        await app.bot.send_message(chat_id=user_id, text=random.choice(mensajes), reply_markup=get_menu(), parse_mode='Markdown')
+        await app.bot.send_message(chat_id=user_id, text=random.choice(mensajes), reply_markup=get_menu())
     except:
         pass
 
@@ -318,9 +323,18 @@ async def crear_link_referido(context, user_id, username):
             'username': f"@{username}" if username!= "sin_username" else f"ID:{user_id}"
         }
         INVITACIONES[invite_link.invite_link] = user_id
+        logger.info(f"Link creado para {username}: {invite_link.invite_link}")
         return invite_link.invite_link
     except Exception as e:
-        logger.error(f"Error creando link: {e}")
+        logger.error(f"Error creando link para {username}: {e}")
+        if "not enough rights" in str(e).lower():
+            error_msg = "❌ No soy admin o me falta permiso 'Invitar usuarios'"
+        elif "chat not found" in str(e).lower():
+            error_msg = f"❌ CANAL_ID incorrecto: {CANAL_ID}"
+        else:
+            error_msg = f"❌ Error: {str(e)}"
+
+        await context.bot.send_message(chat_id=user_id, text=error_msg)
         return None
 
 # Chequear premios ESCALONADOS
@@ -333,40 +347,46 @@ async def chequear_premio(context, user_id):
         if contador == meta:
             username = REFERIDOS[user_id]['username']
             mensajes_meta = {
-                5: f"🔥 *NIVEL TIBIO DESBLOQUEADO* 🔥\n\n{contador} #HORMOS metiste 😏\nPremio: {premio}\n\nTe lo mando al pv en 10min... pa que me pruebes 🥵",
-                20: f"🔥 *NIVEL CALIENTE DESBLOQUEADO* 🔥\n\n{contador} #HORMOS 😈\nPremio: {premio}\n\nYa me pones nerviosa... te escribo al pv 🥵",
-                50: f"😈 *NIVEL ARDIENDO DESBLOQUEADO* 😈\n\n{contador} #HORMOS 🔥\nPremio: {premio}\n\nMe tienes sin aire... voy al pv ya 🥵",
-                100: f"🥵 *NIVEL INFIERNO DESBLOQUEADO* 🥵\n\n{contador} #HORMOS 😈\nPremio: {premio}\n\nYa soy toda tuya... revisa tu pv 🔥",
-                200: f"👑 *NIVEL DIABLA DESBLOQUEADO* 👑\n\n{contador} #HORMOS 🍑\nPremio: {premio}\n\n*ME ENTREGO COMPLETA*... video fetiche + todo\nRevisa tu pv YA 😈🥵"
+                5: f"🔥 NIVEL TIBIO DESBLOQUEADO 🔥\n\n{contador} #HORMOS metiste 😏\nPremio: {premio}\n\nTe lo mando al pv en 10min... pa que me pruebes 🥵",
+                20: f"🔥 NIVEL CALIENTE DESBLOQUEADO 🔥\n\n{contador} #HORMOS 😈\nPremio: {premio}\n\nYa me pones nerviosa... te escribo al pv 🥵",
+                50: f"😈 NIVEL ARDIENDO DESBLOQUEADO 😈\n\n{contador} #HORMOS 🔥\nPremio: {premio}\n\nMe tienes sin aire... voy al pv ya 🥵",
+                100: f"🥵 NIVEL INFIERNO DESBLOQUEADO 🥵\n\n{contador} #HORMOS 😈\nPremio: {premio}\n\nYa soy toda tuya... revisa tu pv 🔥",
+                200: f"👑 NIVEL DIABLA DESBLOQUEADO 👑\n\n{contador} #HORMOS 🍑\nPremio: {premio}\n\nME ENTREGO COMPLETA... video fetiche + todo\nRevisa tu pv YA 😈🥵"
             }
-            await context.bot.send_message(
-                chat_id=user_id,
-                text=mensajes_meta.get(meta, f"🏆 META {meta} ALCANZADA 🏆\n\nPremio: {premio}\n\nTe escribo al pv 😏"),
-                parse_mode='Markdown'
-            )
+            try:
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=mensajes_meta.get(meta, f"🏆 META {meta} ALCANZADA 🏆\n\nPremio: {premio}\n\nTe escribo al pv 😏")
+                )
+            except Forbidden:
+                logger.warning(f"No puedo escribirle a {user_id}, no inició el bot")
             # Aviso al admin
             await context.bot.send_message(
                 chat_id=ADMIN_ID,
-                text=f"🔥 *PREMIO DESBLOQUEADO* 🔥\n\n👤 {username}\n🆔 `{user_id}`\n📊 {meta} miembros\n🎁 {premio}\n\n👉 [Escribirle](tg://user?id={user_id})",
-                parse_mode='Markdown'
+                text=f"🔥 PREMIO DESBLOQUEADO 🔥\n\n👤 {username}\n🆔 {user_id}\n📊 {meta} miembros\n🎁 {premio}\n\n👉 Escribirle: tg://user?id={user_id}"
             )
 
 async def enviar_gratis(chat_id, context):
-    await context.bot.send_message(chat_id=chat_id, text=TEXTO_GRATIS, parse_mode='Markdown', reply_markup=get_volver())
-    for foto in FOTOS_GRATIS:
-        try:
+    await context.bot.send_message(chat_id=chat_id, text=TEXTO_GRATIS, reply_markup=get_volver())
+    # Solo enviar fotos si el usuario inició el bot
+    try:
+        for foto in FOTOS_GRATIS:
             with open(foto, 'rb') as f:
                 await context.bot.send_photo(chat_id=chat_id, photo=f)
             await asyncio.sleep(0.5)
-        except FileNotFoundError:
-            logger.warning(f"Foto {foto} no encontrada, saltando...")
-        except Exception as e:
-            logger.error(f"No se pudo enviar {foto}: {e}")
+    except Forbidden:
+        logger.warning(f"Usuario {chat_id} no inició el bot, no puedo mandar fotos")
+    except FileNotFoundError:
+        logger.warning(f"Foto no encontrada, saltando...")
+    except Exception as e:
+        logger.error(f"No se pudo enviar fotos: {e}")
 
-# NUEVO: Detectar joins en el canal con ChatMemberHandler - ESTA ES LA CLAVE
+# ESTA FUNCIÓN ES LA CLAVE - Detecta cuando alguien entra al canal
 async def track_join(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = update.chat_member
-    # Solo nos interesa cuando alguien entra al canal
+    logger.info(f"ChatMember update: {result.new_chat_member.status} en {result.chat.id}")
+
+    # Solo nos interesa cuando alguien entra al canal como miembro
     if result.new_chat_member.status == "member" and result.old_chat_member.status in ["left", "kicked"]:
         user = result.new_chat_member.user
         if user.is_bot:
@@ -378,11 +398,13 @@ async def track_join(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if referidor_id in REFERIDOS:
                 REFERIDOS[referidor_id]['contador'] += 1
                 nivel = '👑 DIABLA' if REFERIDOS[referidor_id]['contador']>=200 else '🥵 INFIERNO' if REFERIDOS[referidor_id]['contador']>=100 else '😈 ARDIENDO' if REFERIDOS[referidor_id]['contador']>=50 else '🔥 CALIENTE' if REFERIDOS[referidor_id]['contador']>=20 else '🥵 TIBIO' if REFERIDOS[referidor_id]['contador']>=5 else '🥉 FRÍO'
-                await context.bot.send_message(
-                    chat_id=referidor_id,
-                    text=f"🔥 *+1 #HORMO* 🔥\n\n{user.first_name} cayó por tu link 😏\nProgreso: {REFERIDOS[referidor_id]['contador']}/200\nNivel: {nivel}\n\nMe tienes más caliente... sigue 🥵",
-                    parse_mode='Markdown'
-                )
+                try:
+                    await context.bot.send_message(
+                        chat_id=referidor_id,
+                        text=f"🔥 +1 #HORMO 🔥\n\n{user.first_name} cayó por tu link 😏\nProgreso: {REFERIDOS[referidor_id]['contador']}/200\nNivel: {nivel}\n\nMe tienes más caliente... sigue 🥵"
+                    )
+                except Forbidden:
+                    pass # El referidor no inició el bot
                 await chequear_premio(context, referidor_id)
                 logger.info(f"Referido contado: {user.first_name} para {referidor_id}. Total: {REFERIDOS[referidor_id]['contador']}")
 
@@ -405,8 +427,8 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if message.text and message.text.lower() == '/start':
         DEMO_USADO.add(user_id)
         saludo = f"Mmmm {nombre}... 😏✨ llegaste justo cuando te pensaba 🙈"
-        await message.reply_text(saludo, parse_mode='Markdown')
-        await message.reply_text("¿Qué se te antoja hoy? 👇", reply_markup=get_menu(), parse_mode='Markdown')
+        await message.reply_text(saludo)
+        await message.reply_text("¿Qué se te antoja hoy? 👇", reply_markup=get_menu())
         return
 
     # Comando /milink
@@ -416,12 +438,9 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             contador = REFERIDOS[user_id]['contador'] if user_id in REFERIDOS else 0
             nivel = '👑 DIABLA' if contador>=200 else '🥵 INFIERNO' if contador>=100 else '😈 ARDIENDO' if contador>=50 else '🔥 CALIENTE' if contador>=20 else '🥵 TIBIO' if contador>=5 else '🥉 FRÍO'
             await message.reply_text(
-                f"🔗 *TU LINK #HORMO* 🔗\n\n{link}\n\n📊 *TU PROGRESO:*\nMiembros: {contador}/200\nNivel: {nivel}\n\n🎯 *PREMIOS ESCALONADOS:*\n5 = 1 videito 🥵\n20 = 2-3 videitos 🔥\n50 = 4-10 videitos 😈\n100 = 10-20 videitos 🥵\n200 = +20 videitos + *VIDEO FETICHE* 👑🍑\n\n⚠️ *REGLAS:*\nSolo cuentan reales +24h en el canal\nBots = te baneo y no hay nada ❌\n\n*Spamea tu link y me vas desnudando* 😈🔥",
-                parse_mode='Markdown',
+                f"🔗 TU LINK #HORMO 🔗\n\n{link}\n\n📊 TU PROGRESO:\nMiembros: {contador}/200\nNivel: {nivel}\n\n🎯 PREMIOS ESCALONADOS:\n5 = 1 videito 🥵\n20 = 2-3 videitos 🔥\n50 = 4-10 videitos 😈\n100 = 10-20 videitos 🥵\n200 = +20 videitos + VIDEO FETICHE 👑🍑\n\n⚠️ REGLAS:\nSolo cuentan reales +24h en el canal\nBots = te baneo y no hay nada ❌\n\nSpamea tu link y me vas desnudando 😈🔥",
                 reply_markup=get_volver()
             )
-        else:
-            await message.reply_text("❌ Error creando link. Asegúrate que el bot sea admin del canal con permiso de 'Invitar usuarios'.", parse_mode='Markdown')
         return
 
     # Comando /misreferidos
@@ -431,27 +450,26 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             link = REFERIDOS[user_id]['link']
             nivel = '👑 DIABLA' if contador>=200 else '🥵 INFIERNO' if contador>=100 else '😈 ARDIENDO' if contador>=50 else '🔥 CALIENTE' if contador>=20 else '🥵 TIBIO' if contador>=5 else '🥉 FRÍO'
             await message.reply_text(
-                f"📊 *TUS #HORMOS* 📊\n\n👤 Usuario: @{username}\n👥 Has metido: {contador}/200\n🎯 Te faltan: {200-contador} para mi *VIDEO FETICHE* 👑\nNivel actual: {nivel}\n\nTu link: {link}\n\n*Sigue caliente y sigue spameando* 🔥",
-                parse_mode='Markdown',
+                f"📊 TUS #HORMOS 📊\n\n👤 Usuario: @{username}\n👥 Has metido: {contador}/200\n🎯 Te faltan: {200-contador} para mi VIDEO FETICHE 👑\nNivel actual: {nivel}\n\nTu link: {link}\n\nSigue caliente y sigue spameando 🔥",
                 reply_markup=get_volver()
             )
         else:
-            await message.reply_text("Aún no tienes link bebé 😏 Usa /milink para crear uno y empezar a ganar", parse_mode='Markdown')
+            await message.reply_text("Aún no tienes link bebé 😏 Usa /milink para crear uno y empezar a ganar")
         return
 
     # Comando /ranking
     if message.text and message.text.lower() == '/ranking':
         if not REFERIDOS:
-            await message.reply_text("Aún no hay #HORMOS activos 😢 Sé el primero en mojarme con /milink", parse_mode='Markdown')
+            await message.reply_text("Aún no hay #HORMOS activos 😢 Sé el primero en mojarme con /milink")
             return
 
         top = sorted(REFERIDOS.items(), key=lambda x: x[1]['contador'], reverse=True)[:10]
-        texto = "🏆 *TOP #HORMOS MÁS CALIENTES* 🏆\n\n"
+        texto = "🏆 TOP #HORMOS MÁS CALIENTES 🏆\n\n"
         for i, (uid, data) in enumerate(top, 1):
             nivel = "👑 DIABLA" if data['contador'] >= 200 else "🥵 INFIERNO" if data['contador'] >= 100 else "😈 ARDIENDO" if data['contador'] >= 50 else "🔥 CALIENTE" if data['contador'] >= 20 else "🥵 TIBIO" if data['contador'] >= 5 else "🥉 FRÍO"
             texto += f"{i}. {data['username']} - {data['contador']} miembros {nivel}\n"
-        texto += "\n¿Vas a dejar que te ganen mi *VIDEO FETICHE*? Usa /milink 😈🍑"
-        await message.reply_text(texto, parse_mode='Markdown', reply_markup=get_volver())
+        texto += "\n¿Vas a dejar que te ganen mi VIDEO FETICHE? Usa /milink 😈🍑"
+        await message.reply_text(texto, reply_markup=get_volver())
         return
 
     if message.photo:
@@ -460,13 +478,12 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         foto_id = message.photo[-1].file_id
         await avisar_pago(context, user_id, username, nombre, foto_id)
         await message.reply_text(
-            f"✅ *PAGO RECIBIDO* 😊\n\n"
+            f"✅ PAGO RECIBIDO 😊\n\n"
             f"Gracias {nombre}, ya te registro\n"
-            f"📩 *AHORA ESCRÍBEME AL PRIVADO*\n"
+            f"📩 AHORA ESCRÍBEME AL PRIVADO\n"
             f"👉 {USERNAME_ADMIN}\n\n"
             f"Ahí coordinamos tu pedido 😏\n\n"
-            f"*El bot se desactiva aquí por seguridad*",
-            parse_mode='Markdown'
+            f"El bot se desactiva aquí por seguridad"
         )
         return
 
@@ -484,28 +501,28 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if any(x in normalizar(texto) for x in ['comprar', 'compro', 'quiero', 'pago', 'pagare', 'llevo', 'lo quiero']):
-        await message.reply_text(f"¡Así me gusta {nombre}! 😍🔥 Elige tu pack 👇", reply_markup=get_precios_menu(), parse_mode='Markdown')
+        await message.reply_text(f"¡Así me gusta {nombre}! 😍🔥 Elige tu pack 👇", reply_markup=get_precios_menu())
         return
 
     if any(x in normalizar(texto) for x in ['precio', 'cuanto', 'vale', 'costo', 'cuesta', 'peru', 'soles']):
         VIO_PRECIOS[user_id] = datetime.now()
         asyncio.create_task(follow_up_task(context.application, user_id, username))
-        await message.reply_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
+        await message.reply_text(PE_PRECIOS, reply_markup=get_volver())
         return
     elif any(x in normalizar(texto) for x in ['mexico', 'mxn', 'peso']):
         VIO_PRECIOS[user_id] = datetime.now()
         asyncio.create_task(follow_up_task(context.application, user_id, username))
-        await message.reply_text(MX_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
+        await message.reply_text(MX_PRECIOS, reply_markup=get_volver())
         return
     elif any(x in normalizar(texto) for x in ['usd', 'usa', 'eeuu', 'dolar', 'estados unidos']):
         VIO_PRECIOS[user_id] = datetime.now()
         asyncio.create_task(follow_up_task(context.application, user_id, username))
-        await message.reply_text(USA_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
+        await message.reply_text(USA_PRECIOS, reply_markup=get_volver())
         return
     elif any(x in normalizar(texto) for x in ['otro', 'internacional', 'colombia', 'argentina', 'chile', 'mundial']):
         VIO_PRECIOS[user_id] = datetime.now()
         asyncio.create_task(follow_up_task(context.application, user_id, username))
-        await message.reply_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
+        await message.reply_text(OTRO_PRECIOS, reply_markup=get_volver(), disable_web_page_preview=True)
         return
 
     es_vip = user_id in VIP_TEMPORAL and VIP_TEMPORAL[user_id] > ahora
@@ -513,10 +530,10 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if es_vip:
         tiempo_restante = (VIP_TEMPORAL[user_id] - ahora).seconds // 60
         if tiempo_restante <= 5:
-            await message.reply_text(f"{nombre}, {tiempo_restante} min y me tengo que ir 😢\n\n¿Qué necesitas antes de irme? ✨", parse_mode='Markdown')
+            await message.reply_text(f"{nombre}, {tiempo_restante} min y me tengo que ir 😢\n\n¿Qué necesitas antes de irme? ✨")
             return
 
-    await message.reply_text("Elige una opción 😏👇", reply_markup=get_menu(), parse_mode='Markdown')
+    await message.reply_text("Elige una opción 😏👇", reply_markup=get_menu())
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -532,26 +549,28 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"Botón presionado: {data} por {user_id}")
 
     if data == 'comprar':
-        await query.edit_message_text("💎 *ELIGE TU PAÍS* 💎\n\nToca tu bandera para ver precios 👇", reply_markup=get_precios_menu(), parse_mode='Markdown')
+        await query.edit_message_text("💎 ELIGE TU PAÍS 💎\n\nToca tu bandera para ver precios 👇", reply_markup=get_precios_menu())
     elif data == 'pe':
-        await query.edit_message_text(PE_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
+        await query.edit_message_text(PE_PRECIOS, reply_markup=get_volver())
     elif data == 'mx':
-        await query.edit_message_text(MX_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
+        await query.edit_message_text(MX_PRECIOS, reply_markup=get_volver())
     elif data == 'usa':
-        await query.edit_message_text(USA_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown')
+        await query.edit_message_text(USA_PRECIOS, reply_markup=get_volver())
     elif data == 'otro':
-        await query.edit_message_text(OTRO_PRECIOS, reply_markup=get_volver(), parse_mode='Markdown', disable_web_page_preview=True)
+        await query.edit_message_text(OTRO_PRECIOS, reply_markup=get_volver(), disable_web_page_preview=True)
     elif data == 'gratis':
-        await query.edit_message_text(TEXTO_GRATIS, reply_markup=get_volver(), parse_mode='Markdown')
-        for foto in FOTOS_GRATIS:
-            try:
+        await query.edit_message_text(TEXTO_GRATIS, reply_markup=get_volver())
+        try:
+            for foto in FOTOS_GRATIS:
                 with open(foto, 'rb') as f:
                     await context.bot.send_photo(chat_id=user_id, photo=f)
                 await asyncio.sleep(0.5)
-            except FileNotFoundError:
-                logger.warning(f"Foto {foto} no encontrada, saltando...")
-            except Exception as e:
-                logger.error(f"No se pudo enviar {foto}: {e}")
+        except Forbidden:
+            await query.message.reply_text("⚠️ Inicia el bot con /start primero para ver las fotos 😏")
+        except FileNotFoundError:
+            logger.warning(f"Foto no encontrada, saltando...")
+        except Exception as e:
+            logger.error(f"No se pudo enviar fotos: {e}")
 
     # Botón MI LINK PICANTE
     elif data == 'milink':
@@ -560,29 +579,26 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             contador = REFERIDOS[user_id]['contador']
             nivel = '👑 DIABLA' if contador>=200 else '🥵 INFIERNO' if contador>=100 else '😈 ARDIENDO' if contador>=50 else '🔥 CALIENTE' if contador>=20 else '🥵 TIBIO' if contador>=5 else '🥉 FRÍO'
             await query.edit_message_text(
-                f"🔗 *TU LINK #HORMO* 🔗\n\n{link}\n\n📊 *TU PROGRESO:*\nMiembros: {contador}/200\nNivel: {nivel}\n\n🎯 *PREMIOS ESCALONADOS:*\n5 = 1 videito 🥵\n20 = 2-3 videitos 🔥\n50 = 4-10 videitos 😈\n100 = 10-20 videitos 🥵\n200 = +20 videitos + *VIDEO FETICHE* 👑🍑\n\n⚠️ *REGLAS:*\nSolo cuentan reales +24h en el canal\nBots = te baneo y no hay nada ❌\n\n*Spamea tu link y me vas desnudando* 😈🔥",
-                parse_mode='Markdown',
+                f"🔗 TU LINK #HORMO 🔗\n\n{link}\n\n📊 TU PROGRESO:\nMiembros: {contador}/200\nNivel: {nivel}\n\n🎯 PREMIOS ESCALONADOS:\n5 = 1 videito 🥵\n20 = 2-3 videitos 🔥\n50 = 4-10 videitos 😈\n100 = 10-20 videitos 🥵\n200 = +20 videitos + VIDEO FETICHE 👑🍑\n\n⚠️ REGLAS:\nSolo cuentan reales +24h en el canal\nBots = te baneo y no hay nada ❌\n\nSpamea tu link y me vas desnudando 😈🔥",
                 reply_markup=get_volver()
             )
-        else:
-            await query.edit_message_text("❌ Error creando link. Asegúrate que el bot sea admin del canal con permiso de 'Invitar usuarios'.", parse_mode='Markdown', reply_markup=get_volver())
 
     # Botón RANKING PICANTE
     elif data == 'ranking':
         if not REFERIDOS:
-            await query.edit_message_text("Aún no hay #HORMOS activos 😢 Sé el primero en mojarme con /milink", parse_mode='Markdown', reply_markup=get_volver())
+            await query.edit_message_text("Aún no hay #HORMOS activos 😢 Sé el primero en mojarme con /milink", reply_markup=get_volver())
             return
 
         top = sorted(REFERIDOS.items(), key=lambda x: x[1]['contador'], reverse=True)[:10]
-        texto = "🏆 *TOP #HORMOS MÁS CALIENTES* 🏆\n\n"
+        texto = "🏆 TOP #HORMOS MÁS CALIENTES 🏆\n\n"
         for i, (uid, data_ref) in enumerate(top, 1):
             nivel = "👑 DIABLA" if data_ref['contador'] >= 200 else "🥵 INFIERNO" if data_ref['contador'] >= 100 else "😈 ARDIENDO" if data_ref['contador'] >= 50 else "🔥 CALIENTE" if data_ref['contador'] >= 20 else "🥵 TIBIO" if data_ref['contador'] >= 5 else "🥉 FRÍO"
             texto += f"{i}. {data_ref['username']} - {data_ref['contador']} miembros {nivel}\n"
-        texto += "\n¿Vas a dejar que te ganen mi *VIDEO FETICHE*? Toca 🔗 MI LINK 😈🍑"
-        await query.edit_message_text(texto, parse_mode='Markdown', reply_markup=get_volver())
+        texto += "\n¿Vas a dejar que te ganen mi VIDEO FETICHE? Toca 🔗 MI LINK 😈🍑"
+        await query.edit_message_text(texto, reply_markup=get_volver())
 
     elif data == 'volver':
-        await query.edit_message_text("¿Qué se te antoja hoy? 👇", reply_markup=get_menu(), parse_mode='Markdown')
+        await query.edit_message_text("¿Qué se te antoja hoy? 👇", reply_markup=get_menu())
 
 async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id!= ADMIN_ID:
@@ -592,7 +608,7 @@ async def vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = int(context.args[0])
     VIP_TEMPORAL[user_id] = datetime.now() + timedelta(minutes=15)
-    await context.bot.send_message(user_id, "✅ *CHAT VIP ACTIVADO* 😊\n\nTienes *15 minutos* de atención prioritaria\n\nPregúntame lo que quieras ✨")
+    await context.bot.send_message(user_id, "✅ CHAT VIP ACTIVADO 😊\n\nTienes 15 minutos de atención prioritaria\n\nPregúntame lo que quieras ✨")
     await update.message.reply_text(f"✅ VIP activado para {user_id}")
 
 async def activar(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -615,13 +631,13 @@ async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not USUARIOS:
         await update.message.reply_text("No hay usuarios aún")
         return
-    texto = "📊 *USUARIOS REGISTRADOS* 📊\n\n"
+    texto = "📊 USUARIOS REGISTRADOS 📊\n\n"
     for uid, data in USUARIOS.items():
         estado = "💰 PAGÓ/DESACTIVADO" if data['pago'] else "🔥 VIP" if data['es_vip'] else "👀 NUEVO"
         refs = f" | {REFERIDOS[uid]['contador']} miembros" if uid in REFERIDOS else ""
-        texto += f"👤 {data['nombre']} @{data['username']}\n🆔 `{uid}` | {estado}{refs}\n⏰ {data['ultimo_mensaje']}\n\n"
-    texto += f"*Total: {len(USUARIOS)} usuarios*"
-    await update.message.reply_text(texto, parse_mode='Markdown')
+        texto += f"👤 {data['nombre']} @{data['username']}\n🆔 {uid} | {estado}{refs}\n⏰ {data['ultimo_mensaje']}\n\n"
+    texto += f"Total: {len(USUARIOS)} usuarios"
+    await update.message.reply_text(texto)
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     if isinstance(context.error, Conflict):
@@ -642,7 +658,7 @@ def main():
     app.add_handler(CommandHandler('activar', activar))
     app.add_handler(CommandHandler('usuarios', usuarios))
     app.add_handler(CallbackQueryHandler(button))
-    # ESTA LÍNEA ES LA QUE HACE QUE CUENTEN LOS REFERIDOS EN CANALES
+    # ESTA LÍNEA ES LA CLAVE PARA QUE CUENTEN LOS REFERIDOS EN CANALES 👑
     app.add_handler(ChatMemberHandler(track_join, ChatMemberHandler.CHAT_MEMBER))
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
     app.add_error_handler(error_handler)
@@ -651,4 +667,4 @@ def main():
     app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
-    main()
+    main()m
