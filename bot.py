@@ -33,6 +33,7 @@ FOLLOWUP_ENVIADO = set()
 # Sistema de referidos
 REFERIDOS = {}
 INVITACIONES = {}
+INVITADOS = {} # NUEVO: Guarda quién invitó a quién {user_id: referidor_id}
 
 FOTOS_GRATIS = [
     "fotitos1.JPG", "fotitos2.JPG", "fotitos3.JPG",
@@ -375,18 +376,18 @@ async def enviar_gratis(chat_id, context):
                 await context.bot.send_photo(chat_id=chat_id, photo=f)
             await asyncio.sleep(0.5)
     except Forbidden:
-        logger.warning(f"Usuario {chat_id} no inició el bot, no puedo mandar fotos")
+        pass # Silencioso, ya no avisa nada
     except FileNotFoundError:
         logger.warning(f"Foto no encontrada, saltando...")
     except Exception as e:
         logger.error(f"No se pudo enviar fotos: {e}")
 
-# ESTA FUNCIÓN ES LA CLAVE - Detecta cuando alguien entra al canal
+# ESTA FUNCIÓN ES LA CLAVE - Detecta cuando alguien entra o sale del canal
 async def track_join(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = update.chat_member
     logger.info(f"ChatMember update: {result.new_chat_member.status} en {result.chat.id}")
 
-    # Solo nos interesa cuando alguien entra al canal como miembro
+    # Cuando ENTRA alguien al canal
     if result.new_chat_member.status == "member" and result.old_chat_member.status in ["left", "kicked"]:
         user = result.new_chat_member.user
         if user.is_bot:
@@ -397,6 +398,7 @@ async def track_join(update: Update, context: ContextTypes.DEFAULT_TYPE):
             referidor_id = INVITACIONES[result.invite_link.invite_link]
             if referidor_id in REFERIDOS:
                 REFERIDOS[referidor_id]['contador'] += 1
+                INVITADOS[user.id] = referidor_id # Guardamos quién lo invitó
                 nivel = '👑 DIABLA' if REFERIDOS[referidor_id]['contador']>=200 else '🥵 INFIERNO' if REFERIDOS[referidor_id]['contador']>=100 else '😈 ARDIENDO' if REFERIDOS[referidor_id]['contador']>=50 else '🔥 CALIENTE' if REFERIDOS[referidor_id]['contador']>=20 else '🥵 TIBIO' if REFERIDOS[referidor_id]['contador']>=5 else '🥉 FRÍO'
                 try:
                     await context.bot.send_message(
@@ -404,9 +406,32 @@ async def track_join(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         text=f"🔥 +1 #HORMO 🔥\n\n{user.first_name} cayó por tu link 😏\nProgreso: {REFERIDOS[referidor_id]['contador']}/200\nNivel: {nivel}\n\nMe tienes más caliente... sigue 🥵"
                     )
                 except Forbidden:
-                    pass # El referidor no inició el bot
+                    pass
                 await chequear_premio(context, referidor_id)
                 logger.info(f"Referido contado: {user.first_name} para {referidor_id}. Total: {REFERIDOS[referidor_id]['contador']}")
+
+    # Cuando SE SALE alguien del canal 👇 ESTO ES LO NUEVO
+    elif result.new_chat_member.status in ["left", "kicked"] and result.old_chat_member.status == "member":
+        user = result.new_chat_member.user
+        if user.is_bot:
+            return
+
+        # Si sabemos quién lo invitó, le restamos
+        if user.id in INVITADOS:
+            referidor_id = INVITADOS[user.id]
+            if referidor_id in REFERIDOS and REFERIDOS[referidor_id]['contador'] > 0:
+                REFERIDOS[referidor_id]['contador'] -= 1
+                nivel = '👑 DIABLA' if REFERIDOS[referidor_id]['contador']>=200 else '🥵 INFIERNO' if REFERIDOS[referidor_id]['contador']>=100 else '😈 ARDIENDO' if REFERIDOS[referidor_id]['contador']>=50 else '🔥 CALIENTE' if REFERIDOS[referidor_id]['contador']>=20 else '🥵 TIBIO' if REFERIDOS[referidor_id]['contador']>=5 else '🥉 FRÍO'
+                try:
+                    await context.bot.send_message(
+                        chat_id=referidor_id,
+                        text=f"💔 -1 #HORMO 💔\n\n{user.first_name} se salió del canal 😢\nProgreso: {REFERIDOS[referidor_id]['contador']}/200\nNivel: {nivel}\n\nTráelo de vuelta bebé 😏"
+                    )
+                except Forbidden:
+                    pass
+                logger.info(f"Referido perdido: {user.first_name} se salió. Total de {referidor_id}: {REFERIDOS[referidor_id]['contador']}")
+            # Borramos el registro
+            del INVITADOS[user.id]
 
 async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message or update.business_message
@@ -566,7 +591,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await context.bot.send_photo(chat_id=user_id, photo=f)
                 await asyncio.sleep(0.5)
         except Forbidden:
-            await query.message.reply_text("⚠️ Inicia el bot con /start primero para ver las fotos 😏")
+            pass # YA NO SPAMEA EL MENSAJE DE /start 😈
         except FileNotFoundError:
             logger.warning(f"Foto no encontrada, saltando...")
         except Exception as e:
