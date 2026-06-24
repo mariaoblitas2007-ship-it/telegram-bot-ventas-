@@ -14,7 +14,7 @@ from telegram.error import Conflict, Forbidden
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-TOKEN = '8751695788:AAGVEh616rdbifTD_Fvhloe10jJ2dTPYnMg'
+TOKEN = '8751695788:AAHJYzHxsSlcjnYOfqMEEb1XMBEMqqYDvW8'
 ADMIN_ID = 8783569348
 USERNAME_ADMIN = "@yanabicitasa"
 CANAL_ID = -1004473732783
