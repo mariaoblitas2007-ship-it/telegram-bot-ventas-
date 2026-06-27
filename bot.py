@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # === CONFIG SEGURA - usa variables de entorno en Render ===
-TOKEN = os.getenv('TOKEN', '8751695788:AAHJYzHxsSlcjnYOfqMEEb1XMBEMqqYDvW8')
+TOKEN = os.getenv('TOKEN', '8762577283:AAGyirGjyF6CkPFMzh-i4-2w1NpHz93fqIg')
 ADMIN_ID = int(os.getenv('ADMIN_ID', '8783569348'))
 USERNAME_ADMIN = "@yanabicitasa"
 CANAL_ID = int(os.getenv('CANAL_ID', '-1004473732783'))
