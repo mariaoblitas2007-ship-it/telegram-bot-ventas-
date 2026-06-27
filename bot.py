@@ -1,8 +1,8 @@
-import os, sys, asyncio, random, logging, unicodedata, signal, re
+import os, sys, asyncio, random, logging, unicodedata, signal, re, json
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, MessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes, ChatMemberHandler
-from telegram.error import Forbidden
+from telegram.error import Forbidden, Conflict
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -20,6 +20,36 @@ ULTIMO_MENSAJE, FOLLOWUP_ENVIADO = {}, set()
 REFERIDOS, INVITACIONES, INVITADOS = {}, {}, {}
 
 FOTOS_GRATIS = ["fotitos1.JPG","fotitos2.JPG","fotitos3.JPG","fotitos4.JPG","fotitos5.JPG","fotitos6.JPG"]
+
+DATA_FILE = "data.json"
+
+# === PERSISTENCIA - NO SE BORRA AL ACTUALIZAR ===
+def cargar_datos():
+    global REFERIDOS, PAGARON, USUARIOS, INVITADOS, INVITACIONES
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r', encoding='utf-8') as f:
+                d = json.load(f)
+                REFERIDOS = {int(k): v for k,v in d.get('referidos', {}).items()}
+                PAGARON = set(d.get('pagaron', []))
+                USUARIOS = {int(k): v for k,v in d.get('usuarios', {}).items()}
+                INVITADOS = {int(k): v for k,v in d.get('invitados', {}).items()}
+                INVITACIONES = {v['link']: int(k) for k,v in REFERIDOS.items() if 'link' in v}
+                logger.info(f"Datos cargados: {len(REFERIDOS)} referidos")
+        except Exception as e:
+            logger.error(f"Error cargando: {e}")
+
+def guardar_datos():
+    try:
+        with open(DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump({
+                'referidos': REFERIDOS,
+                'pagaron': list(PAGARON),
+                'usuarios': USUARIOS,
+                'invitados': INVITADOS
+            }, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"Error guardando: {e}")
 
 # === PRECIOS ACTUALIZADOS ===
 PE_PRECIOS = """
@@ -229,7 +259,10 @@ def get_menu(): return InlineKeyboardMarkup([[InlineKeyboardButton("💎 COMPRAR
 def get_precios_menu(): return InlineKeyboardMarkup([[InlineKeyboardButton("🇵🇪 Perú", callback_data='pe')],[InlineKeyboardButton("🇲🇽 México", callback_data='mx')],[InlineKeyboardButton("🇺🇸 USA/Otros", callback_data='usa')],[InlineKeyboardButton("🌎 Internacional", callback_data='otro')],[InlineKeyboardButton("⬅️ Volver", callback_data='volver')]])
 def get_volver(): return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Volver al Menú", callback_data='volver')]])
 def normalizar(t): return unicodedata.normalize('NFKD', t).encode('ascii','ignore').decode('ascii').lower()
-def registrar_usuario(u): USUARIOS[u.id] = {'nombre': u.first_name, 'username': u.username or "sin_username"}
+
+def registrar_usuario(u):
+    USUARIOS[u.id] = {'nombre': u.first_name, 'username': u.username or "sin_username"}
+    guardar_datos()
 
 async def avisar_pago(ctx, uid, user, nombre, fid):
     try: await ctx.bot.send_photo(ADMIN_ID, fid, caption=f"💰 PAGO\n👤 @{user}\n🆔 {uid}\n👉 tg://user?id={uid}")
@@ -248,6 +281,7 @@ async def crear_link_referido(ctx, uid, username):
         inv = await ctx.bot.create_chat_invite_link(CANAL_ID, name=f"ref{uid}", creates_join_request=False)
         REFERIDOS[uid] = {'link': inv.invite_link, 'contador': 0, 'username': f"@{username}"}
         INVITACIONES[inv.invite_link] = uid
+        guardar_datos()
         return inv.invite_link
     except Exception as e:
         logger.error(e)
@@ -279,6 +313,7 @@ async def track_join(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if ref in REFERIDOS:
             REFERIDOS[ref]['contador'] += 1
             INVITADOS[r.new_chat_member.user.id] = ref
+            guardar_datos()
             try: await ctx.bot.send_message(ref, f"🔥 +1 | Total: {REFERIDOS[ref]['contador']}/200")
             except: pass
             await chequear_premio(ctx, ref)
@@ -286,8 +321,10 @@ async def track_join(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
         u = r.new_chat_member.user
         if u.id in INVITADOS:
             ref = INVITADOS[u.id]
-            if ref in REFERIDOS and REFERIDOS[ref]['contador']>0: REFERIDOS[ref]['contador'] -= 1
+            if ref in REFERIDOS and REFERIDOS[ref]['contador']>0:
+                REFERIDOS[ref]['contador'] -= 1
             del INVITADOS[u.id]
+            guardar_datos()
 
 async def manejar_todo(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
     m = upd.message or upd.business_message
@@ -311,6 +348,7 @@ async def manejar_todo(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if m.photo:
         if uid == ADMIN_ID: return
         PAGARON.add(uid)
+        guardar_datos()
         await avisar_pago(ctx, uid, user, name, m.photo[-1].file_id)
         await m.reply_text(f"✅ Pago recibido. Escríbeme {USERNAME_ADMIN}")
         return
@@ -361,10 +399,13 @@ async def vip(u,c):
 async def activar(u,c):
     if u.effective_user.id!= ADMIN_ID: return
     uid=int(c.args[0])
-    if uid in PAGARON: PAGARON.remove(uid)
+    if uid in PAGARON:
+        PAGARON.remove(uid)
+        guardar_datos()
     await c.bot.send_message(uid,"Bot reactivado"); await u.message.reply_text("OK")
 
 def main():
+    cargar_datos()
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler('vip', vip))
     app.add_handler(CommandHandler('activar', activar))
@@ -372,6 +413,10 @@ def main():
     app.add_handler(ChatMemberHandler(track_join, ChatMemberHandler.CHAT_MEMBER))
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
     logger.info("BOT PRENDIDO ✅")
-    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+    try:
+        app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+    except Conflict:
+        logger.error("Otra instancia corriendo")
+        sys.exit(0)
 
 if __name__ == '__main__': main()
