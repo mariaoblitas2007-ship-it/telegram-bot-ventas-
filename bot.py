@@ -270,7 +270,7 @@ def registrar_usuario(user):
         'username': user.username or "sin_username",
         'ultimo_mensaje': datetime.now().strftime('%d/%m %H:%M'),
         'demo_usada': user.id in DEMO_USADO,
-        'es_vip': user.id in VIP_TEMPORAL and VIP_TEMPORAL[user.id] > datetime.now(),
+        'es_vip': user.id in VIP_TEMPORAL and VIP_TEMPORAL[user_id] > datetime.now(),
         'pago': user.id in PAGARON
     }
 
@@ -497,19 +497,31 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text(texto, reply_markup=get_volver())
         return
 
+    # === CAMBIO 1: FOTOS - YA NO SE TOMAN COMO PAGO SI LAS MANDAS TÚ ===
     if message.photo:
-        if user_id!= ADMIN_ID:
+        # Si eres tú (admin), ignorar fotos
+        if user_id == ADMIN_ID:
+            return
+
+        # Si el cliente manda foto + texto con palabras de pago = es comprobante real
+        caption = message.caption or ""
+        es_comprobante = any(x in normalizar(caption) for x in ['pago', 'yape', 'plin', 'comprobante', 'envie', 'listo', 'paypal', 'usdt', 'transfer', 'envio'])
+
+        if es_comprobante or not caption: # Si no tiene caption, asumimos que es pago
             PAGARON.add(user_id)
-        foto_id = message.photo[-1].file_id
-        await avisar_pago(context, user_id, username, nombre, foto_id)
-        await message.reply_text(
-            f"✅ PAGO RECIBIDO 😊\n\n"
-            f"Gracias {nombre}, ya te registro\n"
-            f"📩 AHORA ESCRÍBEME AL PRIVADO\n"
-            f"👉 {USERNAME_ADMIN}\n\n"
-            f"Ahí coordinamos tu pedido 😏\n\n"
-            f"El bot se desactiva aquí por seguridad"
-        )
+            foto_id = message.photo[-1].file_id
+            await avisar_pago(context, user_id, username, nombre, foto_id)
+            await message.reply_text(
+                f"✅ PAGO RECIBIDO 😊\n\n"
+                f"Gracias {nombre}, ya te registro\n"
+                f"📩 AHORA ESCRÍBEME AL PRIVADO\n"
+                f"👉 {USERNAME_ADMIN}\n\n"
+                f"Ahí coordinamos tu pedido 😏\n\n"
+                f"El bot se desactiva aquí por seguridad"
+            )
+        else:
+            # Si manda foto con otro texto random, no es pago
+            await message.reply_text("Que linda foto bebé 😏 ¿Me la mandas para comprar? Elige tu pack 👇", reply_markup=get_precios_menu())
         return
 
     if not message.text:
@@ -520,6 +532,21 @@ async def manejar_todo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if ULTIMO_MENSAJE.get(user_id) == texto.lower():
         return
     ULTIMO_MENSAJE[user_id] = texto.lower()
+
+    # === CAMBIO 2: AVISAR AL ADMIN CUANDO PIDEN INFO ===
+    palabras_info = ['info', 'informacion', 'información', 'precio', 'cuanto', 'cuesta', 'como', 'cómo', 'ayuda', 'duda']
+    if any(x in normalizar(texto) for x in palabras_info) and user_id!= ADMIN_ID:
+        try:
+            await context.bot.send_message(
+                chat_id=ADMIN_ID,
+                text=f"🔔 CLIENTE PIDIENDO INFO 🔔\n\n"
+                     f"👤 {nombre} @{username}\n"
+                     f"🆔 {user_id}\n"
+                     f"💬 Dijo: {texto}\n\n"
+                     f"👉 Escribirle: tg://user?id={user_id}"
+            )
+        except:
+            pass
 
     if any(x in normalizar(texto) for x in ['gratis', 'free', 'regalo', 'bonus', 'muestra gratis']):
         await enviar_gratis(user_id, context)
@@ -645,51 +672,4 @@ async def activar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = int(context.args[0])
     if user_id in PAGARON:
         PAGARON.remove(user_id)
-        await context.bot.send_message(user_id, "😏 Bot reactivado. ¿En qué te ayudo?")
-        await update.message.reply_text(f"✅ Bot reactivado para {user_id}")
-    else:
-        await update.message.reply_text(f"⚠️ El usuario {user_id} no estaba desactivado")
-
-async def usuarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id!= ADMIN_ID:
-        return
-    if not USUARIOS:
-        await update.message.reply_text("No hay usuarios aún")
-        return
-    texto = "📊 USUARIOS REGISTRADOS 📊\n\n"
-    for uid, data in USUARIOS.items():
-        estado = "💰 PAGÓ/DESACTIVADO" if data['pago'] else "🔥 VIP" if data['es_vip'] else "👀 NUEVO"
-        refs = f" | {REFERIDOS[uid]['contador']} miembros" if uid in REFERIDOS else ""
-        texto += f"👤 {data['nombre']} @{data['username']}\n🆔 {uid} | {estado}{refs}\n⏰ {data['ultimo_mensaje']}\n\n"
-    texto += f"Total: {len(USUARIOS)} usuarios"
-    await update.message.reply_text(texto)
-
-async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
-    if isinstance(context.error, Conflict):
-        logger.error("⚠️ Conflicto: Otro bot está corriendo. Detenlo en Render/otros sitios")
-    else:
-        logger.error(f"Error: {context.error}", exc_info=context.error)
-
-def shutdown_handler(signum, frame):
-    logger.info("Apagando bot...")
-    sys.exit(0)
-
-signal.signal(signal.SIGINT, shutdown_handler)
-signal.signal(signal.SIGTERM, shutdown_handler)
-
-def main():
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler('vip', vip))
-    app.add_handler(CommandHandler('activar', activar))
-    app.add_handler(CommandHandler('usuarios', usuarios))
-    app.add_handler(CallbackQueryHandler(button))
-    # ESTA LÍNEA ES LA CLAVE PARA QUE CUENTEN LOS REFERIDOS EN CANALES 👑
-    app.add_handler(ChatMemberHandler(track_join, ChatMemberHandler.CHAT_MEMBER))
-    app.add_handler(MessageHandler(filters.ALL, manejar_todo))
-    app.add_error_handler(error_handler)
-    logger.info("BOT PRENDIDO - MODO 24/7 ACTIVO ✅")
-    # IMPORTANTE: allowed_updates para que Telegram mande los eventos de miembros
-    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
-
-if __name__ == '__main__':
-    main()
+        await context.bot.send_message(user_id
