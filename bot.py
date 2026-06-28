@@ -450,7 +450,10 @@ def main():
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(ChatMemberHandler(track_join, ChatMemberHandler.CHAT_MEMBER))
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
-    app.job_queue.run_daily(resumen_estrellas, time=time(4, 58))
+
+    if app.job_queue:
+        app.job_queue.run_daily(resumen_estrellas, time=time(4, 58))
+
     logger.info("BOT PRENDIDO ✅")
     try:
         app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
