@@ -18,13 +18,13 @@ LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 VIP_TEMPORAL, DEMO_USADO, USUARIOS, PAGARON = {}, set(), {}, set()
 ULTIMO_MENSAJE, FOLLOWUP_ENVIADO = {}, set()
 REFERIDOS, INVITACIONES, INVITADOS = {}, {}, {}
-VENTAS_ESTRELLAS = [] # <-- NUEVO
+VENTAS_ESTRELLAS = []
 
 FOTOS_GRATIS = ["fotitos1.JPG","fotitos2.JPG","fotitos3.JPG","fotitos4.JPG","fotitos5.JPG","fotitos6.JPG"]
 
 DATA_FILE = "data.json"
 
-# === PERSISTENCIA - NO SE BORRA AL ACTUALIZAR ===
+# === PERSISTENCIA ===
 def cargar_datos():
     global REFERIDOS, PAGARON, USUARIOS, INVITADOS, INVITACIONES, VENTAS_ESTRELLAS
     if os.path.exists(DATA_FILE):
@@ -36,7 +36,7 @@ def cargar_datos():
                 USUARIOS = {int(k): v for k,v in d.get('usuarios', {}).items()}
                 INVITADOS = {int(k): v for k,v in d.get('invitados', {}).items()}
                 INVITACIONES = {v['link']: int(k) for k,v in REFERIDOS.items() if 'link' in v}
-                VENTAS_ESTRELLAS = d.get('ventas_estrellas', []) # <-- NUEVO
+                VENTAS_ESTRELLAS = d.get('ventas_estrellas', [])
                 logger.info(f"Datos cargados: {len(REFERIDOS)} referidos")
         except Exception as e:
             logger.error(f"Error cargando: {e}")
@@ -49,12 +49,12 @@ def guardar_datos():
                 'pagaron': list(PAGARON),
                 'usuarios': USUARIOS,
                 'invitados': INVITADOS,
-                'ventas_estrellas': VENTAS_ESTRELLAS # <-- NUEVO
+                'ventas_estrellas': VENTAS_ESTRELLAS
             }, f, ensure_ascii=False, indent=2)
     except Exception as e:
         logger.error(f"Error guardando: {e}")
 
-# === PRECIOS ACTUALIZADOS ===
+# === PRECIOS ===
 PE_PRECIOS = """
 🛍 PACKS DISPONIBLES - PERÚ 🇵🇪😏
 
@@ -271,7 +271,7 @@ async def avisar_pago(ctx, uid, user, nombre, fid):
     try: await ctx.bot.send_photo(ADMIN_ID, fid, caption=f"💰 PAGO\n👤 @{user}\n🆔 {uid}\n👉 tg://user?id={uid}")
     except: pass
 
-# === NUEVO: ESTRELLAS ===
+# === ESTRELLAS ===
 async def detectar_estrellas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     if not msg or not msg.paid_media_purchased:
@@ -287,27 +287,11 @@ async def detectar_estrellas(update: Update, context: ContextTypes.DEFAULT_TYPE)
             estrellas = msg.reply_to_message.paid_media.star_count
     canal_id_str = str(CANAL_ID).replace("-100", "")
     link_post = f"https://t.me/c/{canal_id_str}/{post_id}"
-    venta = {
-        'uid': uid,
-        'nombre': user.first_name,
-        'username': user.username or '',
-        'estrellas': estrellas,
-        'post': link_post,
-        'fecha': datetime.now().isoformat(),
-        'dia': datetime.now().strftime('%Y-%m-%d')
-    }
+    venta = {'uid': uid, 'nombre': user.first_name, 'username': user.username or '', 'estrellas': estrellas, 'post': link_post, 'fecha': datetime.now().isoformat(), 'dia': datetime.now().strftime('%Y-%m-%d')}
     VENTAS_ESTRELLAS.append(venta)
     guardar_datos()
     total_persona = sum(v['estrellas'] for v in VENTAS_ESTRELLAS if v['uid'] == uid)
-    await context.bot.send_message(
-        ADMIN_ID,
-        f"⭐ {estrellas} ESTRELLAS\n"
-        f"👤 {user.first_name} @{user.username or 'sin_user'}\n"
-        f"👉 PERFIL: tg://user?id={uid}\n"
-        f"🎬 COMPRÓ: {link_post}\n"
-        f"💰 Total de él/ella: {total_persona}⭐",
-        disable_web_page_preview=True
-    )
+    await context.bot.send_message(ADMIN_ID, f"⭐ {estrellas} ESTRELLAS\n👤 {user.first_name} @{user.username or 'sin_user'}\n👉 PERFIL: tg://user?id={uid}\n🎬 COMPRÓ: {link_post}\n💰 Total de él/ella: {total_persona}⭐", disable_web_page_preview=True)
 
 async def resumen_estrellas(context: ContextTypes.DEFAULT_TYPE):
     hoy = datetime.now().strftime('%Y-%m-%d')
@@ -467,9 +451,12 @@ def main():
     app.add_handler(CommandHandler('activar', activar))
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(ChatMemberHandler(track_join, ChatMemberHandler.CHAT_MEMBER))
-    app.add_handler(MessageHandler(filters.PAID_MEDIA_PURCHASED, detectar_estrellas)) # <-- NUEVO
+
+    paid_filter = filters.create(lambda u: u.effective_message and u.effective_message.paid_media_purchased)
+    app.add_handler(MessageHandler(paid_filter, detectar_estrellas))
+
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
-    app.job_queue.run_daily(resumen_estrellas, time=time(4, 58)) # <-- NUEVO 11:58pm Lima
+    app.job_queue.run_daily(resumen_estrellas, time=time(4, 58))
     logger.info("BOT PRENDIDO ✅")
     try:
         app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
