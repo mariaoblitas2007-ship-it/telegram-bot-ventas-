@@ -1,5 +1,5 @@
 import os, sys, asyncio, random, logging, unicodedata, signal, re, json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, MessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes, ChatMemberHandler
 from telegram.error import Forbidden, Conflict
@@ -18,6 +18,7 @@ LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 VIP_TEMPORAL, DEMO_USADO, USUARIOS, PAGARON = {}, set(), {}, set()
 ULTIMO_MENSAJE, FOLLOWUP_ENVIADO = {}, set()
 REFERIDOS, INVITACIONES, INVITADOS = {}, {}, {}
+VENTAS_ESTRELLAS = [] # <-- NUEVO
 
 FOTOS_GRATIS = ["fotitos1.JPG","fotitos2.JPG","fotitos3.JPG","fotitos4.JPG","fotitos5.JPG","fotitos6.JPG"]
 
@@ -25,7 +26,7 @@ DATA_FILE = "data.json"
 
 # === PERSISTENCIA - NO SE BORRA AL ACTUALIZAR ===
 def cargar_datos():
-    global REFERIDOS, PAGARON, USUARIOS, INVITADOS, INVITACIONES
+    global REFERIDOS, PAGARON, USUARIOS, INVITADOS, INVITACIONES, VENTAS_ESTRELLAS
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, 'r', encoding='utf-8') as f:
@@ -35,6 +36,7 @@ def cargar_datos():
                 USUARIOS = {int(k): v for k,v in d.get('usuarios', {}).items()}
                 INVITADOS = {int(k): v for k,v in d.get('invitados', {}).items()}
                 INVITACIONES = {v['link']: int(k) for k,v in REFERIDOS.items() if 'link' in v}
+                VENTAS_ESTRELLAS = d.get('ventas_estrellas', []) # <-- NUEVO
                 logger.info(f"Datos cargados: {len(REFERIDOS)} referidos")
         except Exception as e:
             logger.error(f"Error cargando: {e}")
@@ -46,7 +48,8 @@ def guardar_datos():
                 'referidos': REFERIDOS,
                 'pagaron': list(PAGARON),
                 'usuarios': USUARIOS,
-                'invitados': INVITADOS
+                'invitados': INVITADOS,
+                'ventas_estrellas': VENTAS_ESTRELLAS # <-- NUEVO
             }, f, ensure_ascii=False, indent=2)
     except Exception as e:
         logger.error(f"Error guardando: {e}")
@@ -268,6 +271,59 @@ async def avisar_pago(ctx, uid, user, nombre, fid):
     try: await ctx.bot.send_photo(ADMIN_ID, fid, caption=f"💰 PAGO\n👤 @{user}\n🆔 {uid}\n👉 tg://user?id={uid}")
     except: pass
 
+# === NUEVO: ESTRELLAS ===
+async def detectar_estrellas(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    if not msg or not msg.paid_media_purchased:
+        return
+    compra = msg.paid_media_purchased
+    user = compra.from_user
+    uid = user.id
+    estrellas = 0
+    post_id = 0
+    if msg.reply_to_message:
+        post_id = msg.reply_to_message.message_id
+        if msg.reply_to_message.paid_media:
+            estrellas = msg.reply_to_message.paid_media.star_count
+    canal_id_str = str(CANAL_ID).replace("-100", "")
+    link_post = f"https://t.me/c/{canal_id_str}/{post_id}"
+    venta = {
+        'uid': uid,
+        'nombre': user.first_name,
+        'username': user.username or '',
+        'estrellas': estrellas,
+        'post': link_post,
+        'fecha': datetime.now().isoformat(),
+        'dia': datetime.now().strftime('%Y-%m-%d')
+    }
+    VENTAS_ESTRELLAS.append(venta)
+    guardar_datos()
+    total_persona = sum(v['estrellas'] for v in VENTAS_ESTRELLAS if v['uid'] == uid)
+    await context.bot.send_message(
+        ADMIN_ID,
+        f"⭐ {estrellas} ESTRELLAS\n"
+        f"👤 {user.first_name} @{user.username or 'sin_user'}\n"
+        f"👉 PERFIL: tg://user?id={uid}\n"
+        f"🎬 COMPRÓ: {link_post}\n"
+        f"💰 Total de él/ella: {total_persona}⭐",
+        disable_web_page_preview=True
+    )
+
+async def resumen_estrellas(context: ContextTypes.DEFAULT_TYPE):
+    hoy = datetime.now().strftime('%Y-%m-%d')
+    hoy_ventas = [v for v in VENTAS_ESTRELLAS if v['dia'] == hoy]
+    if not hoy_ventas: return
+    total = sum(v['estrellas'] for v in hoy_ventas)
+    conteo = {}
+    for v in hoy_ventas:
+        conteo[v['estrellas']] = conteo.get(v['estrellas'], 0) + 1
+    top = max(conteo.items(), key=lambda x: x[1])
+    texto = f"📊 ESTRELLAS HOY {hoy}\n\n💎 Total: {total}⭐ en {len(hoy_ventas)} ventas\n\n"
+    for e, c in sorted(conteo.items(), key=lambda x: -x[1]):
+        texto += f"• {e}⭐: {c} veces\n"
+    texto += f"\n🥇 MÁS VENDIDO: {top[0]}⭐ ({top[1]} ventas)"
+    await context.bot.send_message(ADMIN_ID, texto)
+
 async def follow_up(ctx: ContextTypes.DEFAULT_TYPE):
     uid = ctx.job.data['uid']
     if uid in PAGARON or uid in FOLLOWUP_ENVIADO: return
@@ -411,7 +467,9 @@ def main():
     app.add_handler(CommandHandler('activar', activar))
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(ChatMemberHandler(track_join, ChatMemberHandler.CHAT_MEMBER))
+    app.add_handler(MessageHandler(filters.PAID_MEDIA_PURCHASED, detectar_estrellas)) # <-- NUEVO
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
+    app.job_queue.run_daily(resumen_estrellas, time=time(4, 58)) # <-- NUEVO 11:58pm Lima
     logger.info("BOT PRENDIDO ✅")
     try:
         app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
