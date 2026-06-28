@@ -24,7 +24,6 @@ FOTOS_GRATIS = ["fotitos1.JPG","fotitos2.JPG","fotitos3.JPG","fotitos4.JPG","fot
 
 DATA_FILE = "data.json"
 
-# === PERSISTENCIA ===
 def cargar_datos():
     global REFERIDOS, PAGARON, USUARIOS, INVITADOS, INVITACIONES, VENTAS_ESTRELLAS
     if os.path.exists(DATA_FILE):
@@ -37,7 +36,6 @@ def cargar_datos():
                 INVITADOS = {int(k): v for k,v in d.get('invitados', {}).items()}
                 INVITACIONES = {v['link']: int(k) for k,v in REFERIDOS.items() if 'link' in v}
                 VENTAS_ESTRELLAS = d.get('ventas_estrellas', [])
-                logger.info(f"Datos cargados: {len(REFERIDOS)} referidos")
         except Exception as e:
             logger.error(f"Error cargando: {e}")
 
@@ -54,7 +52,6 @@ def guardar_datos():
     except Exception as e:
         logger.error(f"Error guardando: {e}")
 
-# === PRECIOS ===
 PE_PRECIOS = """
 🛍 PACKS DISPONIBLES - PERÚ 🇵🇪😏
 
@@ -271,11 +268,9 @@ async def avisar_pago(ctx, uid, user, nombre, fid):
     try: await ctx.bot.send_photo(ADMIN_ID, fid, caption=f"💰 PAGO\n👤 @{user}\n🆔 {uid}\n👉 tg://user?id={uid}")
     except: pass
 
-# === ESTRELLAS ===
 async def detectar_estrellas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
-    if not msg or not msg.paid_media_purchased:
-        return
+    if not msg or not msg.paid_media_purchased: return
     compra = msg.paid_media_purchased
     user = compra.from_user
     uid = user.id
@@ -325,8 +320,6 @@ async def crear_link_referido(ctx, uid, username):
         return inv.invite_link
     except Exception as e:
         logger.error(e)
-        try: await ctx.bot.send_message(ADMIN_ID, f"⚠️ Error link @{username}: {e}")
-        except: pass
         return None
 
 async def chequear_premio(ctx, uid):
@@ -369,6 +362,11 @@ async def track_join(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def manejar_todo(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
     m = upd.message or upd.business_message
     if not m or not m.from_user or m.from_user.is_bot: return
+
+    if getattr(m, 'paid_media_purchased', None):
+        await detectar_estrellas(upd, ctx)
+        return
+
     uid = m.from_user.id
     if uid in PAGARON and uid!= ADMIN_ID: return
     registrar_usuario(m.from_user)
@@ -451,10 +449,6 @@ def main():
     app.add_handler(CommandHandler('activar', activar))
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(ChatMemberHandler(track_join, ChatMemberHandler.CHAT_MEMBER))
-
-    paid_filter = filters.create(lambda u: u.effective_message and u.effective_message.paid_media_purchased)
-    app.add_handler(MessageHandler(paid_filter, detectar_estrellas))
-
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
     app.job_queue.run_daily(resumen_estrellas, time=time(4, 58))
     logger.info("BOT PRENDIDO ✅")
