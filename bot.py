@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 TOKEN = '8762577283:AAFVT7_WMpZ7njVnToIlZypUpCToF5LGcbA'
 ADMIN_ID = 8783569348
 USERNAME_ADMIN = "@yanabicitasa"
-CANAL_ID = -1004473732783
+CANAL_ID = -1004327627898
 
-LINK_CANAL = "https://t.me/+ZWc0FAcw-hQ2MDZh"
+LINK_CANAL = "https://t.me/+zt1RzGevdHBjMDgx"
 LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 
 VIP_TEMPORAL, DEMO_USADO, USUARIOS, PAGARON = {}, set(), {}, set()
