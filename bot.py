@@ -19,6 +19,7 @@ VIP_TEMPORAL, DEMO_USADO, USUARIOS, PAGARON = {}, set(), {}, set()
 ULTIMO_MENSAJE, FOLLOWUP_ENVIADO = {}, set()
 REFERIDOS, INVITACIONES, INVITADOS = {}, {}, {}
 VENTAS_ESTRELLAS = []
+ESPERA_PAIS = {} # NUEVO: para el trigger de precios
 
 FOTOS_GRATIS = ["fotitos1.JPG","fotitos2.JPG","fotitos3.JPG","fotitos4.JPG","fotitos5.JPG","fotitos6.JPG"]
 
@@ -52,165 +53,106 @@ def guardar_datos():
     except Exception as e:
         logger.error(f"Error guardando: {e}")
 
+# ========== PRECIOS ACTUALIZADOS ==========
 PE_PRECIOS = """
-🛍 PACKS DISPONIBLES - PERÚ 🇵🇪😏
+🛍 VIDEOS 🛒
 
-💦 PRUEBA: S/ 5
-→ 3 fotitos
-→ Para que me conozcas 🙈
+🎂 BÁSICO: S/ 15
+→ 5 vds | S/ 3 c/u
 
-🎂 BÁSICO: S/ 10
-→ 6 unidades
-→ +1 foto extra HOY
-
-🔥 TOP: S/ 20 ← MÁS VENDIDO
-→ 12 unidades
-→ Ahorras 50%
-→ REGALO: 2 fotos extra
-
-🏆 PREMIUM: S/ 35
-→ 20 unidades + 1 personalizado
-→ incluye chat privado 24h 🥰
+🔥 TOP: S/ 30 ← MÁS VENDIDO
+→ 12 vds | S/ 2.50 c/u
 → Ahorras 50%
 
-👑 VIP: S/ 50 ← MÁXIMO 28 UNIDADES
-→ 28 unidades + 2 personalizados
-→ Chat 3 días + videollamada 5min
-→ TODO INCLUIDO 😈
+🏆 PREMIUM: S/ 60
+→ 1 personalizado + 20 vds
+→ incluye sexting 🥰
+→ Ahorras 67%
 
-📼 LLAMADITAS 📼
-S/ 30: 5 min 😈
-S/ 50: 10 min + 3 fotos
-
-⚡ COMBO FLASH: S/ 45
-→ Pack PREMIUM + Llamada 10min
-→ Ahorras S/ 20
+📼 VIDEOLLAMADAS 📼
+S/ 60: 5 min
+S/ 80: 10 min
 
 💳 PAGO: YAPE/PLIN: 923553612
-100% REAL - PIDEME REFERENCIAS
+CUENTO CON REFERENCIAS
 
-1. Yapeas 2. Captura 3. Disfrutas 😏
+Mándame captura cuando pagues bebé 🥰
+En cuanto caiga te mando tu pack 🔥
+
+1. Yapeas 2. Captura
+
+Si no contesto envías cap del pago a : @YanaBiBot
 """
 
 MX_PRECIOS = """
-🛍 PACKS DISPONIBLES - MÉXICO 🇲🇽😏
+🛍 VIDEOS 🛒
 
-💦 PRUEBA: $60 MXN
-→ 3 fotitos
-→ Para que me conozcas 🙈
+🎂 BÁSICO: $100 MXN
+→ 5 vds | $20 c/u
 
-🎂 BÁSICO: $90 MXN
-→ 6 unidades
-→ +1 foto extra HOY
-
-🔥 TOP: $145 MXN ← MÁS VENDIDO
-→ 12 unidades
-→ Ahorras 50%
-→ REGALO: 2 fotos extra
-
-🏆 PREMIUM: $230 MXN
-→ 20 unidades + 1 personalizado
-→ incluye chat privado 24h 🥰
+🔥 TOP: $200 MXN ← MÁS VENDIDO
+→ 12 vds | $16 c/u
 → Ahorras 50%
 
-👑 VIP: $320 MXN ← MÁXIMO 28 UNIDADES
-→ 28 unidades + 2 personalizados
-→ Chat 3 días + videollamada 5min
-→ TODO INCLUIDO 😈
+🏆 PREMIUM: $400 MXN
+→ 1 personalizado + 20 vds
+→ incluye sexting 🥰
+→ Ahorras 80%
 
-📼 LLAMADITAS 📼
-$205 MXN: 5 min 😈
-$320 MXN: 10 min + 3 fotos
+📼 VIDEOLLAMADAS 📼
+$400 MXN: 5 min
+$600 MXN: 10 min
 
 🛍 PAGO MXN:
 🏦 Banco: STP
-🔢 CLABE: 646180546711450910
-📝 Referencia: yanae
+🔢 CLABE:
+646180546711450910
+📝 Referencia/Concepto: yanae
 
-🇲🇽 También: Transfer / Astropay
+🇲🇽 También acepto: Transfer / Astropay
+→ Pídeme datos si usas otro método
 
-Mándame captura cuando pagues 😊
+Mándame captura cuando pagues bebé 🥰
+En cuanto caiga te mando tu pack 🔥
+
+1. Pagas 2. Captura
+
+Si no contesto envías cap del pago a : @YanaBiBot con estos precios.
 """
 
 USA_PRECIOS = """
-🛍 PACKS DISPONIBLES - USA 🇺🇸😏
+🛍 VIDEOS 🛒
 
-💦 PRUEBA: $2 USD
-→ 3 fotitos
-→ Para que me pruebes 🙈
+🎂 BÁSICO: $5 USD
+→ 5 vds | $1 c/u
 
-🎂 BÁSICO: $3.50 USD
-→ 6 unidades
-→ +1 foto extra HOY
-
-🔥 TOP: $7 USD ← MÁS VENDIDO
-→ 12 unidades
-→ Ahorras 50%
-→ REGALO: 2 fotos extra
-
-🏆 PREMIUM: $12 USD
-→ 20 unidades + 1 personalizado
-→ incluye chat privado 24h 🥰
+🔥 TOP: $9 USD ← MÁS VENDIDO
+→ 12 vds | $0.75 c/u
 → Ahorras 50%
 
-👑 VIP: $20 USD ← MÁXIMO 28 UNIDADES
-→ 28 unidades + 2 personalizados
-→ Chat 3 días + videollamada 5min
-→ MEJOR VALOR 😈
+🏆 PREMIUM: $20 USD
+→ 1 personalizado + 20 vds
+→ incluye sexting 🥰
+→ Ahorras 60%
 
-📼 LLAMADITAS 📼
-$10 USD: 5 min 😈
-$20 USD: 10 min + 3 fotos
+📼 VIDEOLLAMADAS 📼
+$20 USD: 5min
+$35 USD: 10min
 
 🪙 PAGO:
-PayPal: AbigailMaximoofO
+PayPal:
+AbigailMaximoofO
+/ USDT
 
-🏦 Bank EEUU:
-Community Federal Savings Bank
-📍 Address: 5 Penn Plaza, 14th Floor New York, NY 10001
-0️⃣ Account: 8338233469
-0️⃣ Routing: 026073150
-✍️ Type: Checking
+Avísame cuando envíes con el comprobante 🥰
+En cuanto caiga te mando tu pack 🔥
 
-Avísame cuando envíes con el comprobante 😊
+1. Pagas 2. Captura
+
+Si no contesto envías cap del pago a : @YanaBiBot con estos precios.
 """
 
-OTRO_PRECIOS = f"""
-🛍 PACKS DISPONIBLES - INTERNACIONAL 🌎😏
-
-💦 PRUEBA: $2 USD
-→ 3 fotitos
-→ Para que me conozcas 🙈
-
-🎂 BÁSICO: $3.50 USD
-→ 6 unidades
-→ +1 foto extra HOY
-
-🔥 TOP: $7 USD ← MÁS VENDIDO
-→ 12 unidades
-→ Ahorras 50%
-→ REGALO: 2 fotos extra
-
-🏆 PREMIUM: $12 USD
-→ 20 unidades + 1 personalizado
-→ incluye chat privado 24h 🥰
-→ Ahorras 50%
-
-👑 VIP: $20 USD ← MÁXIMO 28 UNIDADES
-→ 28 unidades + 2 personalizados
-→ Chat 3 días + videollamada 5min
-→ MEJOR VALOR 😈
-
-📼 LLAMADITAS 📼
-$10 USD: 5 min 😈
-$20 USD: 10 min + 3 fotos
-
-🪙 PAGO:
-PayPal: {LINK_PAYPAL}
-/ USDT disponible
-
-Avísame cuando envíes con el comprobante 😊
-"""
+OTRO_PRECIOS = USA_PRECIOS
 
 TEXTO_GRATIS = """📸 GRATIS 🥺💋
 
@@ -259,6 +201,11 @@ def get_menu(): return InlineKeyboardMarkup([[InlineKeyboardButton("💎 COMPRAR
 def get_precios_menu(): return InlineKeyboardMarkup([[InlineKeyboardButton("🇵🇪 Perú", callback_data='pe')],[InlineKeyboardButton("🇲🇽 México", callback_data='mx')],[InlineKeyboardButton("🇺🇸 USA/Otros", callback_data='usa')],[InlineKeyboardButton("🌎 Internacional", callback_data='otro')],[InlineKeyboardButton("⬅️ Volver", callback_data='volver')]])
 def get_volver(): return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Volver al Menú", callback_data='volver')]])
 def normalizar(t): return unicodedata.normalize('NFKD', t).encode('ascii','ignore').decode('ascii').lower()
+
+def es_trigger_precios(texto):
+    if not texto: return False
+    t = normalizar(texto)
+    return "hola mor" in t and "pasame tus precios" in t
 
 def registrar_usuario(u):
     USUARIOS[u.id] = {'nombre': u.first_name, 'username': u.username or "sin_username"}
@@ -372,6 +319,32 @@ async def manejar_todo(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
     registrar_usuario(m.from_user)
     name = m.from_user.first_name
     user = m.from_user.username or "x"
+
+    # ===== NUEVO: TRIGGER PRECIOS EN PRIVADO =====
+    if m.chat.type == 'private':
+        if m.text and es_trigger_precios(m.text):
+            ESPERA_PAIS[uid] = True
+            await m.reply_text("hola mi amor 🫣🔥\n¿de dónde eres tú, bebé? 🥺💋")
+            return
+
+        if uid in ESPERA_PAIS and m.text:
+            txt = normalizar(m.text)
+            peru_keys = ['peru','perú','pe','lima','arequipa','trujillo','cusco','piura','chiclayo','peruano','peruana']
+            mex_keys = ['mexico','méxico','mx','cdmx','df','guadalajara','monterrey','puebla','tijuana','mexicano','mexicana','mex']
+            usa_keys = ['eeuu','usa','estados unidos','united states','america','gringo','gringa','new york','miami','texas','california','florida']
+
+            if any(k in txt for k in peru_keys):
+                await m.reply_text(PE_PRECIOS, reply_markup=get_volver())
+            elif any(k in txt for k in mex_keys):
+                await m.reply_text(MX_PRECIOS, reply_markup=get_volver())
+            elif any(k in txt for k in usa_keys):
+                await m.reply_text(USA_PRECIOS, reply_markup=get_volver())
+            else:
+                await m.reply_text(OTRO_PRECIOS, reply_markup=get_volver())
+
+            del ESPERA_PAIS[uid]
+            return
+    # ===== FIN NUEVO =====
 
     if m.text and m.text.lower() == '/start':
         await m.reply_text(f"Mmmm {name}... 😏✨", reply_markup=get_menu())
