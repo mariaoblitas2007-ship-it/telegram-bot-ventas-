@@ -19,7 +19,7 @@ VIP_TEMPORAL, DEMO_USADO, USUARIOS, PAGARON = {}, set(), {}, set()
 ULTIMO_MENSAJE, FOLLOWUP_ENVIADO = {}, set()
 REFERIDOS, INVITACIONES, INVITADOS = {}, {}, {}
 VENTAS_ESTRELLAS = []
-ESPERA_PAIS = {} # NUEVO: para el trigger de precios
+ESPERA_PAIS = {}
 
 FOTOS_GRATIS = ["fotitos1.JPG","fotitos2.JPG","fotitos3.JPG","fotitos4.JPG","fotitos5.JPG","fotitos6.JPG"]
 
@@ -53,7 +53,6 @@ def guardar_datos():
     except Exception as e:
         logger.error(f"Error guardando: {e}")
 
-# ========== PRECIOS ACTUALIZADOS ==========
 PE_PRECIOS = """
 🛍 VIDEOS 🛒
 
@@ -205,7 +204,8 @@ def normalizar(t): return unicodedata.normalize('NFKD', t).encode('ascii','ignor
 def es_trigger_precios(texto):
     if not texto: return False
     t = normalizar(texto)
-    return "hola mor" in t and "pasame tus precios" in t
+    # AHORA DETECTA "HOLA MOR PRECIOS"
+    return "hola mor" in t and "precio" in t
 
 def registrar_usuario(u):
     USUARIOS[u.id] = {'nombre': u.first_name, 'username': u.username or "sin_username"}
@@ -320,13 +320,15 @@ async def manejar_todo(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
     name = m.from_user.first_name
     user = m.from_user.username or "x"
 
-    # ===== NUEVO: TRIGGER PRECIOS EN PRIVADO =====
+    # ===== PRIVADO: SOLO RESPONDE AL TRIGGER =====
     if m.chat.type == 'private':
+        # 1. Trigger exacto
         if m.text and es_trigger_precios(m.text):
             ESPERA_PAIS[uid] = True
             await m.reply_text("hola mi amor 🫣🔥\n¿de dónde eres tú, bebé? 🥺💋")
             return
 
+        # 2. Esperando país - SIN BOTONES
         if uid in ESPERA_PAIS and m.text:
             txt = normalizar(m.text)
             peru_keys = ['peru','perú','pe','lima','arequipa','trujillo','cusco','piura','chiclayo','peruano','peruana']
@@ -334,18 +336,31 @@ async def manejar_todo(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
             usa_keys = ['eeuu','usa','estados unidos','united states','america','gringo','gringa','new york','miami','texas','california','florida']
 
             if any(k in txt for k in peru_keys):
-                await m.reply_text(PE_PRECIOS, reply_markup=get_volver())
+                await m.reply_text(PE_PRECIOS) # SIN reply_markup
             elif any(k in txt for k in mex_keys):
-                await m.reply_text(MX_PRECIOS, reply_markup=get_volver())
+                await m.reply_text(MX_PRECIOS)
             elif any(k in txt for k in usa_keys):
-                await m.reply_text(USA_PRECIOS, reply_markup=get_volver())
+                await m.reply_text(USA_PRECIOS)
             else:
-                await m.reply_text(OTRO_PRECIOS, reply_markup=get_volver())
+                await m.reply_text(OTRO_PRECIOS)
 
             del ESPERA_PAIS[uid]
             return
-    # ===== FIN NUEVO =====
 
+        # 3. Foto de pago
+        if m.photo:
+            if uid == ADMIN_ID: return
+            PAGARON.add(uid)
+            guardar_datos()
+            await avisar_pago(ctx, uid, user, name, m.photo[-1].file_id)
+            await m.reply_text(f"✅ Pago recibido. Escríbeme {USERNAME_ADMIN}")
+            return
+
+        # 4. IGNORA TODO LO DEMÁS EN PRIVADO
+        return
+    # ===== FIN PRIVADO =====
+
+    # Todo lo de abajo solo funciona en GRUPOS/CANALES
     if m.text and m.text.lower() == '/start':
         await m.reply_text(f"Mmmm {name}... 😏✨", reply_markup=get_menu())
         return
