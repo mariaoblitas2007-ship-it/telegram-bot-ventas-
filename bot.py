@@ -1,10 +1,11 @@
 import os, json, logging, unicodedata
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import Application, MessageHandler, CallbackQueryHandler, filters, ContextTypes, ChatMemberHandler
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# ===== CONFIG =====
 TOKEN = '8762577283:AAFVT7_WMpZ7njVnToIlZypUpCToF5LGcbA'
 ADMIN_ID = 8783569348
 LINK_CANAL = "https://t.me/+zt1RzGevdHBjMDgx"
@@ -13,6 +14,7 @@ LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 USUARIOS, PAGARON, REFERIDOS, INVITADOS, ESPERA_PAIS = {}, set(), {}, {}, {}
 DATA_FILE = "data.json"
 
+# OCR opcional
 try:
     import pytesseract
     from PIL import Image
@@ -32,7 +34,7 @@ def cargar_datos():
 def guardar_datos():
     json.dump({'usuarios':USUARIOS,'pagaron':list(PAGARON),'referidos':REFERIDOS,'invitados':INVITADOS}, open(DATA_FILE,'w'))
 
-# ===== PRECIOS (IGUALES) =====
+# ===== 3 PRECIOS =====
 MX_PRECIOS = """🛍 VIDEOS 🛒
 
 🎂 BÁSICO: $ 100 MXN
@@ -150,6 +152,7 @@ def normalizar(t):
 def es_precio(t):
     return any(p in normalizar(t) for p in ['precio','precios','costo','cuanto','cuánto','vale','valor'])
 
+# ===== IDENTIFICA FOTOS + LINK DIRECTO =====
 async def analizar_foto(ctx, uid, user, fid):
     try:
         f = await ctx.bot.get_file(fid)
@@ -180,41 +183,28 @@ async def todo(upd, ctx):
     es_neg = upd.business_message is not None
     txt = normalizar(m.text)
 
-    if es_neg:
+    if es_neg: # SIN SPAM - solo palabras clave
         if uid == ADMIN_ID: return
         if 'calific' in txt:
             await m.reply_text("solo trato hot a compradores 🥵"); return
         if any(k in txt for k in ['fake','estafa']):
             await m.reply_text(f"¿Fake? mira {LINK_CANAL}"); return
-
-        # === MENSAJES NUEVOS ===
-        if 'gratis' in txt:
-            await m.reply_text(
-                "1️⃣ Bio Tg: @yanabicitasa\n"
-                "2️⃣ Sube una fotito de las que te envié a tu story + Frase hot 😋\n"
-                "3️⃣ Mándame captura + videito cuando cumplas\n"
-                "4️⃣ Me confirmas cuando llegue a 100 vistas (story) :3\n"
-                "5️⃣ Disfruta de hasta 20 videitos :3 ❤️\n\n"
-                "¿Te animas o ño? 🥺\n"
-                "(Me avisas cuando cumplas Mor)"
-            ); return
-
-        if 'ya cumpli' in txt:
-            await m.reply_text(
-                "100 vistas es para que veas que es fácil :3 me confirmas cuando tenga 500-1000 vistas la story, y te envío los videos\n\n"
-                "Me envías video entrando al TikTok, entrando al estado, entrando a los likes\n"
-                "cualquier corte en el video anula la promoción de videos"
-            ); return
-
+        if 'ya cumpli' in txt: # NO responde a "ya" solo
+            await m.reply_text("100 vistas es para que veas que es fácil :3 me confirmas cuando tenga 500-1000 vistas la story, y te envío los videos\n\nMe envías video entrando al TikTok, entrando al estado, entrando a los likes\ncualquier corte en el video anula la promoción de videos"); return
         if any(k in txt for k in ['vistas','500','1000']):
-            await m.reply_text(
-                "Busca y comenta en varios videos que tengan: #hormo #hot #hormonal #amigoshormo\n\n"
-                "Cositas hormonales como: quién? Alguno?\n"
-                "Miren mi story\n"
-                "Y cositas así"
-            ); return
-        # === FIN MENSAJES NUEVOS ===
-
+            await m.reply_text("Busca y comenta en varios videos que tengan: #hormo #hot #hormonal #amigoshormo\n\nCositas hormonales como: quién? Alguno?\nMiren mi story\nY cositas así"); return
+        if 'gratis' in txt:
+            if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
+            try:
+                await m.reply_media_group([
+                    InputMediaPhoto(open('fotitos1.JPG','rb')),
+                    InputMediaPhoto(open('fotitos2.JPG','rb')),
+                    InputMediaPhoto(open('fotitos3.JPG','rb')),
+                    InputMediaPhoto(open('fotitos4.JPG','rb')),
+                    InputMediaPhoto(open('fotitos5.JPG','rb'))
+                ])
+            except: pass
+            await m.reply_text("✨ (REGALITO) QUIERES HASTA 20 VIDEITOS GRATSS? ✨\n\nhttps://t.me/YanaBiBot\n\nPasitos súper fáciles uwu:\n1️⃣ En tu bio de TikTok pon: Tg: yanabicitasa ✨\n2️⃣ Sube una fotito de las que te envié a tu story + Frase hot 😋\n3️⃣ Mándame captura + videito cuando cumplas\n4️⃣ Me confirmas cuando llegue a 100 vistas (story) :3\n5️⃣ Disfruta de hasta 20 videitos :3 ❤️\n\n¿Te animas o ño? 🥺\n(Me avisas cuando cumplas Mor)"); return
         if m.text and es_precio(m.text):
             ESPERA_PAIS[uid] = True
             await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
