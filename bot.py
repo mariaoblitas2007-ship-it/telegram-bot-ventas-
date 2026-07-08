@@ -37,7 +37,7 @@ def cargar_datos():
 def guardar_datos():
     json.dump({'usuarios':USUARIOS,'pagaron':list(PAGARON),'referidos':REFERIDOS,'invitados':INVITADOS}, open(DATA_FILE,'w'))
 
-# ===== TEXTOS (IGUALES) =====
+# ===== TEXTOS =====
 MX_PRECIOS = """🛍 VIDEOS 🛒
 
 🎂 BÁSICO: $ 100 MXN
@@ -164,7 +164,13 @@ def es_precio(t):
 def precio_por_pais(pais):
     if pais == 'pe': return PE_PRECIOS
     if pais == 'mx': return MX_PRECIOS
-    return USA_PRECIOS # USA, Chile y resto
+    return USA_PRECIOS
+
+async def notificar_admin(tipo, uid, user, extra=""):
+    username = f"@{user}" if user else "sin @"
+    link = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
+    caption = f"{tipo}\n👤 {username}\n🆔 <code>{uid}</code>\n🔗 <a href='{link}'>ABRIR CHAT</a>\n{extra}"
+    await app_bot.send_message(ADMIN_ID, caption, parse_mode='HTML')
 
 async def analizar_foto(ctx, uid, user, fid):
     try:
@@ -175,23 +181,26 @@ async def analizar_foto(ctx, uid, user, fid):
         if HAS_OCR:
             try: txt = pytesseract.image_to_string(Image.open(p)).lower()
             except: pass
-        username = f"@{user}" if user else "sin @"
         if txt and all(k in txt for k in ['basico','top','premium']):
-            await ctx.bot.send_message(ADMIN_ID, f"📦 {username} envió foto de PACKS")
-            return
+            await notificar_admin("📦 PACKS", uid, user); return
         is_pago = any(k in txt for k in ['yape','plin','paypal','banco','clabe','stp','abigail','maximoof','pago','comprobante'])
         is_promo = any(k in txt for k in ['tiktok','story','vistas','hormonal','alguno para jugar','yanabicitasa','tg:'])
         if is_pago:
-            tipo = "PAGO"; PAGARON.add(uid); guardar_datos()
+            PAGARON.add(uid); guardar_datos()
+            await ctx.bot.send_photo(ADMIN_ID, fid, caption=f"PAGO\n👤 @{user}\n🆔 <code>{uid}</code>\n🔗 https://t.me/{user}", parse_mode='HTML'); return
         elif is_promo:
-            tipo = "PROMO"
-        else:
-            return # FOTO HOT - no reenviar
-        link_directo = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
-        caption = f"{tipo}\n👤 {username}\n🆔 <code>{uid}</code>\n🔗 <a href='{link_directo}'>ABRIR CHAT</a>"
-        await ctx.bot.send_photo(ADMIN_ID, fid, caption=caption, parse_mode='HTML')
-        if tipo == "PROMO":
-            await ctx.bot.send_message(uid, COMENTA_TEXTO)
+            await ctx.bot.send_photo(ADMIN_ID, fid, caption=f"PROMO\n👤 @{user}\n🆔 <code>{uid}</code>\n🔗 https://t.me/{user}", parse_mode='HTML')
+            await ctx.bot.send_message(uid, COMENTA_TEXTO); return
+    except Exception as e:
+        logger.error(e)
+
+async def analizar_video(ctx, uid, user, fid):
+    try:
+        username = f"@{user}" if user else "sin @"
+        link = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
+        caption = f"PROMO VIDEO\n👤 {username}\n🆔 <code>{uid}</code>\n🔗 <a href='{link}'>ABRIR CHAT</a>"
+        await ctx.bot.send_video(ADMIN_ID, fid, caption=caption, parse_mode='HTML')
+        await ctx.bot.send_message(uid, COMENTA_TEXTO)
     except Exception as e:
         logger.error(e)
 
@@ -208,14 +217,13 @@ async def enviar_gratis(m):
     await m.reply_text(GRATIS_TEXTO)
 
 async def todo(upd, ctx):
+    global app_bot; app_bot = ctx.bot
     m = upd.message or upd.business_message
     if not m or m.from_user.is_bot: return
     uid = m.from_user.id
-    # ✅ NO SOBREESCRIBIR - guardar nombre y mantener país
     if uid not in USUARIOS: USUARIOS[uid] = {}
     USUARIOS[uid]['n'] = m.from_user.first_name
     guardar_datos()
-
     es_neg = upd.business_message is not None
     txt = normalizar(m.text)
     raw = m.text or ""
@@ -223,82 +231,80 @@ async def todo(upd, ctx):
     if es_neg:
         if uid == ADMIN_ID: return
 
-        # ✅ SALUDOS MEJORADOS - no manda fotos directo
-        saludos = ['hola','hola bb','hey','buenas','ola','buenos dias','buenas tardes','buenas noches','holis','hello','hi','que tal']
-        if any(s in txt for s in saludos) and len(txt) < 20:
-            await m.reply_text("Hola mor 🥺💕 ¿qué buscas hoy? Te paso precios o la promo gratis, dime nomás 🥵"); return
-
-        if 'calific' in txt:
-            await m.reply_text("solo trato hot a compradores 🥵"); return
-        if any(k in txt for k in ['fake','estafa']):
-            await m.reply_text(f"¿Fake? mira {LINK_CANAL}"); return
-        if any(k in txt for k in ['ganas','caliente','quitar','quito']):
-            await m.reply_text(PREMIUM_SALUDO); ESPERA_PAIS[uid]=True; return
-
-        if any(k in txt for k in ['hermosa','linda','preciosa','guapa','bella','rica','diosa','te amo','me encantas']):
-            await m.reply_text("Aww gracias mor 🥺💕 si quieres ver más, cómprame un pack y te mando hasta el doble de contenido, ¿te paso precios? 🥵"); return
-        if any(k in txt for k in ['encuentro','encuentros','sales','cita','citas','nos vemos','te veo','en persona','salir']):
-            await m.reply_text("Solo puedo pensarlo si compras el paquete más grande, sorpréndeme con la cap del pago 🫣"); return
-        if any(k in txt for k in ['ayuda','ayudas','me ayudas','apoyame','ayudame']):
-            await m.reply_text("Claro mor, si agarras el PREMIUM te mando hasta el doble de contenido 🥵 ¿quieres ver precios?"); return
-        if any(k in txt for k in ['enseña','enseñas','muestra','muestrame','prueba','sample','videito','probadita','adelanto']):
-            if uid in PAGARON:
-                await m.reply_text("Ya pagaste mi amor 🥰 en un ratito te mando todo"); return
-            else:
-                await enviar_gratis(m); return
-
-        # ✅ VIDEOLLAMADA - NO PREGUNTA SI YA SABE PAÍS
-        if any(k in txt for k in ['videollamada','video llamada','videocall','llamada','haces videollamada']):
-            pais = USUARIOS[uid].get('pais')
-            if pais:
-                await m.reply_text(f"Tengo videollamadas mor 🥵\n\n{precio_por_pais(pais)}"); return
-            else:
-                ESPERA_PAIS[uid]=True
-                await m.reply_text("Tengo videollamadas mor 🥵 ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
-
-        if any(k in txt for k in ['no tengo','sin plata','sin dinero','no puedo comprar','no tengo pa']):
-            await m.reply_text("Mor, si no puedes comprar, haz la promo gratis y te mando hasta 20, ¿te paso los pasitos?"); await enviar_gratis(m); return
-        if any(k in txt for k in ['primeros 5','primeros cinco','primeros5','de los primeros']):
-            await m.reply_text("Amor, los primeros 5 solo es para la reacción, para los videos tienes que hacer la story y llegar a 100 vistas, ¿te mando los pasos?"); await enviar_gratis(m); return
-        if any(k in txt for k in ['pasas el rato','como estas','como estás','que haces','nada por prv','prvv','prv']):
-            await m.reply_text("Aquí chambeando para mis mors 🥵 ¿quieres ver mi pack PREMIUM o te mando el gratis?"); return
-        if any(k in txt for k in ['te enseño','como me corro','como me vengo','me corro','me vengo','te muestro como']):
-            await m.reply_text("Jajaja guarda eso para cuando compres el PREMIUM, ahí sí te muestro todo 🫣 ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸"); ESPERA_PAIS[uid]=True; return
-        if any(k in txt for k in ['intercambio','intercambios','cambio de fotos','cambiamos','intercambiamos']):
-            await m.reply_text("No hago intercambios, mor 🥺 solo vendo packs o te doy gratis si haces la promo, ¿quieres los pasitos?"); await enviar_gratis(m); return
-        if any(k in txt for k in ['ftpn','pene','pito','verga','mando ftpn','la tengo parada','bien parada','quieres ver mi']):
-            await m.reply_text("Jajaja guarda eso, yo no recibo ftpn 😏 si quieres ver lo mío agarra el PREMIUM, ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸"); ESPERA_PAIS[uid]=True; return
-        if any(k in txt for k in ['wooo','woow','comoo','no entiendo','que es esto']):
-            await m.reply_text("Te explico de nuevo mor 🥺"); await enviar_gratis(m); return
-        if 'ya cumpli' in txt:
-            await m.reply_text("Las 100 vistas son solo para que veas lo fácil que es, mor :3 💕\n\nCuando tu story llegue a 500-1000 me avisas y te suelto tus videitos al toque 🥵\n\nMándame videito entrando a TikTok → tu perfil → tu story → los likes, TODO seguido sin cortar. Si lo cortas se anula la promo, bebé 😘"); return
-        if any(k in txt for k in ['vistas','500','1000']):
-            await m.reply_text(COMENTA_TEXTO); return
-        if 'gratis' in txt:
-            await enviar_gratis(m); return
-
-        # ✅ PRECIO - NO PREGUNTA SI YA SABE
-        if m.text and es_precio(m.text):
-            pais = USUARIOS[uid].get('pais')
-            if pais:
-                await m.reply_text(precio_por_pais(pais)); return
-            else:
-                ESPERA_PAIS[uid] = True
-                await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
-
+        # ✅ PRIORIDAD 1: Si está esperando país
         if uid in ESPERA_PAIS:
-            if 'peru' in txt or '🇵🇪' in raw:
-                pais = 'pe'
-            elif 'mex' in txt or '🇲🇽' in raw:
-                pais = 'mx'
-            else:
-                pais = 'usa' # Chile, USA, etc. van a USD
-            USUARIOS[uid]['pais'] = pais; guardar_datos() # ✅ GUARDA PAÍS
+            if 'peru' in txt or '🇵🇪' in raw: pais='pe'
+            elif 'mex' in txt or '🇲🇽' in raw: pais='mx'
+            else: pais='usa'
+            USUARIOS[uid]['pais']=pais; guardar_datos()
             await m.reply_text(precio_por_pais(pais))
             del ESPERA_PAIS[uid]; return
 
-        if m.photo:
-            await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id); return
+        # ✅ NUEVO: Detecta país aunque venga con halago
+        pais_detectado = None
+        if 'peru' in txt or '🇵🇪' in raw:
+            pais_detectado = 'pe'
+        elif 'mex' in txt or 'mexico' in txt or '🇲🇽' in raw:
+            pais_detectado = 'mx'
+        elif any(p in txt for p in ['usa','eeuu','estados','chile','colombia','argentina','ecuador','venezuela','bolivia']) or '🇺🇸' in raw:
+            pais_detectado = 'usa'
+
+        if pais_detectado:
+            USUARIOS[uid]['pais'] = pais_detectado
+            guardar_datos()
+            await m.reply_text(precio_por_pais(pais_detectado))
+            return
+
+        # ✅ DETECTAR PAGO POR TEXTO
+        if any(k in txt for k in ['ya pague','pague','pagué','te pague','comprobante','transferi','deposite','pago realizado']):
+            PAGARON.add(uid); guardar_datos()
+            await notificar_admin("PAGO (TEXTO)", uid, m.from_user.username, f"💬 {raw[:50]}")
+            await m.reply_text("Gracias mor 🥰 ya vi tu pago, en un ratito te mando todo"); return
+
+        # ✅ SALUDOS
+        saludos = ['hola','hola bb','hey','buenas','ola','buenos dias','buenas tardes','buenas noches','holis','hello','hi','que tal','jola']
+        if any(s in txt for s in saludos) and len(txt) < 20:
+            await m.reply_text("Hola mor 🥺💕 ¿qué buscas hoy? Te paso precios o la promo gratis, dime nomás 🥵"); return
+
+        # ✅ NUEVAS RESPUESTAS
+        if any(k in txt for k in ['cual es la promo','que es la promo','promo','promocion']):
+            await enviar_gratis(m); return
+        if 'premium' in txt or txt == 'el premium':
+            pais = USUARIOS[uid].get('pais')
+            if pais: await m.reply_text(precio_por_pais(pais))
+            else: ESPERA_PAIS[uid]=True; await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸")
+            return
+
+        if 'calific' in txt: await m.reply_text("solo trato hot a compradores 🥵"); return
+        if any(k in txt for k in ['fake','estafa']): await m.reply_text(f"¿Fake? mira {LINK_CANAL}"); return
+        if any(k in txt for k in ['ganas','caliente','quitar','quito']): await m.reply_text(PREMIUM_SALUDO); ESPERA_PAIS[uid]=True; return
+        if any(k in txt for k in ['hermosa','linda','preciosa','guapa','bella','rica','diosa','te amo','me encantas']): await m.reply_text("Aww gracias mor 🥺💕 si quieres ver más, cómprame un pack y te mando hasta el doble de contenido, ¿te paso precios? 🥵"); return
+        if any(k in txt for k in ['encuentro','encuentros','sales','cita','citas','nos vemos','te veo','en persona','salir']): await m.reply_text("Solo puedo pensarlo si compras el paquete más grande, sorpréndeme con la cap del pago 🫣"); return
+        if any(k in txt for k in ['ayuda','ayudas','me ayudas','apoyame','ayudame']): await m.reply_text("Claro mor, si agarras el PREMIUM te mando hasta el doble de contenido 🥵 ¿quieres ver precios?"); return
+        if any(k in txt for k in ['enseña','enseñas','muestra','muestrame','prueba','sample','videito','probadita','adelanto']):
+            if uid in PAGARON: await m.reply_text("Ya pagaste mi amor 🥰 en un ratito te mando todo"); return
+            else: await enviar_gratis(m); return
+        if any(k in txt for k in ['videollamada','video llamada','videocall','llamada','haces videollamada']):
+            pais = USUARIOS[uid].get('pais')
+            if pais: await m.reply_text(f"Tengo videollamadas mor 🥵\n\n{precio_por_pais(pais)}"); return
+            else: ESPERA_PAIS[uid]=True; await m.reply_text("Tengo videollamadas mor 🥵 ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
+        if any(k in txt for k in ['no tengo','sin plata','sin dinero','no puedo comprar','no tengo pa']): await m.reply_text("Mor, si no puedes comprar, haz la promo gratis y te mando hasta 20, ¿te paso los pasitos?"); await enviar_gratis(m); return
+        if any(k in txt for k in ['primeros 5','primeros cinco','primeros5','de los primeros']): await m.reply_text("Amor, los primeros 5 solo es para la reacción, para los videos tienes que hacer la story y llegar a 100 vistas, ¿te mando los pasos?"); await enviar_gratis(m); return
+        if any(k in txt for k in ['pasas el rato','como estas','como estás','que haces','nada por prv','prvv','prv']): await m.reply_text("Aquí chambeando para mis mors 🥵 ¿quieres ver mi pack PREMIUM o te mando el gratis?"); return
+        if any(k in txt for k in ['te enseño','como me corro','como me vengo','me corro','me vengo','te muestro como']): await m.reply_text("Jajaja guarda eso para cuando compres el PREMIUM, ahí sí te muestro todo 🫣 ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸"); ESPERA_PAIS[uid]=True; return
+        if any(k in txt for k in ['intercambio','intercambios','cambio de fotos','cambiamos','intercambiamos']): await m.reply_text("No hago intercambios, mor 🥺 solo vendo packs o te doy gratis si haces la promo, ¿quieres los pasitos?"); await enviar_gratis(m); return
+        if any(k in txt for k in ['ftpn','pene','pito','verga','mando ftpn','la tengo parada','bien parada','quieres ver mi']): await m.reply_text("Jajaja guarda eso, yo no recibo ftpn 😏 si quieres ver lo mío agarra el PREMIUM, ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸"); ESPERA_PAIS[uid]=True; return
+        if any(k in txt for k in ['wooo','woow','comoo','no entiendo','que es esto']): await m.reply_text("Te explico de nuevo mor 🥺"); await enviar_gratis(m); return
+        if 'ya cumpli' in txt: await m.reply_text("Las 100 vistas son solo para que veas lo fácil que es, mor :3 💕\n\nCuando tu story llegue a 500-1000 me avisas y te suelto tus videitos al toque 🥵\n\nMándame videito entrando a TikTok → tu perfil → tu story → los likes, TODO seguido sin cortar. Si lo cortas se anula la promo, bebé 😘"); return
+        if any(k in txt for k in ['vistas','500','1000']): await m.reply_text(COMENTA_TEXTO); return
+        if 'gratis' in txt: await enviar_gratis(m); return
+        if m.text and es_precio(m.text):
+            pais = USUARIOS[uid].get('pais')
+            if pais: await m.reply_text(precio_por_pais(pais)); return
+            else: ESPERA_PAIS[uid] = True; await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
+
+        if m.photo: await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id); return
+        if m.video: await analizar_video(ctx, uid, m.from_user.username or '', m.video.file_id); return
         return
 
     if m.chat.type == 'private':
