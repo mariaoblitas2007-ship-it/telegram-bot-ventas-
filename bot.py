@@ -37,7 +37,7 @@ def cargar_datos():
 def guardar_datos():
     json.dump({'usuarios':USUARIOS,'pagaron':list(PAGARON),'referidos':REFERIDOS,'invitados':INVITADOS}, open(DATA_FILE,'w'))
 
-# ===== TEXTOS (SIN CAMBIOS) =====
+# ===== TEXTOS (IGUALES) =====
 MX_PRECIOS = """🛍 VIDEOS 🛒
 
 🎂 BÁSICO: $ 100 MXN
@@ -161,6 +161,11 @@ def normalizar(t):
 def es_precio(t):
     return any(p in normalizar(t) for p in ['precio','precios','costo','cuanto','cuánto','vale','valor'])
 
+def precio_por_pais(pais):
+    if pais == 'pe': return PE_PRECIOS
+    if pais == 'mx': return MX_PRECIOS
+    return USA_PRECIOS # USA, Chile y resto
+
 async def analizar_foto(ctx, uid, user, fid):
     try:
         f = await ctx.bot.get_file(fid)
@@ -171,7 +176,6 @@ async def analizar_foto(ctx, uid, user, fid):
             try: txt = pytesseract.image_to_string(Image.open(p)).lower()
             except: pass
         username = f"@{user}" if user else "sin @"
-        # SOLO PAGO O PROMO
         if txt and all(k in txt for k in ['basico','top','premium']):
             await ctx.bot.send_message(ADMIN_ID, f"📦 {username} envió foto de PACKS")
             return
@@ -182,7 +186,7 @@ async def analizar_foto(ctx, uid, user, fid):
         elif is_promo:
             tipo = "PROMO"
         else:
-            return # FOTO HOT → no reenviar
+            return # FOTO HOT - no reenviar
         link_directo = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
         caption = f"{tipo}\n👤 {username}\n🆔 <code>{uid}</code>\n🔗 <a href='{link_directo}'>ABRIR CHAT</a>"
         await ctx.bot.send_photo(ADMIN_ID, fid, caption=caption, parse_mode='HTML')
@@ -207,21 +211,30 @@ async def todo(upd, ctx):
     m = upd.message or upd.business_message
     if not m or m.from_user.is_bot: return
     uid = m.from_user.id
-    USUARIOS[uid] = {'n': m.from_user.first_name}; guardar_datos()
+    # ✅ NO SOBREESCRIBIR - guardar nombre y mantener país
+    if uid not in USUARIOS: USUARIOS[uid] = {}
+    USUARIOS[uid]['n'] = m.from_user.first_name
+    guardar_datos()
+
     es_neg = upd.business_message is not None
     txt = normalizar(m.text)
     raw = m.text or ""
 
-    if es_neg: # ✅ MODO NEGOCIO - interpreta todo
+    if es_neg:
         if uid == ADMIN_ID: return
+
+        # ✅ SALUDOS MEJORADOS - no manda fotos directo
+        saludos = ['hola','hola bb','hey','buenas','ola','buenos dias','buenas tardes','buenas noches','holis','hello','hi','que tal']
+        if any(s in txt for s in saludos) and len(txt) < 20:
+            await m.reply_text("Hola mor 🥺💕 ¿qué buscas hoy? Te paso precios o la promo gratis, dime nomás 🥵"); return
+
         if 'calific' in txt:
             await m.reply_text("solo trato hot a compradores 🥵"); return
         if any(k in txt for k in ['fake','estafa']):
             await m.reply_text(f"¿Fake? mira {LINK_CANAL}"); return
         if any(k in txt for k in ['ganas','caliente','quitar','quito']):
             await m.reply_text(PREMIUM_SALUDO); ESPERA_PAIS[uid]=True; return
-        if txt.strip() in ['hola','hola bb','hey','buenas','ola','buenos dias','buenas tardes','buenas noches']:
-            await enviar_gratis(m); return
+
         if any(k in txt for k in ['hermosa','linda','preciosa','guapa','bella','rica','diosa','te amo','me encantas']):
             await m.reply_text("Aww gracias mor 🥺💕 si quieres ver más, cómprame un pack y te mando hasta el doble de contenido, ¿te paso precios? 🥵"); return
         if any(k in txt for k in ['encuentro','encuentros','sales','cita','citas','nos vemos','te veo','en persona','salir']):
@@ -232,11 +245,17 @@ async def todo(upd, ctx):
             if uid in PAGARON:
                 await m.reply_text("Ya pagaste mi amor 🥰 en un ratito te mando todo"); return
             else:
-                if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
                 await enviar_gratis(m); return
-        if any(k in txt for k in ['videollamada','video llamada','videocall','llamada']):
-            ESPERA_PAIS[uid]=True
-            await m.reply_text("Tengo videollamadas mor 🥵 ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
+
+        # ✅ VIDEOLLAMADA - NO PREGUNTA SI YA SABE PAÍS
+        if any(k in txt for k in ['videollamada','video llamada','videocall','llamada','haces videollamada']):
+            pais = USUARIOS[uid].get('pais')
+            if pais:
+                await m.reply_text(f"Tengo videollamadas mor 🥵\n\n{precio_por_pais(pais)}"); return
+            else:
+                ESPERA_PAIS[uid]=True
+                await m.reply_text("Tengo videollamadas mor 🥵 ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
+
         if any(k in txt for k in ['no tengo','sin plata','sin dinero','no puedo comprar','no tengo pa']):
             await m.reply_text("Mor, si no puedes comprar, haz la promo gratis y te mando hasta 20, ¿te paso los pasitos?"); await enviar_gratis(m); return
         if any(k in txt for k in ['primeros 5','primeros cinco','primeros5','de los primeros']):
@@ -256,26 +275,32 @@ async def todo(upd, ctx):
         if any(k in txt for k in ['vistas','500','1000']):
             await m.reply_text(COMENTA_TEXTO); return
         if 'gratis' in txt:
-            if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
             await enviar_gratis(m); return
+
+        # ✅ PRECIO - NO PREGUNTA SI YA SABE
         if m.text and es_precio(m.text):
-            ESPERA_PAIS[uid] = True
-            await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
+            pais = USUARIOS[uid].get('pais')
+            if pais:
+                await m.reply_text(precio_por_pais(pais)); return
+            else:
+                ESPERA_PAIS[uid] = True
+                await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
+
         if uid in ESPERA_PAIS:
             if 'peru' in txt or '🇵🇪' in raw:
-                await m.reply_text(PE_PRECIOS)
+                pais = 'pe'
             elif 'mex' in txt or '🇲🇽' in raw:
-                await m.reply_text(MX_PRECIOS)
-            elif 'usa' in txt or 'eeuu' in txt or 'estados' in txt or '🇺🇸' in raw or '🇺🇲' in raw:
-                await m.reply_text(USA_PRECIOS)
+                pais = 'mx'
             else:
-                await m.reply_text(USA_PRECIOS)
+                pais = 'usa' # Chile, USA, etc. van a USD
+            USUARIOS[uid]['pais'] = pais; guardar_datos() # ✅ GUARDA PAÍS
+            await m.reply_text(precio_por_pais(pais))
             del ESPERA_PAIS[uid]; return
+
         if m.photo:
             await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id); return
         return
 
-    # ✅ MODO PRIVADO - solo botones
     if m.chat.type == 'private':
         await m.reply_text("Elige:", reply_markup=get_menu())
 
