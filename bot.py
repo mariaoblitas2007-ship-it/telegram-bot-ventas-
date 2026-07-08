@@ -33,7 +33,7 @@ def cargar_datos():
 def guardar_datos():
     json.dump({'usuarios':USUARIOS,'pagaron':list(PAGARON),'referidos':REFERIDOS,'invitados':INVITADOS}, open(DATA_FILE,'w'))
 
-# ===== 3 PRECIOS =====
+# ===== TEXTOS =====
 MX_PRECIOS = """🛍 VIDEOS 🛒
 
 🎂 BÁSICO: $ 100 MXN
@@ -129,6 +129,8 @@ En cuanto caiga te mando tu pack 🔥
 
 Si no contesto envías cap del pago a : @YanaBiBot con estos precios."""
 
+GRATIS_TEXTO = "✨ (REGALITO) QUIERES HASTA 20 VIDEITOS GRATSS? ✨\n\nhttps://t.me/YanaBiBot\n\nPasitos súper fáciles uwu:\n1️⃣ En tu bio de TikTok pon: Tg: yanabicitasa ✨\n2️⃣ Sube una fotito de las que te envié a tu story + Frase hot 😋\n3️⃣ Mándame captura + videito cuando cumplas\n4️⃣ Me confirmas cuando llegue a 100 vistas (story) :3\n5️⃣ Disfruta de hasta 20 videitos :3 ❤️\n\n¿Te animas o ño? 🥺\n(Me avisas cuando cumplas Mor)"
+
 def get_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("💎 COMPRAR",callback_data='comprar')],
@@ -160,18 +162,34 @@ async def analizar_foto(ctx, uid, user, fid):
         if HAS_OCR:
             try: txt = pytesseract.image_to_string(Image.open(p)).lower()
             except: pass
+        username = f"@{user}" if user else "sin @"
+        # NUEVO: si es foto de packs, no reenviar
+        if txt and all(k in txt for k in ['basico','top','premium']):
+            await ctx.bot.send_message(ADMIN_ID, f"📦 {username} envió foto de PACKS")
+            return
         if any(k in txt for k in ['yape','plin','paypal','banco','clabe','stp','abigail','maximoof']):
             tipo = "💰 PAGO DETECTADO"; PAGARON.add(uid); guardar_datos()
         elif any(k in txt for k in ['tiktok','story','vistas']):
             tipo = "📸 PROMO"
         else:
             tipo = "📷 FOTO"
-        username = f"@{user}" if user else "sin @"
         link_directo = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
         caption = f"{tipo}\n👤 {username}\n🆔 <code>{uid}</code>\n🔗 <a href='{link_directo}'>ABRIR CHAT</a>"
         await ctx.bot.send_photo(ADMIN_ID, fid, caption=caption, parse_mode='HTML')
     except Exception as e:
         logger.error(e)
+
+async def enviar_gratis(m):
+    try:
+        await m.reply_media_group([
+            InputMediaPhoto(open('fotitos1.JPG','rb')),
+            InputMediaPhoto(open('fotitos2.JPG','rb')),
+            InputMediaPhoto(open('fotitos3.JPG','rb')),
+            InputMediaPhoto(open('fotitos4.JPG','rb')),
+            InputMediaPhoto(open('fotitos5.JPG','rb'))
+        ])
+    except: pass
+    await m.reply_text(GRATIS_TEXTO)
 
 async def todo(upd, ctx):
     m = upd.message or upd.business_message
@@ -188,22 +206,29 @@ async def todo(upd, ctx):
             await m.reply_text("solo trato hot a compradores 🥵"); return
         if any(k in txt for k in ['fake','estafa']):
             await m.reply_text(f"¿Fake? mira {LINK_CANAL}"); return
+        # NUEVO 1: halagos
+        if any(k in txt for k in ['hermosa','linda','preciosa','guapa','bella','rica','diosa','te amo','me encantas']):
+            await m.reply_text("Aww gracias mor 🥺💕 si quieres ver más, cómprame un pack y te mando hasta el doble de contenido, ¿te paso precios? 🥵"); return
+        # NUEVO 2: encuentros
+        if any(k in txt for k in ['encuentro','encuentros','sales','cita','citas','nos vemos','te veo','en persona','salir']):
+            await m.reply_text("Solo puedo pensarlo si compras el paquete más grande, sorpréndeme con la cap del pago 🫣"); return
+        # NUEVO 3: me ayudas
+        if any(k in txt for k in ['ayuda','ayudas','me ayudas','apoyame','ayudame']):
+            await m.reply_text("Claro mor, si agarras el PREMIUM te mando hasta el doble de contenido 🥵 ¿quieres ver precios?"); return
+        # NUEVO 4: enseña videito
+        if any(k in txt for k in ['enseña','enseñas','muestra','muestrame','prueba','sample','videito','probadita','adelanto']):
+            if uid in PAGARON:
+                await m.reply_text("Ya pagaste mi amor 🥰 en un ratito te mando todo"); return
+            else:
+                if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
+                await enviar_gratis(m); return
         if 'ya cumpli' in txt:
             await m.reply_text("Las 100 vistas son solo para que veas lo fácil que es, mor :3 💕\n\nCuando tu story llegue a 500-1000 me avisas y te suelto tus videitos al toque 🥵\n\nMándame videito entrando a TikTok → tu perfil → tu story → los likes, TODO seguido sin cortar. Si lo cortas se anula la promo, bebé 😘"); return
         if any(k in txt for k in ['vistas','500','1000']):
             await m.reply_text("Busca videos con #hormo #hot #hormonal #amigoshormo y deja comentarios bien ricos 🥵\n\nEscribe cositas como: \"¿quién?\", \"¿alguno?\", \"miren mi story\", \"ando horm...\" \n\nEntre más caliente comentes, más gente entra a verte, bebé 😏"); return
         if 'gratis' in txt:
             if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
-            try:
-                await m.reply_media_group([
-                    InputMediaPhoto(open('fotitos1.JPG','rb')),
-                    InputMediaPhoto(open('fotitos2.JPG','rb')),
-                    InputMediaPhoto(open('fotitos3.JPG','rb')),
-                    InputMediaPhoto(open('fotitos4.JPG','rb')),
-                    InputMediaPhoto(open('fotitos5.JPG','rb'))
-                ])
-            except: pass
-            await m.reply_text("✨ (REGALITO) QUIERES HASTA 20 VIDEITOS GRATSS? ✨\n\nhttps://t.me/YanaBiBot\n\nPasitos súper fáciles uwu:\n1️⃣ En tu bio de TikTok pon: Tg: yanabicitasa ✨\n2️⃣ Sube una fotito de las que te envié a tu story + Frase hot 😋\n3️⃣ Mándame captura + videito cuando cumplas\n4️⃣ Me confirmas cuando llegue a 100 vistas (story) :3\n5️⃣ Disfruta de hasta 20 videitos :3 ❤️\n\n¿Te animas o ño? 🥺\n(Me avisas cuando cumplas Mor)"); return
+            await enviar_gratis(m); return
         if m.text and es_precio(m.text):
             ESPERA_PAIS[uid] = True
             await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
