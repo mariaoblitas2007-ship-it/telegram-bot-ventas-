@@ -255,6 +255,37 @@ async def todo(upd, ctx):
             await m.reply_text(precio_por_pais(pais_detectado))
             return
 
+        # ✅ RESPUESTAS A TUS CAPTURAS
+        if any(k in txt for k in ['no tengo seguidores','no tengo muchos seguidores','no llega a 100','no va a llegar','seguidores y no va']):
+            await m.reply_text(COMENTA_TEXTO)
+            return
+
+        if 'pasame tus precios' in txt or 'pasame precios' in txt or 'pásame tus precios' in txt:
+            pais = USUARIOS[uid].get('pais')
+            if pais: await m.reply_text(precio_por_pais(pais))
+            else: ESPERA_PAIS[uid]=True; await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸")
+            return
+
+        if 'mejor hay que hablar' in txt:
+            await m.reply_text("Hablemos pues mor 🥵 dime, ¿quieres precios o la promo gratis?")
+            return
+
+        if 'lo se hacer' in txt or 'lo sé hacer' in txt:
+            await m.reply_text("Perfecto mor, si ya sabes mándame captura + videito de tu story y te suelto los videos al toque 🥰")
+            return
+
+        if txt.strip() == 'cumplo' or txt.startswith('cumplo'):
+            await m.reply_text("Dale mor, mándame la prueba (captura + video entrando a tu perfil) y te mando todo 🥵")
+            return
+
+        if txt.strip() == 'dame':
+            await m.reply_text("¿Qué quieres que te dé mor? ¿Precios o la promo?")
+            return
+
+        if 'quieres ver bb' in txt or 'quieres ver' in txt:
+            await m.reply_text("Claro que quiero verte mor 😏 pero primero agarra un pack y te muestro todo, ¿te paso precios?")
+            return
+
         # ✅ DETECTAR PAGO POR TEXTO
         if any(k in txt for k in ['ya pague','pague','pagué','te pague','comprobante','transferi','deposite','pago realizado']):
             PAGARON.add(uid); guardar_datos()
