@@ -322,16 +322,19 @@ async def manejar_todo(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     # ===== 1. CHAT DE NEGOCIO (@yanabicitasa) =====
     if es_negocio:
+        # IGNORA TUS PROPIOS MENSAJES - AQUÍ ESTABA EL BUG
+        if uid == ADMIN_ID: return
+
         if m.text and es_trigger_precios(m.text):
             ESPERA_PAIS[uid] = True
             await m.reply_text("hola mi amor 🫣🔥\n¿de dónde eres tú, bebé? 🥺💋")
             return
         if uid in ESPERA_PAIS and m.text:
             txt = normalizar(m.text)
-            if any(k in txt for k in ['peru','pe','lima']): await m.reply_text(PE_PRECIOS, reply_markup=get_menu())
-            elif any(k in txt for k in ['mexico','mx']): await m.reply_text(MX_PRECIOS, reply_markup=get_menu())
-            elif any(k in txt for k in ['eeuu','usa']): await m.reply_text(USA_PRECIOS, reply_markup=get_menu())
-            else: await m.reply_text(OTRO_PRECIOS, reply_markup=get_menu())
+            if any(k in txt for k in ['peru','pe','lima']): await m.reply_text(PE_PRECIOS)
+            elif any(k in txt for k in ['mexico','mx']): await m.reply_text(MX_PRECIOS)
+            elif any(k in txt for k in ['eeuu','usa']): await m.reply_text(USA_PRECIOS)
+            else: await m.reply_text(OTRO_PRECIOS)
             del ESPERA_PAIS[uid]
             return
         if m.photo:
@@ -339,7 +342,7 @@ async def manejar_todo(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
             await avisar_pago(ctx, uid, user, name, m.photo[-1].file_id)
             await m.reply_text(f"✅ Pago recibido. Escríbeme {USERNAME_ADMIN}")
             return
-        return # IGNORA TODO LO DEMÁS
+        return # IGNORA TODO LO DEMÁS EN NEGOCIO
 
     # ===== 2. CHAT DIRECTO CON @YanaBiBot =====
     if m.chat.type == 'private':
@@ -363,9 +366,9 @@ async def manejar_todo(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if m.text and m.text.lower() == '/start':
             await m.reply_text(f"Mmmm {name}... 😏✨", reply_markup=get_menu())
             return
-        if m.text and any(x in normalizar(m.text) for x in ['gratis','free']):
+        if m.text and any(x in normalizar(m.text) for x in ['gratis','free','regalo']):
             await enviar_gratis(uid, ctx); return
-        if m.text and any(x in m.text.lower() for x in ['comprar','precio','pago']):
+        if m.text and any(x in m.text.lower() for x in ['comprar','quiero','pago','precio']):
             await m.reply_text("Elige país:", reply_markup=get_precios_menu()); return
         await m.reply_text("¿Qué se te antoja? 👇", reply_markup=get_menu())
         return
@@ -373,6 +376,21 @@ async def manejar_todo(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
     # ===== 3. GRUPOS =====
     if m.text and m.text.lower() == '/start':
         await m.reply_text(f"Mmmm {name}... 😏✨", reply_markup=get_menu())
+        return
+    if m.text and '/milink' in m.text.lower():
+        link = await crear_link_referido(ctx, uid, user)
+        if link:
+            c = REFERIDOS[uid]['contador']
+            await m.reply_text(f"{TEXTO_NIVELES}\n\n🔗 TU LINK:\n{link}\n\n📊 Llevas: {c}/200", reply_markup=get_volver())
+        else: await m.reply_text("😏 Preparando link...", reply_markup=get_volver())
+        return
+    if m.photo:
+        if uid == ADMIN_ID: return
+        PAGARON.add(uid)
+        guardar_datos()
+        await avisar_pago(ctx, uid, user, name, m.photo[-1].file_id)
+        await m.reply_text(f"✅ Pago recibido. Escríbeme {USERNAME_ADMIN}")
+        return
 
 async def button(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
     q = upd.callback_query; await q.answer()
