@@ -167,7 +167,6 @@ async def analizar_foto(ctx, uid, user, fid):
             try: txt = pytesseract.image_to_string(Image.open(p)).lower()
             except: pass
         username = f"@{user}" if user else "sin @"
-        # NO reenviar foto de packs
         if txt and all(k in txt for k in ['basico','top','premium']):
             await ctx.bot.send_message(ADMIN_ID, f"📦 {username} envió foto de PACKS")
             return
@@ -180,7 +179,6 @@ async def analizar_foto(ctx, uid, user, fid):
         link_directo = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
         caption = f"{tipo}\n👤 {username}\n🆔 <code>{uid}</code>\n🔗 <a href='{link_directo}'>ABRIR CHAT</a>"
         await ctx.bot.send_photo(ADMIN_ID, fid, caption=caption, parse_mode='HTML')
-        # NUEVO: si es promo (captura de story), manda el mensaje de comentar
         if tipo == "📸 PROMO":
             await ctx.bot.send_message(uid, COMENTA_TEXTO)
     except Exception as e:
@@ -213,24 +211,44 @@ async def todo(upd, ctx):
             await m.reply_text("solo trato hot a compradores 🥵"); return
         if any(k in txt for k in ['fake','estafa']):
             await m.reply_text(f"¿Fake? mira {LINK_CANAL}"); return
-        # 1) saludo con ganas -> ofrece premium
+        # saludo con ganas
         if any(k in txt for k in ['ganas','caliente','quitar','quito']):
             await m.reply_text(PREMIUM_SALUDO); ESPERA_PAIS[uid]=True; return
-        # 2) hola simple -> manda gratis
+        # hola simple
         if txt.strip() in ['hola','hola bb','hey','buenas','ola','buenos dias','buenas tardes','buenas noches']:
             await enviar_gratis(m); return
+        # halagos
         if any(k in txt for k in ['hermosa','linda','preciosa','guapa','bella','rica','diosa','te amo','me encantas']):
             await m.reply_text("Aww gracias mor 🥺💕 si quieres ver más, cómprame un pack y te mando hasta el doble de contenido, ¿te paso precios? 🥵"); return
+        # encuentros
         if any(k in txt for k in ['encuentro','encuentros','sales','cita','citas','nos vemos','te veo','en persona','salir']):
             await m.reply_text("Solo puedo pensarlo si compras el paquete más grande, sorpréndeme con la cap del pago 🫣"); return
+        # me ayudas
         if any(k in txt for k in ['ayuda','ayudas','me ayudas','apoyame','ayudame']):
             await m.reply_text("Claro mor, si agarras el PREMIUM te mando hasta el doble de contenido 🥵 ¿quieres ver precios?"); return
+        # enseña videito
         if any(k in txt for k in ['enseña','enseñas','muestra','muestrame','prueba','sample','videito','probadita','adelanto']):
             if uid in PAGARON:
                 await m.reply_text("Ya pagaste mi amor 🥰 en un ratito te mando todo"); return
             else:
                 if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
                 await enviar_gratis(m); return
+        # NUEVO: videollamada
+        if any(k in txt for k in ['videollamada','video llamada','videocall','llamada']):
+            ESPERA_PAIS[uid]=True
+            await m.reply_text("Tengo videollamadas mor 🥵 ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
+        # NUEVO: no tengo plata
+        if any(k in txt for k in ['no tengo','sin plata','sin dinero','no puedo comprar','no tengo pa']):
+            await m.reply_text("Mor, si no puedes comprar, haz la promo gratis y te mando hasta 20, ¿te paso los pasitos?"); await enviar_gratis(m); return
+        # NUEVO: primeros 5
+        if any(k in txt for k in ['primeros 5','primeros cinco','primeros5','de los primeros']):
+            await m.reply_text("Amor, los primeros 5 solo es para la reacción, para los videos tienes que hacer la story y llegar a 100 vistas, ¿te mando los pasos?"); await enviar_gratis(m); return
+        # NUEVO: pasas el rato / como estas / prv
+        if any(k in txt for k in ['pasas el rato','como estas','como estás','que haces','nada por prv','prvv','prv']):
+            await m.reply_text("Aquí chambeando para mis mors 🥵 ¿quieres ver mi pack PREMIUM o te mando el gratis?"); return
+        # NUEVO: te enseño como me corro
+        if any(k in txt for k in ['te enseño','como me corro','como me vengo','me corro','me vengo','te muestro como']):
+            await m.reply_text("Jajaja guarda eso para cuando compres el PREMIUM, ahí sí te muestro todo 🫣 ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸"); ESPERA_PAIS[uid]=True; return
         if 'ya cumpli' in txt:
             await m.reply_text("Las 100 vistas son solo para que veas lo fácil que es, mor :3 💕\n\nCuando tu story llegue a 500-1000 me avisas y te suelto tus videitos al toque 🥵\n\nMándame videito entrando a TikTok → tu perfil → tu story → los likes, TODO seguido sin cortar. Si lo cortas se anula la promo, bebé 😘"); return
         if any(k in txt for k in ['vistas','500','1000']):
