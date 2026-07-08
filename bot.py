@@ -1,6 +1,6 @@
 import os, json, logging, unicodedata
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from telegram.ext import Application, MessageHandler, CallbackQueryHandler, filters, ContextTypes, ChatMemberHandler
+from telegram.ext import Application, MessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes, ChatMemberHandler
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -218,6 +218,10 @@ async def enviar_gratis(m):
     except: pass
     await m.reply_text(GRATIS_TEXTO)
 
+# NUEVO: comando /start
+async def start_cmd(upd, ctx):
+    await upd.message.reply_text("Hola mor 🥵 bienvenido, elige:", reply_markup=get_menu())
+
 async def todo(upd, ctx):
     global app_bot; app_bot = ctx.bot
     m = upd.message or upd.business_message
@@ -241,7 +245,6 @@ async def todo(upd, ctx):
     if es_neg:
         if uid == ADMIN_ID: return
 
-        # 1. SI ESTÁ ESPERANDO PAÍS
         if uid in ESPERA_PAIS:
             pais = detectar_pais(txt) or 'usa'
             USUARIOS[uid]['pais'] = pais; guardar_datos()
@@ -249,7 +252,6 @@ async def todo(upd, ctx):
             await m.reply_text(precio_por_pais(pais))
             del ESPERA_PAIS[uid]; return
 
-        # 2. DETECTA PAÍS DIRECTO
         pais_directo = detectar_pais(txt)
         if pais_directo and not USUARIOS[uid].get('pais'):
             USUARIOS[uid]['pais'] = pais_directo; guardar_datos()
@@ -260,7 +262,6 @@ async def todo(upd, ctx):
                 await notificar_admin("💰 PAGO", uid, m.from_user.username, f"💬 {raw[:50]}")
             return
 
-        # 3. PREGUNTA PAÍS ANTES DE PRECIOS
         if tiene(PRECIOS) or tiene(PREMIUM) or txt in ['si','ya','dale']:
             pais = USUARIOS[uid].get('pais')
             if not pais:
@@ -276,7 +277,6 @@ async def todo(upd, ctx):
         if m.photo: await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id); return
         if m.video: await analizar_video(ctx, uid, m.from_user.username or '', m.video.file_id); return
 
-        # Fallback
         await m.reply_text(EJEMPLO_TEXTO); return
 
     if m.chat.type == 'private':
@@ -309,6 +309,7 @@ async def nuevo(upd, ctx):
 def main():
     cargar_datos()
     app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(MessageHandler(filters.ALL, todo))
     app.add_handler(CallbackQueryHandler(btn))
     app.add_handler(ChatMemberHandler(nuevo, ChatMemberHandler.CHAT_MEMBER))
