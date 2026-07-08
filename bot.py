@@ -137,7 +137,8 @@ GRATIS_TEXTO = "✨ (REGALITO) QUIERES HASTA 20 VIDEITOS GRATSS? ✨\n\nhttps://
 
 COMENTA_TEXTO = "Busca videos con #hormo #hot #hormonal #amigoshormo y deja comentarios bien ricos 🥵\n\nEscribe cositas como: \"¿quién?\", \"¿alguno?\", \"miren mi story\", \"ando horm...\"\n\nEntre más caliente comentes, más gente entra a verte, bebé 😏"
 
-PREMIUM_SALUDO = "Hola mor 🥺💕 ¿cómo estás? Si quieres lo mejor, agarra mi PACK PREMIUM: 1 personalizado + 20 videitos + sexting y te mando hasta el DOBLE de contenido 🥵\n\n¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸"
+# ✅ TU TEXTO DE EJEMPLO
+EJEMPLO_TEXTO = "Wenas Mor, tengo varios videitos cogiendo, masturbándome, con juguetitos y mis deditos, también tengo manoseándome las tetas, y puedo cumplir fetiche dependiendo lo que envíes :3 🥵\n\n¿Quieres que te pase precios?"
 
 def get_menu():
     return InlineKeyboardMarkup([
@@ -174,13 +175,10 @@ async def notificar_admin(tipo, uid, user, extra=""):
 
 async def analizar_foto(ctx, uid, user, fid):
     try:
-        # ✅ SIEMPRE reenvía
         username = f"@{user}" if user else "sin @"
         link = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
         caption = f"FOTO RECIBIDA\n👤 {username}\n🆔 <code>{uid}</code>\n🔗 <a href='{link}'>ABRIR CHAT</a>"
         await ctx.bot.send_photo(ADMIN_ID, fid, caption=caption, parse_mode='HTML')
-
-        # Detectar pago opcional
         f = await ctx.bot.get_file(fid)
         p = f"/tmp/{fid}.jpg"
         await f.download_to_drive(p)
@@ -248,7 +246,6 @@ async def todo(upd, ctx):
             await m.reply_text(precio_por_pais(pais_detectado))
             return
 
-        # ✅ ARREGLO SPAM: detecta pruebas
         if any(k in txt for k in ['ya lo hice','ya lo hise','ya te mande','te mande la cap','mira tengo','ya tengo una','jakajs','jajs','jajajs']):
             await notificar_admin("PRUEBA ENVIADA", uid, m.from_user.username, f"💬 {raw}")
             await m.reply_text("Ya lo vi mor, ahora mándame el videito entrando a tu perfil para verificar y te suelto los videos 🥰")
@@ -283,12 +280,41 @@ async def todo(upd, ctx):
             await notificar_admin("PAGO (TEXTO)", uid, m.from_user.username, f"💬 {raw[:50]}")
             await m.reply_text("Gracias mor 🥰 ya vi tu pago, en un ratito te mando todo"); return
 
-        # ✅ SALUDOS ARREGLADOS (sin 'hi')
-        saludos = ['hola','hola bb','hey','buenas','ola','buenos dias','buenas tardes','buenas noches','holis','hello','que tal','jola']
-        if (txt in saludos or any(txt.startswith(s+' ') for s in saludos)) and len(txt) < 25:
-            await m.reply_text("Hola mor 🥺💕 ¿qué buscas hoy? Te paso precios o la promo gratis, dime nomás 🥵"); return
+        # ✅ NUEVOS: jajaja y pn
+        if any(k in txt for k in ['jajaja','jaja','jeje','xd','lol']):
+            await m.reply_text("Jajaja mor 🥵 ¿te paso precios o quieres la promo gratis?")
+            return
+        if any(k in txt for k in ['quisieras ver','quisiera ver','ver mi pn','mi pn','pn?','ver mi pene']):
+            await m.reply_text("Jajaja guarda eso, yo no recibo ftpn 😏 si quieres ver lo mío agarra el PREMIUM, ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸")
+            ESPERA_PAIS[uid]=True; return
 
-        #... resto de tus respuestas (igual que antes)
+        # ✅ TU EJEMPLO para "que contienen"
+        if any(k in txt for k in ['que contienen','que contiene','que tienen','que incluyen','que hay en']):
+            await m.reply_text(EJEMPLO_TEXTO)
+            return
+
+        # ✅ Sexting
+        if 'sexting' in txt:
+            await m.reply_text("Sexting es chat caliente mor 🥵 nos escribimos cochinadas, te mando audios gimiendo, fotos al momento y te hago venir con palabras. Va incluido en el PREMIUM, ¿lo quieres?")
+            return
+
+        # ✅ Una foto
+        if txt.strip() in ['una foto','una fotito','mandame una foto','pasa foto']:
+            await m.reply_text("Para probadita haz la promo gratis mor, te mando hasta 20. ¿Te paso los pasitos?")
+            await enviar_gratis(m); return
+
+        # ✅ Sigue conversación si dice sí
+        if any(k in txt for k in ['si','si quiero','dale','va','ok','quiero precios','pasamelos']):
+            pais = USUARIOS[uid].get('pais')
+            if pais: await m.reply_text(precio_por_pais(pais))
+            else: ESPERA_PAIS[uid]=True; await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸")
+            return
+
+        # ✅ SALUDO CON TU EJEMPLO
+        saludos = ['hola','hola bb','hey','buenas','ola','buenos dias','buenas tardes','buenas noches','holis','hello','que tal','jola','wenas']
+        if (txt in saludos or any(txt.startswith(s+' ') for s in saludos)) and len(txt) < 25:
+            await m.reply_text(EJEMPLO_TEXTO); return
+
         if any(k in txt for k in ['cual es la promo','que es la promo','promo','promocion']):
             await enviar_gratis(m); return
         if 'premium' in txt or txt == 'el premium':
@@ -296,6 +322,10 @@ async def todo(upd, ctx):
             if pais: await m.reply_text(precio_por_pais(pais))
             else: ESPERA_PAIS[uid]=True; await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸")
             return
+
+        if any(k in txt for k in ['intercambio','intercambios','intercambiabas','cambio de fotos','cambiamos','intercambiamos']):
+            await m.reply_text("No hago intercambios mor 🥺 solo vendo packs o te doy gratis si haces la promo, ¿quieres los pasitos?")
+            await enviar_gratis(m); return
 
         if m.photo: await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id); return
         if m.video: await analizar_video(ctx, uid, m.from_user.username or '', m.video.file_id); return
