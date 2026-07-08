@@ -137,7 +137,6 @@ GRATIS_TEXTO = "✨ (REGALITO) QUIERES HASTA 20 VIDEITOS GRATSS? ✨\n\nhttps://
 
 COMENTA_TEXTO = "Busca videos con #hormo #hot #hormonal #amigoshormo y deja comentarios bien ricos 🥵\n\nEscribe cositas como: \"¿quién?\", \"¿alguno?\", \"miren mi story\", \"ando horm...\"\n\nEntre más caliente comentes, más gente entra a verte, bebé 😏"
 
-# ✅ TU TEXTO DE EJEMPLO
 EJEMPLO_TEXTO = "Wenas Mor, tengo varios videitos cogiendo, masturbándome, con juguetitos y mis deditos, también tengo manoseándome las tetas, y puedo cumplir fetiche dependiendo lo que envíes :3 🥵\n\n¿Quieres que te pase precios?"
 
 def get_menu():
@@ -187,8 +186,9 @@ async def analizar_foto(ctx, uid, user, fid):
             try: txt = pytesseract.image_to_string(Image.open(p)).lower()
             except: pass
         if any(k in txt for k in ['yape','plin','paypal','banco','clabe','stp','abigail','maximoof','pago','comprobante']):
-            PAGARON.add(uid); guardar_datos()
-            await ctx.bot.send_message(ADMIN_ID, "💰 Posible PAGO detectado")
+            if uid not in PAGARON:
+                PAGARON.add(uid); guardar_datos()
+                await ctx.bot.send_message(ADMIN_ID, "💰 Posible PAGO detectado")
     except Exception as e:
         logger.error(e)
 
@@ -275,12 +275,13 @@ async def todo(upd, ctx):
         if 'quieres ver bb' in txt or 'quieres ver' in txt:
             await m.reply_text("Claro que quiero verte mor 😏 pero primero agarra un pack y te muestro todo, ¿te paso precios?"); return
 
-        if any(k in txt for k in ['ya pague','pague','pagué','te pague','comprobante','transferi','deposite','pago realizado']):
-            PAGARON.add(uid); guardar_datos()
-            await notificar_admin("PAGO (TEXTO)", uid, m.from_user.username, f"💬 {raw[:50]}")
-            await m.reply_text("Gracias mor 🥰 ya vi tu pago, en un ratito te mando todo"); return
+        # ✅ PAGO SIN SPAM - solo te avisa a ti
+        if any(k in txt for k in ['ya pague','pague','pagué','te pague','comprobante','transferi','deposite','pago realizado','ya quedo','listo','quedo','ya esta']):
+            if uid not in PAGARON:
+                PAGARON.add(uid); guardar_datos()
+                await notificar_admin("💰 PAGO", uid, m.from_user.username, f"💬 {raw[:50]}")
+            return
 
-        # ✅ NUEVOS: jajaja y pn
         if any(k in txt for k in ['jajaja','jaja','jeje','xd','lol']):
             await m.reply_text("Jajaja mor 🥵 ¿te paso precios o quieres la promo gratis?")
             return
@@ -288,29 +289,24 @@ async def todo(upd, ctx):
             await m.reply_text("Jajaja guarda eso, yo no recibo ftpn 😏 si quieres ver lo mío agarra el PREMIUM, ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸")
             ESPERA_PAIS[uid]=True; return
 
-        # ✅ TU EJEMPLO para "que contienen"
         if any(k in txt for k in ['que contienen','que contiene','que tienen','que incluyen','que hay en']):
             await m.reply_text(EJEMPLO_TEXTO)
             return
 
-        # ✅ Sexting
         if 'sexting' in txt:
             await m.reply_text("Sexting es chat caliente mor 🥵 nos escribimos cochinadas, te mando audios gimiendo, fotos al momento y te hago venir con palabras. Va incluido en el PREMIUM, ¿lo quieres?")
             return
 
-        # ✅ Una foto
         if txt.strip() in ['una foto','una fotito','mandame una foto','pasa foto']:
             await m.reply_text("Para probadita haz la promo gratis mor, te mando hasta 20. ¿Te paso los pasitos?")
             await enviar_gratis(m); return
 
-        # ✅ Sigue conversación si dice sí
         if any(k in txt for k in ['si','si quiero','dale','va','ok','quiero precios','pasamelos']):
             pais = USUARIOS[uid].get('pais')
             if pais: await m.reply_text(precio_por_pais(pais))
             else: ESPERA_PAIS[uid]=True; await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸")
             return
 
-        # ✅ SALUDO CON TU EJEMPLO
         saludos = ['hola','hola bb','hey','buenas','ola','buenos dias','buenas tardes','buenas noches','holis','hello','que tal','jola','wenas']
         if (txt in saludos or any(txt.startswith(s+' ') for s in saludos)) and len(txt) < 25:
             await m.reply_text(EJEMPLO_TEXTO); return
@@ -321,6 +317,11 @@ async def todo(upd, ctx):
             pais = USUARIOS[uid].get('pais')
             if pais: await m.reply_text(precio_por_pais(pais))
             else: ESPERA_PAIS[uid]=True; await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸")
+            return
+
+        # ✅ ENCUENTROS - tu frase exacta
+        if any(k in txt for k in ['encuentro','encuentros','cita','citas','nos vemos','te veo','en persona','salir','vemos','quedar','salimos']):
+            await m.reply_text("Si quieres un encuentro conmigo, es SOLO con el PREMIUM mor. Compra y podemos llegar a coordinar 😏 mándame la captura y hablamos")
             return
 
         if any(k in txt for k in ['intercambio','intercambios','intercambiabas','cambio de fotos','cambiamos','intercambiamos']):
