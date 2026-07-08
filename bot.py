@@ -180,7 +180,7 @@ async def todo(upd, ctx):
     USUARIOS[uid] = {'n': m.from_user.first_name}; guardar_datos()
     es_neg = upd.business_message is not None
     txt = normalizar(m.text)
-    raw = m.text or "" # para detectar emojis
+    raw = m.text or ""
 
     if es_neg:
         if uid == ADMIN_ID: return
@@ -189,9 +189,9 @@ async def todo(upd, ctx):
         if any(k in txt for k in ['fake','estafa']):
             await m.reply_text(f"¿Fake? mira {LINK_CANAL}"); return
         if 'ya cumpli' in txt:
-            await m.reply_text("100 vistas es para que veas que es fácil :3 me confirmas cuando tenga 500-1000 vistas la story, y te envío los videos\n\nMe envías video entrando al TikTok, entrando al estado, entrando a los likes\ncualquier corte en el video anula la promoción de videos"); return
+            await m.reply_text("Las 100 vistas son solo para que veas lo fácil que es, mor :3 💕\n\nCuando tu story llegue a 500-1000 me avisas y te suelto tus videitos al toque 🥵\n\nMándame videito entrando a TikTok → tu perfil → tu story → los likes, TODO seguido sin cortar. Si lo cortas se anula la promo, bebé 😘"); return
         if any(k in txt for k in ['vistas','500','1000']):
-            await m.reply_text("Busca y comenta en varios videos que tengan: #hormo #hot #hormonal #amigoshormo\n\nCositas hormonales como: quién? Alguno?\nMiren mi story\nY cositas así"); return
+            await m.reply_text("Busca videos con #hormo #hot #hormonal #amigoshormo y deja comentarios bien ricos 🥵\n\nEscribe cositas como: \"¿quién?\", \"¿alguno?\", \"miren mi story\", \"ando horm...\" \n\nEntre más caliente comentes, más gente entra a verte, bebé 😏"); return
         if 'gratis' in txt:
             if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
             try:
@@ -208,7 +208,6 @@ async def todo(upd, ctx):
             ESPERA_PAIS[uid] = True
             await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
         if uid in ESPERA_PAIS:
-            # NUEVO: detecta emojis de banderas
             if 'peru' in txt or '🇵🇪' in raw:
                 await m.reply_text(PE_PRECIOS)
             elif 'mex' in txt or '🇲🇽' in raw:
