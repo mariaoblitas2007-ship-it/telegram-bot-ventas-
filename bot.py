@@ -5,7 +5,6 @@ from telegram.ext import Application, MessageHandler, CallbackQueryHandler, filt
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ===== CONFIG =====
 TOKEN = '8762577283:AAFVT7_WMpZ7njVnToIlZypUpCToF5LGcbA'
 ADMIN_ID = 8783569348
 LINK_CANAL = "https://t.me/+zt1RzGevdHBjMDgx"
@@ -14,7 +13,6 @@ LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 USUARIOS, PAGARON, REFERIDOS, INVITADOS, ESPERA_PAIS = {}, set(), {}, {}, {}
 DATA_FILE = "data.json"
 
-# OCR opcional - no rompe si no está
 try:
     import pytesseract
     from PIL import Image
@@ -34,7 +32,7 @@ def cargar_datos():
 def guardar_datos():
     json.dump({'usuarios':USUARIOS,'pagaron':list(PAGARON),'referidos':REFERIDOS,'invitados':INVITADOS}, open(DATA_FILE,'w'))
 
-# ===== PRECIOS =====
+# ===== PRECIOS (IGUALES) =====
 MX_PRECIOS = """🛍 VIDEOS 🛒
 
 🎂 BÁSICO: $ 100 MXN
@@ -152,7 +150,6 @@ def normalizar(t):
 def es_precio(t):
     return any(p in normalizar(t) for p in ['precio','precios','costo','cuanto','cuánto','vale','valor'])
 
-# ===== FOTOS CON LINK DIRECTO =====
 async def analizar_foto(ctx, uid, user, fid):
     try:
         f = await ctx.bot.get_file(fid)
@@ -162,22 +159,15 @@ async def analizar_foto(ctx, uid, user, fid):
         if HAS_OCR:
             try: txt = pytesseract.image_to_string(Image.open(p)).lower()
             except: pass
-
         if any(k in txt for k in ['yape','plin','paypal','banco','clabe','stp','abigail','maximoof']):
             tipo = "💰 PAGO DETECTADO"; PAGARON.add(uid); guardar_datos()
         elif any(k in txt for k in ['tiktok','story','vistas']):
             tipo = "📸 PROMO"
         else:
             tipo = "📷 FOTO"
-
         username = f"@{user}" if user else "sin @"
         link_directo = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
-
-        caption = (f"{tipo}\n"
-                   f"👤 {username}\n"
-                   f"🆔 <code>{uid}</code>\n"
-                   f"🔗 <a href='{link_directo}'>ABRIR CHAT</a>")
-
+        caption = f"{tipo}\n👤 {username}\n🆔 <code>{uid}</code>\n🔗 <a href='{link_directo}'>ABRIR CHAT</a>"
         await ctx.bot.send_photo(ADMIN_ID, fid, caption=caption, parse_mode='HTML')
     except Exception as e:
         logger.error(e)
@@ -196,12 +186,35 @@ async def todo(upd, ctx):
             await m.reply_text("solo trato hot a compradores 🥵"); return
         if any(k in txt for k in ['fake','estafa']):
             await m.reply_text(f"¿Fake? mira {LINK_CANAL}"); return
-        if 'ya cumpli' in txt: # SOLO "ya cumplí", no "ya"
-            await m.reply_text("100 vistas ok, avísame a 500-1000. Video sin cortes.\n⚠️ SOLO @yanabicitasa"); return
-        if any(k in txt for k in ['vistas','500','1000']):
-            await m.reply_text("Comenta #hormo 'miren mi story' 🥵"); return
+
+        # === MENSAJES NUEVOS ===
         if 'gratis' in txt:
-            await m.reply_text("1.Bio Tg:yanabicitasa 2.Subir QR 3.Comentar 4.Captura\nDi 'ya cumplí'"); return
+            await m.reply_text(
+                "1️⃣ Bio Tg: @yanabicitasa\n"
+                "2️⃣ Sube una fotito de las que te envié a tu story + Frase hot 😋\n"
+                "3️⃣ Mándame captura + videito cuando cumplas\n"
+                "4️⃣ Me confirmas cuando llegue a 100 vistas (story) :3\n"
+                "5️⃣ Disfruta de hasta 20 videitos :3 ❤️\n\n"
+                "¿Te animas o ño? 🥺\n"
+                "(Me avisas cuando cumplas Mor)"
+            ); return
+
+        if 'ya cumpli' in txt:
+            await m.reply_text(
+                "100 vistas es para que veas que es fácil :3 me confirmas cuando tenga 500-1000 vistas la story, y te envío los videos\n\n"
+                "Me envías video entrando al TikTok, entrando al estado, entrando a los likes\n"
+                "cualquier corte en el video anula la promoción de videos"
+            ); return
+
+        if any(k in txt for k in ['vistas','500','1000']):
+            await m.reply_text(
+                "Busca y comenta en varios videos que tengan: #hormo #hot #hormonal #amigoshormo\n\n"
+                "Cositas hormonales como: quién? Alguno?\n"
+                "Miren mi story\n"
+                "Y cositas así"
+            ); return
+        # === FIN MENSAJES NUEVOS ===
+
         if m.text and es_precio(m.text):
             ESPERA_PAIS[uid] = True
             await m.reply_text("¿De dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
