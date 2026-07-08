@@ -204,7 +204,6 @@ def normalizar(t): return unicodedata.normalize('NFKD', t).encode('ascii','ignor
 def es_trigger_precios(texto):
     if not texto: return False
     t = normalizar(texto)
-    # AHORA DETECTA "HOLA MOR PRECIOS"
     return "hola mor" in t and "precio" in t
 
 def registrar_usuario(u):
@@ -315,82 +314,61 @@ async def manejar_todo(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     uid = m.from_user.id
-    if uid in PAGARON and uid!= ADMIN_ID: return
+    # if uid in PAGARON and uid!= ADMIN_ID: return # ← QUITADO
     registrar_usuario(m.from_user)
     name = m.from_user.first_name
     user = m.from_user.username or "x"
 
-    # ===== PRIVADO: SOLO RESPONDE AL TRIGGER =====
-    if m.chat.type == 'private':
-        # 1. Trigger exacto
+    # ===== MODO ADMIN =====
+    if uid == ADMIN_ID and m.chat.type == 'private':
         if m.text and es_trigger_precios(m.text):
             ESPERA_PAIS[uid] = True
             await m.reply_text("hola mi amor 🫣🔥\n¿de dónde eres tú, bebé? 🥺💋")
             return
-
-        # 2. Esperando país - SIN BOTONES
         if uid in ESPERA_PAIS and m.text:
             txt = normalizar(m.text)
-            peru_keys = ['peru','perú','pe','lima','arequipa','trujillo','cusco','piura','chiclayo','peruano','peruana']
-            mex_keys = ['mexico','méxico','mx','cdmx','df','guadalajara','monterrey','puebla','tijuana','mexicano','mexicana','mex']
-            usa_keys = ['eeuu','usa','estados unidos','united states','america','gringo','gringa','new york','miami','texas','california','florida']
-
-            if any(k in txt for k in peru_keys):
-                await m.reply_text(PE_PRECIOS) # SIN reply_markup
-            elif any(k in txt for k in mex_keys):
-                await m.reply_text(MX_PRECIOS)
-            elif any(k in txt for k in usa_keys):
-                await m.reply_text(USA_PRECIOS)
-            else:
-                await m.reply_text(OTRO_PRECIOS)
-
+            if any(k in txt for k in ['peru','pe','lima']): await m.reply_text(PE_PRECIOS, reply_markup=get_menu())
+            elif any(k in txt for k in ['mexico','mx']): await m.reply_text(MX_PRECIOS, reply_markup=get_menu())
+            elif any(k in txt for k in ['eeuu','usa']): await m.reply_text(USA_PRECIOS, reply_markup=get_menu())
+            else: await m.reply_text(OTRO_PRECIOS, reply_markup=get_menu())
             del ESPERA_PAIS[uid]
             return
-
-        # 3. Foto de pago
-        if m.photo:
-            if uid == ADMIN_ID: return
-            PAGARON.add(uid)
-            guardar_datos()
-            await avisar_pago(ctx, uid, user, name, m.photo[-1].file_id)
-            await m.reply_text(f"✅ Pago recibido. Escríbeme {USERNAME_ADMIN}")
-            return
-
-        # 4. IGNORA TODO LO DEMÁS EN PRIVADO
         return
-    # ===== FIN PRIVADO =====
 
-    # Todo lo de abajo solo funciona en GRUPOS/CANALES
-    if m.text and m.text.lower() == '/start':
-        await m.reply_text(f"Mmmm {name}... 😏✨", reply_markup=get_menu())
+    # ===== MODO CLIENTES =====
+    if m.text and es_trigger_precios(m.text):
+        ESPERA_PAIS[uid] = True
+        await m.reply_text("hola mi amor 🫣🔥\n¿de dónde eres tú, bebé? 🥺💋")
         return
-    if m.text and '/milink' in m.text.lower():
-        link = await crear_link_referido(ctx, uid, user)
-        if link:
-            c = REFERIDOS[uid]['contador']
-            await m.reply_text(f"{TEXTO_NIVELES}\n\n🔗 TU LINK:\n{link}\n\n📊 Llevas: {c}/200", reply_markup=get_volver())
-        else: await m.reply_text("😏 Preparando link...", reply_markup=get_volver())
+
+    if uid in ESPERA_PAIS and m.text:
+        txt = normalizar(m.text)
+        peru_keys = ['peru','perú','pe','lima','arequipa','trujillo','cusco','piura','chiclayo','peruano','peruana']
+        mex_keys = ['mexico','méxico','mx','cdmx','df','guadalajara','monterrey','puebla','tijuana','mexicano','mexicana','mex']
+        usa_keys = ['eeuu','usa','estados unidos','united states','america','gringo','gringa','new york','miami','texas','california','florida']
+        if any(k in txt for k in peru_keys): await m.reply_text(PE_PRECIOS, reply_markup=get_menu())
+        elif any(k in txt for k in mex_keys): await m.reply_text(MX_PRECIOS, reply_markup=get_menu())
+        elif any(k in txt for k in usa_keys): await m.reply_text(USA_PRECIOS, reply_markup=get_menu())
+        else: await m.reply_text(OTRO_PRECIOS, reply_markup=get_menu())
+        del ESPERA_PAIS[uid]
         return
+
     if m.photo:
-        if uid == ADMIN_ID: return
-        PAGARON.add(uid)
-        guardar_datos()
+        PAGARON.add(uid); guardar_datos()
         await avisar_pago(ctx, uid, user, name, m.photo[-1].file_id)
         await m.reply_text(f"✅ Pago recibido. Escríbeme {USERNAME_ADMIN}")
         return
-    if not m.text: return
-    txt = m.text.lower()
-    if ULTIMO_MENSAJE.get(uid) == txt: return
-    ULTIMO_MENSAJE[uid] = txt
 
-    if any(x in normalizar(txt) for x in ['gratis','free','regalo']):
+    if not m.text: return
+    if m.text.lower() == '/start':
+        await m.reply_text(f"Mmmm {name}... 😏✨", reply_markup=get_menu())
+        return
+    if any(x in normalizar(m.text) for x in ['gratis','free','regalo']):
         await enviar_gratis(uid, ctx); return
-    if any(x in txt for x in ['comprar','quiero','pago']):
+    if any(x in m.text.lower() for x in ['comprar','quiero','pago','precio']):
         await m.reply_text("Elige país:", reply_markup=get_precios_menu()); return
-    if 'peru' in normalizar(txt) or 'soles' in txt:
-        ctx.job_queue.run_once(follow_up, 1800, data={'uid':uid})
-        await m.reply_text(PE_PRECIOS, reply_markup=get_volver()); return
-    await m.reply_text("Elige:", reply_markup=get_menu())
+
+    await m.reply_text("¿Qué se te antoja? 👇", reply_markup=get_menu())
 
 async def button(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
     q = upd.callback_query; await q.answer()
@@ -438,10 +416,8 @@ def main():
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(ChatMemberHandler(track_join, ChatMemberHandler.CHAT_MEMBER))
     app.add_handler(MessageHandler(filters.ALL, manejar_todo))
-
     if app.job_queue:
         app.job_queue.run_daily(resumen_estrellas, time=time(4, 58))
-
     logger.info("BOT PRENDIDO ✅")
     try:
         app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
