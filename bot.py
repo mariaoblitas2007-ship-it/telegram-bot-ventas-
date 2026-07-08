@@ -235,11 +235,6 @@ async def todo(upd, ctx):
 
     def tiene(lista): return any(p in txt for p in lista)
 
-    # NUEVO: /start también en negocio
-    if txt in ['/start','start','menu','hola']:
-        await m.reply_text("Hola mor 🥵 bienvenido, elige:", reply_markup=get_menu())
-        return
-
     PRECIOS = ['precio','precios','costo','cuanto','cuánto','vale','valor','tarifa','cuesta']
     PROMO = ['promo','promocion','promoción','promito','gratis','free','regalo','regalito','gatis']
     PREMIUM = ['premium','premiun','premuim','premiumn','premum','pack premium']
