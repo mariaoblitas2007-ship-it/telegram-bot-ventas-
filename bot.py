@@ -314,13 +314,14 @@ async def manejar_todo(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     uid = m.from_user.id
-    # if uid in PAGARON and uid!= ADMIN_ID: return # ← QUITADO
     registrar_usuario(m.from_user)
     name = m.from_user.first_name
     user = m.from_user.username or "x"
 
-    # ===== MODO ADMIN =====
-    if uid == ADMIN_ID and m.chat.type == 'private':
+    es_negocio = upd.business_message is not None
+
+    # ===== 1. CHAT DE NEGOCIO (@yanabicitasa) =====
+    if es_negocio:
         if m.text and es_trigger_precios(m.text):
             ESPERA_PAIS[uid] = True
             await m.reply_text("hola mi amor 🫣🔥\n¿de dónde eres tú, bebé? 🥺💋")
@@ -333,42 +334,45 @@ async def manejar_todo(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
             else: await m.reply_text(OTRO_PRECIOS, reply_markup=get_menu())
             del ESPERA_PAIS[uid]
             return
+        if m.photo:
+            PAGARON.add(uid); guardar_datos()
+            await avisar_pago(ctx, uid, user, name, m.photo[-1].file_id)
+            await m.reply_text(f"✅ Pago recibido. Escríbeme {USERNAME_ADMIN}")
+            return
+        return # IGNORA TODO LO DEMÁS
+
+    # ===== 2. CHAT DIRECTO CON @YanaBiBot =====
+    if m.chat.type == 'private':
+        if m.text and es_trigger_precios(m.text):
+            ESPERA_PAIS[uid] = True
+            await m.reply_text("hola mi amor 🫣🔥\n¿de dónde eres tú, bebé? 🥺💋")
+            return
+        if uid in ESPERA_PAIS and m.text:
+            txt = normalizar(m.text)
+            if any(k in txt for k in ['peru','pe','lima']): await m.reply_text(PE_PRECIOS, reply_markup=get_menu())
+            elif any(k in txt for k in ['mexico','mx']): await m.reply_text(MX_PRECIOS, reply_markup=get_menu())
+            elif any(k in txt for k in ['eeuu','usa']): await m.reply_text(USA_PRECIOS, reply_markup=get_menu())
+            else: await m.reply_text(OTRO_PRECIOS, reply_markup=get_menu())
+            del ESPERA_PAIS[uid]
+            return
+        if m.photo:
+            PAGARON.add(uid); guardar_datos()
+            await avisar_pago(ctx, uid, user, name, m.photo[-1].file_id)
+            await m.reply_text(f"✅ Pago recibido. Escríbeme {USERNAME_ADMIN}")
+            return
+        if m.text and m.text.lower() == '/start':
+            await m.reply_text(f"Mmmm {name}... 😏✨", reply_markup=get_menu())
+            return
+        if m.text and any(x in normalizar(m.text) for x in ['gratis','free']):
+            await enviar_gratis(uid, ctx); return
+        if m.text and any(x in m.text.lower() for x in ['comprar','precio','pago']):
+            await m.reply_text("Elige país:", reply_markup=get_precios_menu()); return
+        await m.reply_text("¿Qué se te antoja? 👇", reply_markup=get_menu())
         return
 
-    # ===== MODO CLIENTES =====
-    if m.text and es_trigger_precios(m.text):
-        ESPERA_PAIS[uid] = True
-        await m.reply_text("hola mi amor 🫣🔥\n¿de dónde eres tú, bebé? 🥺💋")
-        return
-
-    if uid in ESPERA_PAIS and m.text:
-        txt = normalizar(m.text)
-        peru_keys = ['peru','perú','pe','lima','arequipa','trujillo','cusco','piura','chiclayo','peruano','peruana']
-        mex_keys = ['mexico','méxico','mx','cdmx','df','guadalajara','monterrey','puebla','tijuana','mexicano','mexicana','mex']
-        usa_keys = ['eeuu','usa','estados unidos','united states','america','gringo','gringa','new york','miami','texas','california','florida']
-        if any(k in txt for k in peru_keys): await m.reply_text(PE_PRECIOS, reply_markup=get_menu())
-        elif any(k in txt for k in mex_keys): await m.reply_text(MX_PRECIOS, reply_markup=get_menu())
-        elif any(k in txt for k in usa_keys): await m.reply_text(USA_PRECIOS, reply_markup=get_menu())
-        else: await m.reply_text(OTRO_PRECIOS, reply_markup=get_menu())
-        del ESPERA_PAIS[uid]
-        return
-
-    if m.photo:
-        PAGARON.add(uid); guardar_datos()
-        await avisar_pago(ctx, uid, user, name, m.photo[-1].file_id)
-        await m.reply_text(f"✅ Pago recibido. Escríbeme {USERNAME_ADMIN}")
-        return
-
-    if not m.text: return
-    if m.text.lower() == '/start':
+    # ===== 3. GRUPOS =====
+    if m.text and m.text.lower() == '/start':
         await m.reply_text(f"Mmmm {name}... 😏✨", reply_markup=get_menu())
-        return
-    if any(x in normalizar(m.text) for x in ['gratis','free','regalo']):
-        await enviar_gratis(uid, ctx); return
-    if any(x in m.text.lower() for x in ['comprar','quiero','pago','precio']):
-        await m.reply_text("Elige país:", reply_markup=get_precios_menu()); return
-
-    await m.reply_text("¿Qué se te antoja? 👇", reply_markup=get_menu())
 
 async def button(upd: Update, ctx: ContextTypes.DEFAULT_TYPE):
     q = upd.callback_query; await q.answer()
