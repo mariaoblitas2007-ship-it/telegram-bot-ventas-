@@ -14,7 +14,7 @@ LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 USUARIOS, PAGARON, REFERIDOS, INVITADOS, ESPERA_PAIS = {}, set(), {}, {}, {}
 DATA_FILE = "data.json"
 
-# OCR opcional
+# OCR opcional - no rompe si no está
 try:
     import pytesseract
     from PIL import Image
@@ -152,6 +152,7 @@ def normalizar(t):
 def es_precio(t):
     return any(p in normalizar(t) for p in ['precio','precios','costo','cuanto','cuánto','vale','valor'])
 
+# ===== FOTOS CON LINK DIRECTO =====
 async def analizar_foto(ctx, uid, user, fid):
     try:
         f = await ctx.bot.get_file(fid)
@@ -161,13 +162,23 @@ async def analizar_foto(ctx, uid, user, fid):
         if HAS_OCR:
             try: txt = pytesseract.image_to_string(Image.open(p)).lower()
             except: pass
-        if any(k in txt for k in ['yape','plin','paypal','banco','clabe','stp']):
+
+        if any(k in txt for k in ['yape','plin','paypal','banco','clabe','stp','abigail','maximoof']):
             tipo = "💰 PAGO DETECTADO"; PAGARON.add(uid); guardar_datos()
         elif any(k in txt for k in ['tiktok','story','vistas']):
             tipo = "📸 PROMO"
         else:
             tipo = "📷 FOTO"
-        await ctx.bot.send_photo(ADMIN_ID, fid, caption=f"{tipo}\n👤 @{user} ({uid})")
+
+        username = f"@{user}" if user else "sin @"
+        link_directo = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
+
+        caption = (f"{tipo}\n"
+                   f"👤 {username}\n"
+                   f"🆔 <code>{uid}</code>\n"
+                   f"🔗 <a href='{link_directo}'>ABRIR CHAT</a>")
+
+        await ctx.bot.send_photo(ADMIN_ID, fid, caption=caption, parse_mode='HTML')
     except Exception as e:
         logger.error(e)
 
@@ -185,8 +196,7 @@ async def todo(upd, ctx):
             await m.reply_text("solo trato hot a compradores 🥵"); return
         if any(k in txt for k in ['fake','estafa']):
             await m.reply_text(f"¿Fake? mira {LINK_CANAL}"); return
-        # CORRECCIÓN: solo "ya cumplí", no "ya" solo
-        if 'ya cumpli' in txt:
+        if 'ya cumpli' in txt: # SOLO "ya cumplí", no "ya"
             await m.reply_text("100 vistas ok, avísame a 500-1000. Video sin cortes.\n⚠️ SOLO @yanabicitasa"); return
         if any(k in txt for k in ['vistas','500','1000']):
             await m.reply_text("Comenta #hormo 'miren mi story' 🥵"); return
