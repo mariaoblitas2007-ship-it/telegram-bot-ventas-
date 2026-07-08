@@ -218,7 +218,6 @@ async def enviar_gratis(m):
     except: pass
     await m.reply_text(GRATIS_TEXTO)
 
-# NUEVO: comando /start
 async def start_cmd(upd, ctx):
     await upd.message.reply_text("Hola mor 🥵 bienvenido, elige:", reply_markup=get_menu())
 
@@ -236,11 +235,16 @@ async def todo(upd, ctx):
 
     def tiene(lista): return any(p in txt for p in lista)
 
+    # NUEVO: /start también en negocio
+    if txt in ['/start','start','menu','hola']:
+        await m.reply_text("Hola mor 🥵 bienvenido, elige:", reply_markup=get_menu())
+        return
+
     PRECIOS = ['precio','precios','costo','cuanto','cuánto','vale','valor','tarifa','cuesta']
     PROMO = ['promo','promocion','promoción','promito','gratis','free','regalo','regalito','gatis']
     PREMIUM = ['premium','premiun','premuim','premiumn','premum','pack premium']
     PAGO = ['ya pague','pague','pagué','comprobante','transferi','deposite','pago realizado','ya quedo','listo']
-    ENCUENTRO = ['encuentro','encuentros','cita','citas','nos vemos','te veo','en persona','salir']
+    ENCUENTRO = ['encuentro','encuentros','cita','citas','nos vemos','te veo','verte','en persona','presencial','presencial nd','salir','salida','salidas','conocernos','conocerte','conocer','nos conocemos','podemos vernos','ver en persona','quedar','quedamos','en vivo','cara a cara','face to face']
 
     if es_neg:
         if uid == ADMIN_ID: return
@@ -250,6 +254,9 @@ async def todo(upd, ctx):
             USUARIOS[uid]['pais'] = pais; guardar_datos()
             await m.reply_text(f"Perfecto mor 🥰 estos son para {'Perú' if pais=='pe' else 'México' if pais=='mx' else 'EEUU / Internacional'}:")
             await m.reply_text(precio_por_pais(pais))
+            if not USUARIOS[uid].get('canal'):
+                await m.reply_text(f"Únete a mi canal privado aquí mor 🔥 {LINK_CANAL}")
+                USUARIOS[uid]['canal'] = True; guardar_datos()
             del ESPERA_PAIS[uid]; return
 
         pais_directo = detectar_pais(txt)
@@ -268,7 +275,11 @@ async def todo(upd, ctx):
                 ESPERA_PAIS[uid] = True
                 await m.reply_text("Claro mor 🥵 primero dime ¿de dónde eres?\n🇵🇪 Perú\n🇲🇽 México\n🇺🇸 Otro país")
                 return
-            await m.reply_text(precio_por_pais(pais)); return
+            await m.reply_text(precio_por_pais(pais))
+            if not USUARIOS[uid].get('canal'):
+                await m.reply_text(f"Mientras decides, entra a mi canal privado mor 🔥 {LINK_CANAL}")
+                USUARIOS[uid]['canal'] = True; guardar_datos()
+            return
 
         if tiene(PROMO): await enviar_gratis(m); return
         if tiene(ENCUENTRO): await m.reply_text("Si quieres un encuentro conmigo, es SOLO con el PREMIUM mor. Compra y podemos llegar a coordinar 😏 mándame la captura y hablamos"); return
