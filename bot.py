@@ -11,7 +11,11 @@ ADMIN_ID = 8783569348
 LINK_CANAL = "https://t.me/+zt1RzGevdHBjMDgx"
 LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 
-USUARIOS, PAGARON, REFERIDOS, INVITADOS, ESPERA_PAIS = {}, set(), {}, {}
+USUARIOS = {}
+PAGARON = set()
+REFERIDOS = {}
+INVITADOS = {}
+ESPERA_PAIS = {}
 DATA_FILE = "data.json"
 
 try:
@@ -227,29 +231,21 @@ async def todo(upd, ctx):
             else:
                 if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
                 await enviar_gratis(m); return
-        # videollamada
         if any(k in txt for k in ['videollamada','video llamada','videocall','llamada']):
             ESPERA_PAIS[uid]=True
             await m.reply_text("Tengo videollamadas mor 🥵 ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸"); return
-        # no tengo plata
         if any(k in txt for k in ['no tengo','sin plata','sin dinero','no puedo comprar','no tengo pa']):
             await m.reply_text("Mor, si no puedes comprar, haz la promo gratis y te mando hasta 20, ¿te paso los pasitos?"); await enviar_gratis(m); return
-        # primeros 5
         if any(k in txt for k in ['primeros 5','primeros cinco','primeros5','de los primeros']):
             await m.reply_text("Amor, los primeros 5 solo es para la reacción, para los videos tienes que hacer la story y llegar a 100 vistas, ¿te mando los pasos?"); await enviar_gratis(m); return
-        # pasas el rato
         if any(k in txt for k in ['pasas el rato','como estas','como estás','que haces','nada por prv','prvv','prv']):
             await m.reply_text("Aquí chambeando para mis mors 🥵 ¿quieres ver mi pack PREMIUM o te mando el gratis?"); return
-        # te enseño como me corro
         if any(k in txt for k in ['te enseño','como me corro','como me vengo','me corro','me vengo','te muestro como']):
             await m.reply_text("Jajaja guarda eso para cuando compres el PREMIUM, ahí sí te muestro todo 🫣 ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸"); ESPERA_PAIS[uid]=True; return
-        # NUEVO: intercambio
         if any(k in txt for k in ['intercambio','intercambios','cambio de fotos','cambiamos','intercambiamos']):
             await m.reply_text("No hago intercambios, mor 🥺 solo vendo packs o te doy gratis si haces la promo, ¿quieres los pasitos?"); await enviar_gratis(m); return
-        # NUEVO: ftpn / pene
         if any(k in txt for k in ['ftpn','pene','pito','verga','mando ftpn','la tengo parada','bien parada','quieres ver mi']):
             await m.reply_text("Jajaja guarda eso, yo no recibo ftpn 😏 si quieres ver lo mío agarra el PREMIUM, ¿de dónde eres? 🇵🇪 🇲🇽 🇺🇸"); ESPERA_PAIS[uid]=True; return
-        # NUEVO: woooow / comoo
         if any(k in txt for k in ['wooo','woow','comoo','no entiendo','que es esto']):
             await m.reply_text("Te explico de nuevo mor 🥺"); await enviar_gratis(m); return
         if 'ya cumpli' in txt:
