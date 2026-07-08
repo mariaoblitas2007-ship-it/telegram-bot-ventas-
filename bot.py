@@ -37,7 +37,7 @@ def cargar_datos():
 def guardar_datos():
     json.dump({'usuarios':USUARIOS,'pagaron':list(PAGARON),'referidos':REFERIDOS,'invitados':INVITADOS}, open(DATA_FILE,'w'))
 
-# ===== TEXTOS =====
+# ===== TEXTOS (SIN CAMBIOS) =====
 MX_PRECIOS = """🛍 VIDEOS 🛒
 
 🎂 BÁSICO: $ 100 MXN
@@ -171,19 +171,22 @@ async def analizar_foto(ctx, uid, user, fid):
             try: txt = pytesseract.image_to_string(Image.open(p)).lower()
             except: pass
         username = f"@{user}" if user else "sin @"
+        # SOLO PAGO O PROMO
         if txt and all(k in txt for k in ['basico','top','premium']):
             await ctx.bot.send_message(ADMIN_ID, f"📦 {username} envió foto de PACKS")
             return
-        if any(k in txt for k in ['yape','plin','paypal','banco','clabe','stp','abigail','maximoof']):
-            tipo = "💰 PAGO DETECTADO"; PAGARON.add(uid); guardar_datos()
-        elif any(k in txt for k in ['tiktok','story','vistas','hormonal','alguno para jugar']):
-            tipo = "📸 PROMO"
+        is_pago = any(k in txt for k in ['yape','plin','paypal','banco','clabe','stp','abigail','maximoof','pago','comprobante'])
+        is_promo = any(k in txt for k in ['tiktok','story','vistas','hormonal','alguno para jugar','yanabicitasa','tg:'])
+        if is_pago:
+            tipo = "PAGO"; PAGARON.add(uid); guardar_datos()
+        elif is_promo:
+            tipo = "PROMO"
         else:
-            tipo = "📷 FOTO"
+            return # FOTO HOT → no reenviar
         link_directo = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
         caption = f"{tipo}\n👤 {username}\n🆔 <code>{uid}</code>\n🔗 <a href='{link_directo}'>ABRIR CHAT</a>"
         await ctx.bot.send_photo(ADMIN_ID, fid, caption=caption, parse_mode='HTML')
-        if tipo == "📸 PROMO":
+        if tipo == "PROMO":
             await ctx.bot.send_message(uid, COMENTA_TEXTO)
     except Exception as e:
         logger.error(e)
@@ -209,7 +212,7 @@ async def todo(upd, ctx):
     txt = normalizar(m.text)
     raw = m.text or ""
 
-    if es_neg:
+    if es_neg: # ✅ MODO NEGOCIO - interpreta todo
         if uid == ADMIN_ID: return
         if 'calific' in txt:
             await m.reply_text("solo trato hot a compradores 🥵"); return
@@ -272,9 +275,8 @@ async def todo(upd, ctx):
             await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id); return
         return
 
+    # ✅ MODO PRIVADO - solo botones
     if m.chat.type == 'private':
-        if m.photo:
-            await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id); return
         await m.reply_text("Elige:", reply_markup=get_menu())
 
 async def btn(upd, ctx):
