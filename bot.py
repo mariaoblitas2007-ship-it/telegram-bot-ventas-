@@ -304,8 +304,11 @@ async def todo(upd, ctx):
             ctx.job_queue.run_once(recordar, 180, data={'uid':uid,'chat_id':m.chat.id}, name=f"rec_{uid}")
             return
 
-        if not USUARIOS[uid].get('atendido'):
+        # >>> CAMBIO CLAVE: saludo solo UNA vez
+        if not USUARIOS[uid].get('saludo_enviado'):
             await m.reply_text(EJEMPLO_TEXTO)
+            USUARIOS[uid]['saludo_enviado'] = True
+            guardar_datos()
         return
 
     if m.chat.type == 'private':
