@@ -133,16 +133,13 @@ def normalizar(t): return unicodedata.normalize('NFKD',t or '').encode('ascii','
 def precio_por_pais(p): return PE_PRECIOS if p=='pe' else MX_PRECIOS if p=='mx' else USA_PRECIOS
 def detectar_pais(t):
     t=normalizar(t)
-    if any(x in t for x in ['peru','perú']): return 'pe'
-    if any(x in t for x in ['mex','mexico','méxico']): return 'mx'
-    if any(x in t for x in ['usa','eeuu','estados unidos','united','america']): return 'usa'
-    if any(x in t for x in ['colombia','argentina','chile','ecuador','venezuela','bolivia','espana']): return 'usa'
+    if any(x in t for x in ['peru']): return 'pe'
+    if any(x in t for x in ['mex','mexico']): return 'mx'
+    if any(x in t for x in ['usa','eeuu','estados unidos','united','colombia','argentina','chile','ecuador','venezuela','bolivia','espana','america']): return 'usa'
     return None
 def es_pago(txt):
-    patrones=['yape','plin','ya te pague','te yapee','yapee','ya te transferi','transferi','deposite','comprobante','pago realizado','ya quedo','te pague']
-    if any(p in txt for p in patrones): return True
-    if re.search(r'(ya|listo).*(pague|yapee|plin|transfer)', txt): return True
-    return False
+    patrones=['yape','plin','ya te pague','te yapee','yapee','ya te transferi','transferi','deposite','comprobante','pago realizado','ya quedo','te pague','te envie']
+    return any(p in txt for p in patrones) or bool(re.search(r'(ya|listo).*(pague|yapee|plin|transfer)', txt))
 def es_cumplio(txt):
     return any(p in txt for p in ['cumpli','cumplí','ya hice','hice mi parte','ya di publicidad','te di publicidad','ahora te toca','manda los vidy','porfaaa'])
 
@@ -171,14 +168,21 @@ async def enviar_gratis(m):
     except: pass
     await m.reply_text(GRATIS_TEXTO)
 async def start_cmd(upd, ctx): await upd.message.reply_text("Hola mor 🥵 bienvenido, elige:", reply_markup=get_menu())
+
 async def recordar(context):
     uid=context.job.data['uid']; chat_id=context.job.data['chat_id']
+    bc_id=context.job.data.get('business_connection_id')
     if uid in PAGARON: return
     if USUARIOS.get(uid,{}).get('respondio'): return
     try:
-        await context.bot.send_message(chat_id, "sigues ahí? 🥹")
-        await asyncio.sleep(1.5)
-        await context.bot.send_message(chat_id, "Mor si mandas el PREMIUM hoy te doy el DOBLE de contenido 😍 20 vds extra + 2 personalizados solo por hoy, ¿te lo aparto?")
+        if bc_id:
+            await context.bot.send_message(chat_id, "sigues ahí? 🥹", business_connection_id=bc_id)
+            await asyncio.sleep(1.5)
+            await context.bot.send_message(chat_id, "Mor si mandas el PREMIUM hoy te doy el DOBLE de contenido 😍 20 vds extra + 2 personalizados solo por hoy, ¿te lo aparto?", business_connection_id=bc_id)
+        else:
+            await context.bot.send_message(chat_id, "sigues ahí? 🥹")
+            await asyncio.sleep(1.5)
+            await context.bot.send_message(chat_id, "Mor si mandas el PREMIUM hoy te doy el DOBLE de contenido 😍 20 vds extra + 2 personalizados solo por hoy, ¿te lo aparto?")
         USUARIOS[uid]['atendido']=True; guardar_datos()
     except: pass
 
@@ -193,6 +197,7 @@ async def todo(upd, ctx):
     txt=normalizar(m.text); raw=m.text or ""
     def tiene(l): return any(p in txt for p in l)
     PROMO=['promo','promocion','gratis','free']; ENCUENTRO=['encuentro','cita','en persona','vernos']
+    bc_id = getattr(m, 'business_connection_id', None)
 
     if es_neg:
         if uid==ADMIN_ID: return
@@ -201,18 +206,17 @@ async def todo(upd, ctx):
             if m.video: await analizar_video(ctx,uid,m.from_user.username or '',m.video.file_id)
             return
 
-        # Si estaba esperando país
         if uid in ESPERA_PAIS:
-            pais=detectar_pais(txt) or 'usa'
+            pais=detectar_pais(txt) or USUARIOS[uid].get('pais') or 'usa'
             USUARIOS[uid]['pais']=pais
             await m.reply_text("Perfecto mor 🥰 estos son los precios:")
             await m.reply_text(precio_por_pais(pais))
             if not USUARIOS[uid].get('canal'): await m.reply_text(f"Únete a mi canal privado aquí mor 🔥 {LINK_CANAL}"); USUARIOS[uid]['canal']=True
             USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; USUARIOS[uid]['saludo_enviado']=True; guardar_datos()
-            ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id}, name=f"rec_{uid}")
+            ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
             del ESPERA_PAIS[uid]; return
 
-        # Si en cualquier momento menciona país, mándale ese país aunque ya fue atendido
+        # FIX CLAVE: si menciona país en cualquier momento, manda ese país
         nuevo_pais = detectar_pais(txt)
         if nuevo_pais:
             USUARIOS[uid]['pais']=nuevo_pais
@@ -220,7 +224,7 @@ async def todo(upd, ctx):
             await m.reply_text(precio_por_pais(nuevo_pais))
             if not USUARIOS[uid].get('canal'): await m.reply_text(f"Únete a mi canal privado aquí mor 🔥 {LINK_CANAL}"); USUARIOS[uid]['canal']=True
             USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; USUARIOS[uid]['saludo_enviado']=True; guardar_datos()
-            ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id}, name=f"rec_{uid}")
+            ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
             if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
             return
 
@@ -249,7 +253,7 @@ async def todo(upd, ctx):
         await m.reply_text("Perfecto mor 🥰 estos son los precios:")
         await m.reply_text(precio_por_pais(pais))
         USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; guardar_datos()
-        ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id}, name=f"rec_{uid}")
+        ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
         return
 
     if m.chat.type=='private': await m.reply_text("Elige:", reply_markup=get_menu())
