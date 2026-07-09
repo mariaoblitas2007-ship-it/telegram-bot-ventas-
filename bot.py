@@ -1,6 +1,6 @@
 import os, json, logging, unicodedata
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from telegram.ext import Application, MessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes, ChatMemberHandler, TypeHandler
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, filters, ContextTypes, ChatMemberHandler, TypeHandler
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -171,16 +171,21 @@ def detectar_pais(t):
 
 async def notificar_admin(tipo, uid, user, extra=""):
     username = f"@{user}" if user else "sin @"
-    link = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
-    caption = f"{tipo}\n👤 {username}\n🆔 <code>{uid}</code>\n🔗 <a href='{link}'>ABRIR CHAT</a>\n{extra}"
-    await app_bot.send_message(ADMIN_ID, caption, parse_mode='HTML')
+    url = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
+    caption = f"{tipo}\n👤 {username}\n🆔 <code>{uid}</code>\n{extra}"
+    kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 ABRIR CHAT", url=url)]])
+    try:
+        await app_bot.send_message(ADMIN_ID, caption, reply_markup=kb, parse_mode='HTML')
+    except:
+        await app_bot.send_message(ADMIN_ID, caption, parse_mode='HTML')
 
 async def analizar_foto(ctx, uid, user, fid):
     try:
         username = f"@{user}" if user else "sin @"
-        link = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
-        caption = f"FOTO RECIBIDA\n👤 {username}\n🆔 <code>{uid}</code>\n🔗 <a href='{link}'>ABRIR CHAT</a>"
-        await ctx.bot.send_photo(ADMIN_ID, fid, caption=caption, parse_mode='HTML')
+        url = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
+        caption = f"FOTO RECIBIDA\n👤 {username}\n🆔 <code>{uid}</code>"
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 ABRIR CHAT", url=url)]])
+        await ctx.bot.send_photo(ADMIN_ID, fid, caption=caption, reply_markup=kb, parse_mode='HTML')
         f = await ctx.bot.get_file(fid)
         p = f"/tmp/{fid}.jpg"
         await f.download_to_drive(p)
@@ -198,9 +203,10 @@ async def analizar_foto(ctx, uid, user, fid):
 async def analizar_video(ctx, uid, user, fid):
     try:
         username = f"@{user}" if user else "sin @"
-        link = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
-        caption = f"VIDEO RECIBIDO\n👤 {username}\n🆔 <code>{uid}</code>\n🔗 <a href='{link}'>ABRIR CHAT</a>"
-        await ctx.bot.send_video(ADMIN_ID, fid, caption=caption, parse_mode='HTML')
+        url = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
+        caption = f"VIDEO RECIBIDO\n👤 {username}\n🆔 <code>{uid}</code>"
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 ABRIR CHAT", url=url)]])
+        await ctx.bot.send_video(ADMIN_ID, fid, caption=caption, reply_markup=kb, parse_mode='HTML')
     except Exception as e:
         logger.error(e)
 
@@ -241,10 +247,9 @@ async def todo(upd, ctx):
     es_neg = upd.business_message is not None
     txt = normalizar(m.text)
     raw = m.text or ""
-
     def tiene(lista): return any(p in txt for p in lista)
 
-    PRECIOS = ['precio','precios','costo','cuanto','cuánto','vale','valor','tarifa','cuesta','info']
+    PRECIOS = ['precio','precios','costo','cuanto','cuánto','vale','valor','tarifa','cuesta','info','porfa','cumpli','cumplii','oyee','video','vidy','publicidad']
     PROMO = ['promo','promocion','promoción','gratis','free','regalo']
     PREMIUM = ['premium','premiun']
     PAGO = ['ya pague','pague','pagué','comprobante','transferi','deposite','pago realizado','ya quedo','listo','pagado']
@@ -262,10 +267,8 @@ async def todo(upd, ctx):
             await m.reply_text(f"Perfecto mor 🥰 estos son para {'Perú' if pais=='pe' else 'México' if pais=='mx' else 'EEUU'}:")
             await m.reply_text(precio_por_pais(pais))
             if not USUARIOS[uid].get('canal'):
-                await m.reply_text(f"Únete a mi canal privado aquí mor 🔥 {LINK_CANAL}")
-                USUARIOS[uid]['canal'] = True
-            USUARIOS[uid]['atendido'] = True
-            USUARIOS[uid]['respondio'] = False
+                await m.reply_text(f"Únete a mi canal privado aquí mor 🔥 {LINK_CANAL}"); USUARIOS[uid]['canal']=True
+            USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; USUARIOS[uid]['saludo_enviado']=True
             guardar_datos()
             ctx.job_queue.run_once(recordar, 180, data={'uid':uid,'chat_id':m.chat.id}, name=f"rec_{uid}")
             del ESPERA_PAIS[uid]; return
@@ -275,40 +278,46 @@ async def todo(upd, ctx):
             USUARIOS[uid]['pais'] = pais_directo; guardar_datos()
 
         if tiene(PAGO):
-            if uid not in PAGARON:
-                PAGARON.add(uid); guardar_datos()
-                await notificar_admin("💰 PAGO", uid, m.from_user.username, f"💬 {raw[:50]}")
+            PAGARON.add(uid); guardar_datos()
+            await notificar_admin("💰 PAGO", uid, m.from_user.username, f"💬 {raw[:50]}")
             return
 
-        if m.photo: await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id); return
-        if m.video: await analizar_video(ctx, uid, m.from_user.username or '', m.video.file_id); return
+        # >>> NUEVO: FOTO/VIDEO = reenvía y bloquea para siempre
+        if m.photo:
+            await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id)
+            USUARIOS[uid]['atendido'] = True
+            USUARIOS[uid]['saludo_enviado'] = True
+            guardar_datos()
+            return
+        if m.video:
+            await analizar_video(ctx, uid, m.from_user.username or '', m.video.file_id)
+            USUARIOS[uid]['atendido'] = True
+            USUARIOS[uid]['saludo_enviado'] = True
+            guardar_datos()
+            return
+
         if tiene(ENCUENTRO):
             await m.reply_text("Los encuentros son SOLO con PREMIUM mor 😏 incluye videollamada + personalizado. ¿Te paso el PREMIUM?"); return
         if tiene(PROMO): await enviar_gratis(m); return
         if 'sexting' in txt: await m.reply_text("Sexting va en el PREMIUM mor 🥵 ¿lo quieres?"); return
 
-        if tiene(PRECIOS) or tiene(PREMIUM) or txt in ['si','ya','dale','?']:
-            if USUARIOS[uid].get('atendido'): return
-            pais = USUARIOS[uid].get('pais')
-            if not pais:
-                ESPERA_PAIS[uid] = True
-                await m.reply_text("Claro mor 🥵 primero dime ¿de dónde eres?\n🇵🇪 Perú\n🇲🇽 México\n🇺🇸 Otro país")
-                return
-            await m.reply_text(precio_por_pais(pais))
-            if not USUARIOS[uid].get('canal'):
-                await m.reply_text(f"Mientras decides, entra a mi canal privado mor 🔥 {LINK_CANAL}")
-                USUARIOS[uid]['canal'] = True
-            USUARIOS[uid]['atendido'] = True
-            USUARIOS[uid]['respondio'] = False
-            guardar_datos()
-            ctx.job_queue.run_once(recordar, 180, data={'uid':uid,'chat_id':m.chat.id}, name=f"rec_{uid}")
-            return
+        if USUARIOS[uid].get('atendido'): return
 
-        # >>> CAMBIO CLAVE: saludo solo UNA vez
         if not USUARIOS[uid].get('saludo_enviado'):
             await m.reply_text(EJEMPLO_TEXTO)
-            USUARIOS[uid]['saludo_enviado'] = True
-            guardar_datos()
+            USUARIOS[uid]['saludo_enviado'] = True; guardar_datos()
+            ESPERA_PAIS[uid] = True
+            await m.reply_text("Dime de dónde eres mor?\n🇵🇪 Perú\n🇲🇽 México\n🇺🇸 Otro país")
+            return
+
+        pais = USUARIOS[uid].get('pais')
+        if not pais:
+            ESPERA_PAIS[uid] = True
+            await m.reply_text("Claro mor 🥵 primero dime ¿de dónde eres?\n🇵🇪 Perú\n🇲🇽 México\n🇺🇸 Otro país")
+            return
+        await m.reply_text(precio_por_pais(pais))
+        USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; guardar_datos()
+        ctx.job_queue.run_once(recordar, 180, data={'uid':uid,'chat_id':m.chat.id}, name=f"rec_{uid}")
         return
 
     if m.chat.type == 'private':
@@ -342,7 +351,6 @@ def main():
     cargar_datos()
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start_cmd))
-    app.add_handler(MessageHandler(filters.ALL, todo))
     app.add_handler(TypeHandler(Update, todo))
     app.add_handler(CallbackQueryHandler(btn))
     app.add_handler(ChatMemberHandler(nuevo, ChatMemberHandler.CHAT_MEMBER))
