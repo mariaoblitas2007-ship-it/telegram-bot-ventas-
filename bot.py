@@ -246,25 +246,36 @@ async def todo(upd, ctx):
 
         if uid in ESPERA_PAIS:
             pais = detectar_pais(txt) or 'usa'
-            USUARIOS[uid]['pais'] = pais; guardar_datos()
+            USUARIOS[uid]['pais'] = pais
             await m.reply_text(f"Perfecto mor 🥰 estos son para {'Perú' if pais=='pe' else 'México' if pais=='mx' else 'EEUU / Internacional'}:")
             await m.reply_text(precio_por_pais(pais))
             if not USUARIOS[uid].get('canal'):
                 await m.reply_text(f"Únete a mi canal privado aquí mor 🔥 {LINK_CANAL}")
-                USUARIOS[uid]['canal'] = True; guardar_datos()
+                USUARIOS[uid]['canal'] = True
+            USUARIOS[uid]['atendido'] = True # MODO SILENCIO
+            guardar_datos()
             del ESPERA_PAIS[uid]; return
 
         pais_directo = detectar_pais(txt)
         if pais_directo and not USUARIOS[uid].get('pais'):
             USUARIOS[uid]['pais'] = pais_directo; guardar_datos()
 
+        # FUNCIONES QUE SIEMPRE FUNCIONAN
         if tiene(PAGO):
             if uid not in PAGARON:
                 PAGARON.add(uid); guardar_datos()
                 await notificar_admin("💰 PAGO", uid, m.from_user.username, f"💬 {raw[:50]}")
             return
+        if m.photo: await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id); return
+        if m.video: await analizar_video(ctx, uid, m.from_user.username or '', m.video.file_id); return
+        if tiene(ENCUENTRO): await m.reply_text("Si quieres un encuentro conmigo, es SOLO con el PREMIUM mor. Compra y podemos llegar a coordinar 😏 mándame la captura y hablamos"); return
+        if tiene(PROMO): await enviar_gratis(m); return
+        if 'sexting' in txt: await m.reply_text("Sexting va en el PREMIUM mor 🥵 ¿lo quieres?"); return
 
+        # PRECIOS - solo una vez
         if tiene(PRECIOS) or tiene(PREMIUM) or txt in ['si','ya','dale']:
+            if USUARIOS[uid].get('atendido'): # ya se atendió, no spamear
+                return
             pais = USUARIOS[uid].get('pais')
             if not pais:
                 ESPERA_PAIS[uid] = True
@@ -273,17 +284,15 @@ async def todo(upd, ctx):
             await m.reply_text(precio_por_pais(pais))
             if not USUARIOS[uid].get('canal'):
                 await m.reply_text(f"Mientras decides, entra a mi canal privado mor 🔥 {LINK_CANAL}")
-                USUARIOS[uid]['canal'] = True; guardar_datos()
+                USUARIOS[uid]['canal'] = True
+            USUARIOS[uid]['atendido'] = True # MODO SILENCIO
+            guardar_datos()
             return
 
-        if tiene(PROMO): await enviar_gratis(m); return
-        if tiene(ENCUENTRO): await m.reply_text("Si quieres un encuentro conmigo, es SOLO con el PREMIUM mor. Compra y podemos llegar a coordinar 😏 mándame la captura y hablamos"); return
-        if 'sexting' in txt: await m.reply_text("Sexting va en el PREMIUM mor 🥵 ¿lo quieres?"); return
-
-        if m.photo: await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id); return
-        if m.video: await analizar_video(ctx, uid, m.from_user.username or '', m.video.file_id); return
-
-        await m.reply_text(EJEMPLO_TEXTO); return
+        # Si ya fue atendido, NO mandar el texto de ejemplo (evita spam)
+        if not USUARIOS[uid].get('atendido'):
+            await m.reply_text(EJEMPLO_TEXTO)
+        return
 
     if m.chat.type == 'private':
         await m.reply_text("Elige:", reply_markup=get_menu())
