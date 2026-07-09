@@ -1,6 +1,6 @@
 import os, json, logging, unicodedata
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from telegram.ext import Application, MessageHandler, BusinessMessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes, ChatMemberHandler
+from telegram.ext import Application, MessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes, ChatMemberHandler, TypeHandler
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -135,8 +135,6 @@ Si no contesto envías cap del pago a : @YanaBiBot con estos precios."""
 
 GRATIS_TEXTO = "✨ (REGALITO) QUIERES HASTA 20 VIDEITOS GRATSS? ✨\n\nhttps://t.me/YanaBiBot\n\nPasitos súper fáciles uwu:\n1️⃣ En tu bio de TikTok pon: Tg: yanabicitasa ✨\n2️⃣ Sube una fotito de las que te envié a tu story + Frase hot 😋\n3️⃣ Mándame captura + videito cuando cumplas\n4️⃣ Me confirmas cuando llegue a 100 vistas (story) :3\n5️⃣ Disfruta de hasta 20 videitos :3 ❤️\n\n¿Te animas o ño? 🥺\n(Me avisas cuando cumplas Mor)"
 
-COMENTA_TEXTO = "Busca videos con #hormo #hot #hormonal #amigoshormo y deja comentarios bien ricos 🥵\n\nEscribe cositas como: \"¿quién?\", \"¿alguno?\", \"miren mi story\", \"ando horm...\"\n\nEntre más caliente comentes, más gente entra a verte, bebé 😏"
-
 EJEMPLO_TEXTO = "Wenas Mor, tengo varios videitos cogiendo, masturbándome, con juguetitos y mis deditos, también tengo manoseándome las tetas, y puedo cumplir fetiche dependiendo lo que envíes :3 🥵\n\n¿Quieres que te pase precios?"
 
 def get_menu():
@@ -247,23 +245,21 @@ async def todo(upd, ctx):
     def tiene(lista): return any(p in txt for p in lista)
 
     PRECIOS = ['precio','precios','costo','cuanto','cuánto','vale','valor','tarifa','cuesta','info']
-    PROMO = ['promo','promocion','promoción','promito','gratis','free','regalo','regalito','gatis']
-    PREMIUM = ['premium','premiun','premuim','premiumn','premum','pack premium']
-    PAGO = ['ya pague','pague','pagué','comprobante','transferi','deposite','pago realizado','ya quedo','listo','pagado','deposite']
-    ENCUENTRO = ['encuentro','encuentros','cita','citas','nos vemos','te veo','verte','en persona','presencial','salir','salida','salidas','conocernos','conocerte','conocer','nos conocemos','podemos vernos','ver en persona','quedar','quedamos','en vivo','cara a cara','face to face']
+    PROMO = ['promo','promocion','promoción','gratis','free','regalo']
+    PREMIUM = ['premium','premiun']
+    PAGO = ['ya pague','pague','pagué','comprobante','transferi','deposite','pago realizado','ya quedo','listo','pagado']
+    ENCUENTRO = ['encuentro','encuentros','cita','citas','salida','salidas','en persona','presencial','vernos','conocernos']
 
     if es_neg:
         if uid == ADMIN_ID: return
-
         if uid in PAGARON:
             if m.photo: await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id)
             if m.video: await analizar_video(ctx, uid, m.from_user.username or '', m.video.file_id)
             return
-
         if uid in ESPERA_PAIS:
             pais = detectar_pais(txt) or 'usa'
             USUARIOS[uid]['pais'] = pais
-            await m.reply_text(f"Perfecto mor 🥰 estos son para {'Perú' if pais=='pe' else 'México' if pais=='mx' else 'EEUU / Internacional'}:")
+            await m.reply_text(f"Perfecto mor 🥰 estos son para {'Perú' if pais=='pe' else 'México' if pais=='mx' else 'EEUU'}:")
             await m.reply_text(precio_por_pais(pais))
             if not USUARIOS[uid].get('canal'):
                 await m.reply_text(f"Únete a mi canal privado aquí mor 🔥 {LINK_CANAL}")
@@ -286,16 +282,13 @@ async def todo(upd, ctx):
 
         if m.photo: await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id); return
         if m.video: await analizar_video(ctx, uid, m.from_user.username or '', m.video.file_id); return
-
         if tiene(ENCUENTRO):
             await m.reply_text("Los encuentros son SOLO con PREMIUM mor 😏 incluye videollamada + personalizado. ¿Te paso el PREMIUM?"); return
-
         if tiene(PROMO): await enviar_gratis(m); return
         if 'sexting' in txt: await m.reply_text("Sexting va en el PREMIUM mor 🥵 ¿lo quieres?"); return
 
         if tiene(PRECIOS) or tiene(PREMIUM) or txt in ['si','ya','dale','?']:
-            if USUARIOS[uid].get('atendido'):
-                return
+            if USUARIOS[uid].get('atendido'): return
             pais = USUARIOS[uid].get('pais')
             if not pais:
                 ESPERA_PAIS[uid] = True
@@ -347,7 +340,7 @@ def main():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(MessageHandler(filters.ALL, todo))
-    app.add_handler(BusinessMessageHandler(todo))
+    app.add_handler(TypeHandler(Update, todo))
     app.add_handler(CallbackQueryHandler(btn))
     app.add_handler(ChatMemberHandler(nuevo, ChatMemberHandler.CHAT_MEMBER))
     app.run_polling(allowed_updates=['message','business_message','callback_query','chat_member'])
