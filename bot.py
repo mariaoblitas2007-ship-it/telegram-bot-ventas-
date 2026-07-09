@@ -1,6 +1,6 @@
 import os, json, logging, unicodedata
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from telegram.ext import Application, MessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes, ChatMemberHandler
+from telegram.ext import Application, MessageHandler, BusinessMessageHandler, CallbackQueryHandler, CommandHandler, filters, ContextTypes, ChatMemberHandler
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -221,6 +221,16 @@ async def enviar_gratis(m):
 async def start_cmd(upd, ctx):
     await upd.message.reply_text("Hola mor 🥵 bienvenido, elige:", reply_markup=get_menu())
 
+async def recordar(context):
+    job = context.job
+    uid = job.data['uid']
+    chat_id = job.data['chat_id']
+    if uid in PAGARON: return
+    if USUARIOS.get(uid,{}).get('respondio'): return
+    try:
+        await context.bot.send_message(chat_id, "Mor ¿sigues ahí? 👀 el PREMIUM está con descuento hoy, ¿te lo paso?")
+    except: pass
+
 async def todo(upd, ctx):
     global app_bot; app_bot = ctx.bot
     m = upd.message or upd.business_message
@@ -228,6 +238,7 @@ async def todo(upd, ctx):
     uid = m.from_user.id
     if uid not in USUARIOS: USUARIOS[uid] = {}
     USUARIOS[uid]['n'] = m.from_user.first_name
+    USUARIOS[uid]['respondio'] = True
     guardar_datos()
     es_neg = upd.business_message is not None
     txt = normalizar(m.text)
@@ -235,16 +246,15 @@ async def todo(upd, ctx):
 
     def tiene(lista): return any(p in txt for p in lista)
 
-    PRECIOS = ['precio','precios','costo','cuanto','cuánto','vale','valor','tarifa','cuesta']
+    PRECIOS = ['precio','precios','costo','cuanto','cuánto','vale','valor','tarifa','cuesta','info']
     PROMO = ['promo','promocion','promoción','promito','gratis','free','regalo','regalito','gatis']
     PREMIUM = ['premium','premiun','premuim','premiumn','premum','pack premium']
-    PAGO = ['ya pague','pague','pagué','comprobante','transferi','deposite','pago realizado','ya quedo','listo','pagado']
-    ENCUENTRO = ['encuentro','encuentros','cita','citas','nos vemos','te veo','verte','en persona','presencial','presencial nd','salir','salida','salidas','conocernos','conocerte','conocer','nos conocemos','podemos vernos','ver en persona','quedar','quedamos','en vivo','cara a cara','face to face']
+    PAGO = ['ya pague','pague','pagué','comprobante','transferi','deposite','pago realizado','ya quedo','listo','pagado','deposite']
+    ENCUENTRO = ['encuentro','encuentros','cita','citas','nos vemos','te veo','verte','en persona','presencial','salir','salida','salidas','conocernos','conocerte','conocer','nos conocemos','podemos vernos','ver en persona','quedar','quedamos','en vivo','cara a cara','face to face']
 
     if es_neg:
         if uid == ADMIN_ID: return
 
-        # >>> SI YA PAGÓ: SILENCIO TOTAL (solo reenvía fotos/videos a ti)
         if uid in PAGARON:
             if m.photo: await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id)
             if m.video: await analizar_video(ctx, uid, m.from_user.username or '', m.video.file_id)
@@ -259,7 +269,9 @@ async def todo(upd, ctx):
                 await m.reply_text(f"Únete a mi canal privado aquí mor 🔥 {LINK_CANAL}")
                 USUARIOS[uid]['canal'] = True
             USUARIOS[uid]['atendido'] = True
+            USUARIOS[uid]['respondio'] = False
             guardar_datos()
+            ctx.job_queue.run_once(recordar, 180, data={'uid':uid,'chat_id':m.chat.id}, name=f"rec_{uid}")
             del ESPERA_PAIS[uid]; return
 
         pais_directo = detectar_pais(txt)
@@ -274,11 +286,14 @@ async def todo(upd, ctx):
 
         if m.photo: await analizar_foto(ctx, uid, m.from_user.username or '', m.photo[-1].file_id); return
         if m.video: await analizar_video(ctx, uid, m.from_user.username or '', m.video.file_id); return
-        if tiene(ENCUENTRO): await m.reply_text("Si quieres un encuentro conmigo, es SOLO con el PREMIUM mor. Compra y podemos llegar a coordinar 😏 mándame la captura y hablamos"); return
+
+        if tiene(ENCUENTRO):
+            await m.reply_text("Los encuentros son SOLO con PREMIUM mor 😏 incluye videollamada + personalizado. ¿Te paso el PREMIUM?"); return
+
         if tiene(PROMO): await enviar_gratis(m); return
         if 'sexting' in txt: await m.reply_text("Sexting va en el PREMIUM mor 🥵 ¿lo quieres?"); return
 
-        if tiene(PRECIOS) or tiene(PREMIUM) or txt in ['si','ya','dale']:
+        if tiene(PRECIOS) or tiene(PREMIUM) or txt in ['si','ya','dale','?']:
             if USUARIOS[uid].get('atendido'):
                 return
             pais = USUARIOS[uid].get('pais')
@@ -291,7 +306,9 @@ async def todo(upd, ctx):
                 await m.reply_text(f"Mientras decides, entra a mi canal privado mor 🔥 {LINK_CANAL}")
                 USUARIOS[uid]['canal'] = True
             USUARIOS[uid]['atendido'] = True
+            USUARIOS[uid]['respondio'] = False
             guardar_datos()
+            ctx.job_queue.run_once(recordar, 180, data={'uid':uid,'chat_id':m.chat.id}, name=f"rec_{uid}")
             return
 
         if not USUARIOS[uid].get('atendido'):
@@ -330,9 +347,10 @@ def main():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(MessageHandler(filters.ALL, todo))
+    app.add_handler(BusinessMessageHandler(todo))
     app.add_handler(CallbackQueryHandler(btn))
     app.add_handler(ChatMemberHandler(nuevo, ChatMemberHandler.CHAT_MEMBER))
-    app.run_polling()
+    app.run_polling(allowed_updates=['message','business_message','callback_query','chat_member'])
 
 if __name__ == '__main__':
     main()
