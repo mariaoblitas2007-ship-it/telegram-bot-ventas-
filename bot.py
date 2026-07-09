@@ -135,7 +135,7 @@ def detectar_pais(t):
     t=normalizar(t)
     if any(x in t for x in ['peru']): return 'pe'
     if any(x in t for x in ['mex','mexico']): return 'mx'
-    if any(x in t for x in ['usa','eeuu','estados unidos','united','colombia','argentina','chile','ecuador','venezuela','bolivia','espana','america']): return 'usa'
+    if any(x in t for x in ['usa','eeuu','estados unidos','united','colombia','argentina','chile','ecuador','venezuela','bolivia','espana','america','espana']): return 'usa'
     return None
 def es_pago(txt):
     patrones=['yape','plin','ya te pague','te yapee','yapee','ya te transferi','transferi','deposite','comprobante','pago realizado','ya quedo','te pague','te envie']
@@ -216,7 +216,6 @@ async def todo(upd, ctx):
             ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
             del ESPERA_PAIS[uid]; return
 
-        # FIX CLAVE: si menciona país en cualquier momento, manda ese país
         nuevo_pais = detectar_pais(txt)
         if nuevo_pais:
             USUARIOS[uid]['pais']=nuevo_pais
@@ -246,8 +245,11 @@ async def todo(upd, ctx):
         if USUARIOS[uid].get('atendido'): return
 
         if not USUARIOS[uid].get('saludo_enviado'):
-            await m.reply_text(EJEMPLO_TEXTO); USUARIOS[uid]['saludo_enviado']=True; guardar_datos()
-            ESPERA_PAIS[uid]=True; await m.reply_text("Dime de dónde eres mor?\n🇵🇪 Perú\n🇲🇽 México\n🇺🇸 Otro país"); return
+            await m.reply_text(EJEMPLO_TEXTO)
+            USUARIOS[uid]['saludo_enviado']=True; guardar_datos()
+            ESPERA_PAIS[uid]=True
+            await m.reply_text("de donde eres mor?")
+            return
 
         pais=USUARIOS[uid].get('pais') or 'usa'
         await m.reply_text("Perfecto mor 🥰 estos son los precios:")
