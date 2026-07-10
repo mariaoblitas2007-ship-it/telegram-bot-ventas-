@@ -1,4 +1,4 @@
-import os, json, logging, unicodedata, time
+import os, json, logging, unicodedata
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import Application, TypeHandler
 
@@ -42,11 +42,16 @@ $600 MXN: 10 min
 🔢 CLABE:
 646180546711450910
 📝 Referencia/Concepto: yanae
+
 🇲🇽 También acepto: Transfer / Astropay
+→ Pídeme datos si usas otro método
 
 Mándame captura cuando pagues bebé 🥰
+En cuanto caiga te mando tu pack 🔥
+
 1. Pagas 2. Captura
-Si no contesto envías cap a : @YanaBiBot con estos precios."""
+
+Si no contesto envías cap del pago a : @YanaBiBot con estos precios."""
 
 PE_PRECIOS = """🛍 VIDEOS 🛒
 
@@ -65,10 +70,18 @@ PE_PRECIOS = """🛍 VIDEOS 🛒
 📼 VIDEOLLAMADAS 📼
 S/ 60: 5 min
 S/ 80: 10 min
+
 ━━━━━━━━━━━━━━━━━━━━
-923553612 YAPE/PLIN
+
+923553612
+
+YAPE/PLIN
+
+CUENTO CON REFERENCIAS
+
 1. Yapeas 2. Captura
-Si no contesto envías cap a : @YanaBiBot con estos precios."""
+
+Si no contesto envías cap del pago a : @YanaBiBot con estos precios."""
 
 USA_PRECIOS = f"""🛍 VIDEOS 🛒
 
@@ -89,10 +102,17 @@ $20 USD: 5min
 $35 USD: 10min
 
 🪙 PAGO:
-PayPal: AbigailMaximoofO / USDT
+PayPal:
+AbigailMaximoofO
+/ USDT
 Link: {LINK_PAYPAL}
-Avísame con comprobante 🥰
-Si no contesto envías cap a : @YanaBiBot con estos precios."""
+
+Avísame cuando envíes con el comprobante 🥰
+En cuanto caiga te mando tu pack 🔥
+
+1. Pagas 2. Captura
+
+Si no contesto envías cap del pago a : @YanaBiBot con estos precios."""
 
 GRATIS_TEXTO="""(REGALITO)
 ✨ QUIERES HASTA 20 VIDEITOS GRATSS? ✨
@@ -111,9 +131,12 @@ Pasitos súper fáciles uwu:
 (Revisa mi perfil)"""
 
 TEXTO_100="""Las 100 vistas son solo para que veas lo fácil que es, mor :3 💕
+
 Cuando tu story llegue a 500-1000 me avisas y te suelto tus videitos al toque 🥵
+
 Mándame videito entrando a TikTok → tu perfil → tu story → los likes, TODO seguido sin cortar. Si lo cortas se anula la promo, bebé 😘"""
 TEXTO_INTER="No hago intercambios mor 🥰 yo vendo, pero si me cumples la promo de los videitos gratis o me compras un pack te doy videitos al toque 😏"
+TEXTO_GRATIS_RECORDATORIO="tienes que cumplir con la promoción Mor 🥺"
 
 def normalizar(t): return unicodedata.normalize('NFKD',t or '').encode('ascii','ignore').decode().lower()
 def precio_por_pais(p): return PE_PRECIOS if p=='pe' else MX_PRECIOS if p=='mx' else USA_PRECIOS
@@ -123,17 +146,21 @@ def detectar_pais(t):
     if 'mex' in t: return 'mx'
     if any(x in t for x in ['usa','eeuu','colombia','argentina','chile','ecuador','venezuela','bolivia','espana']): return 'usa'
     return None
-def es_compra(t): return any(k in t for k in ['vendes','me vendes','precio','precios','cuanto cuesta','cuanto es','pasame'])
+def es_compra(t): return any(k in t for k in ['vendes','me vendes','precio','precios','cuanto cuesta','pasame'])
+def es_gratis(t): return any(k in t for k in ['video gratis','videos gratis','videito gratis','videitos gratis','regalame','me regalas','gratis'])
 def es_100(t): return ('100' in t and 'vista' in t) or 'ya cumpli' in t
-def es_pago(t): return any(k in t for k in ['yape','plin','ya te pague','te yapee','comprobante','te pague'])
-def puede_enviar(uid, key, cooldown=999999):
-    # anti-spam: si ya se envió una vez, no volver a enviar nunca
-    flags=USUARIOS[uid].setdefault('flags',{})
-    if flags.get(key): return False
-    return True
+def es_pago(t): return any(k in t for k in ['yape','plin','ya te pague','te yapee','comprobante','te pague','transferi'])
+def puede(uid,key):
+    USUARIOS[uid].setdefault('flags',{})
+    return not USUARIOS[uid]['flags'].get(key)
 
-async def notificar(tipo,uid,user,extra=""):
-    try: await app_bot.send_message(ADMIN_ID,f"{tipo} {uid} @{user} {extra}")
+def link_directo(uid, username):
+    url=f"https://t.me/{username}" if username and username!='None' else f"tg://user?id={uid}"
+    return InlineKeyboardMarkup([[InlineKeyboardButton("🔗 ABRIR CHAT DIRECTO", url=url)]])
+
+async def notificar_admin(tipo, uid, username, texto=""):
+    msg=f"{tipo}\n👤 @{username}\n🆔 <code>{uid}</code>\n💬 {texto[:120]}"
+    try: await app_bot.send_message(ADMIN_ID, msg, reply_markup=link_directo(uid,username), parse_mode='HTML')
     except: pass
 
 async def bienvenida(m):
@@ -146,50 +173,49 @@ async def todo(upd,ctx):
     global app_bot; app_bot=ctx.bot
     m=upd.message or upd.business_message
     if not m or m.from_user.is_bot: return
-    uid=m.from_user.id
+    uid=m.from_user.id; username=m.from_user.username or "None"
     USUARIOS.setdefault(uid,{}); USUARIOS[uid].setdefault('flags',{})
     txt=normalizar(m.text); raw=m.text or ""
     es_neg=upd.business_message is not None
     if es_neg and uid==ADMIN_ID: return
-    guardar_datos()
 
     if es_neg:
-        if m.photo or m.video:
-            if m.photo: await ctx.bot.send_photo(ADMIN_ID,m.photo[-1].file_id,caption=f"{uid}")
-            if m.video: await ctx.bot.send_video(ADMIN_ID,m.video[-1].file_id,caption=f"{uid}")
-            return
-        if es_pago(txt):
-            await notificar("💰 PAGO",uid,m.from_user.username,raw); PAGARON.add(uid); guardar_datos(); return
+        if m.photo: await ctx.bot.send_photo(ADMIN_ID,m.photo[-1].file_id,caption=f"📸 FOTO @{username} {uid}",reply_markup=link_directo(uid,username)); return
+        if m.video: await ctx.bot.send_video(ADMIN_ID,m.video[-1].file_id,caption=f"🎥 VIDEO @{username} {uid}",reply_markup=link_directo(uid,username)); return
+        if es_pago(txt): await notificar_admin("💰 PAGO",uid,username,raw); PAGARON.add(uid); guardar_datos(); return
         if es_100(txt):
-            if puede_enviar(uid,'v100'): await m.reply_text(TEXTO_100); USUARIOS[uid]['flags']['v100']=True
-            await notificar("100 VISTAS",uid,m.from_user.username,raw); guardar_datos(); return
+            if puede(uid,'v100'): await m.reply_text(TEXTO_100); USUARIOS[uid]['flags']['v100']=True
+            await notificar_admin("🎁 PROMO - 100 VISTAS",uid,username,raw); guardar_datos(); return
         if 'intercamb' in txt or 'cambias' in txt:
-            if puede_enviar(uid,'inter'): await m.reply_text(TEXTO_INTER); USUARIOS[uid]['flags']['inter']=True; guardar_datos()
+            if puede(uid,'inter'): await m.reply_text(TEXTO_INTER); USUARIOS[uid]['flags']['inter']=True; guardar_datos()
+            return
+
+        # NUEVO: si pide gratis después de ya haberle mandado promo
+        if es_gratis(txt):
+            if puede(uid,'bienvenida'):
+                await bienvenida(m); USUARIOS[uid]['flags']['bienvenida']=True; guardar_datos()
+            else:
+                if puede(uid,'recordatorio_gratis'):
+                    await m.reply_text(TEXTO_GRATIS_RECORDATORIO)
+                    USUARIOS[uid]['flags']['recordatorio_gratis']=True; guardar_datos()
+                # si ya se lo recordó una vez, ya no spamea más
             return
 
         p_det=detectar_pais(txt)
         if p_det: USUARIOS[uid]['pais']=p_det; guardar_datos()
-
         if uid in ESPERA_PAIS:
             p=detectar_pais(txt) or USUARIOS[uid].get('pais')
-            if p and puede_enviar(uid,'precios'):
-                await m.reply_text(precio_por_pais(p)); USUARIOS[uid]['flags']['precios']=True; del ESPERA_PAIS[uid]; guardar_datos()
+            if p and puede(uid,'precios'): await m.reply_text(precio_por_pais(p)); USUARIOS[uid]['flags']['precios']=True; del ESPERA_PAIS[uid]; guardar_datos()
             return
-
         if es_compra(txt):
             p=USUARIOS[uid].get('pais') or p_det
             if p:
-                if puede_enviar(uid,'precios'):
-                    await m.reply_text(precio_por_pais(p)); USUARIOS[uid]['flags']['precios']=True; guardar_datos()
+                if puede(uid,'precios'): await m.reply_text(precio_por_pais(p)); USUARIOS[uid]['flags']['precios']=True; guardar_datos()
                 return
             else:
-                if puede_enviar(uid,'preg_pais'):
-                    await m.reply_text("de donde eres mor?:3"); USUARIOS[uid]['flags']['preg_pais']=True; ESPERA_PAIS[uid]=True; guardar_datos()
+                if puede(uid,'preg_pais'): await m.reply_text("de donde eres mor?:3"); USUARIOS[uid]['flags']['preg_pais']=True; ESPERA_PAIS[uid]=True; guardar_datos()
                 return
-
-        if puede_enviar(uid,'bienvenida'):
-            await bienvenida(m); USUARIOS[uid]['flags']['bienvenida']=True; guardar_datos()
-            return
+        if puede(uid,'bienvenida'): await bienvenida(m); USUARIOS[uid]['flags']['bienvenida']=True; guardar_datos()
 
 def main():
     cargar_datos()
