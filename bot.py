@@ -12,10 +12,6 @@ LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 
 USUARIOS = {}; PAGARON = set(); REFERIDOS = {}; INVITADOS = {}; ESPERA_PAIS = {}; DATA_FILE = "data.json"
 
-try:
-    import pytesseract; from PIL import Image; HAS_OCR = True
-except: HAS_OCR = False
-
 def cargar_datos():
     global USUARIOS, PAGARON, REFERIDOS, INVITADOS
     if os.path.exists(DATA_FILE):
@@ -123,7 +119,6 @@ En cuanto caiga te mando tu pack 🔥
 Si no contesto envías cap del pago a : @YanaBiBot con estos precios."""
 
 GRATIS_TEXTO = "✨ (REGALITO) QUIERES HASTA 20 VIDEITOS GRATSS? ✨\n\nhttps://t.me/YanaBiBot\n\nPasitos súper fáciles uwu:\n1️⃣ En tu bio de TikTok pon: Tg: yanabicitasa ✨\n2️⃣ Sube una fotito de las que te envié a tu story + Frase hot 😋\n3️⃣ Mándame captura + videito cuando cumplas\n4️⃣ Me confirmas cuando llegue a 100 vistas (story) :3\n5️⃣ Disfruta de hasta 20 videitos :3 ❤️\n\n¿Te animas o ño? 🥺\n(Me avisas cuando cumplas Mor)"
-EJEMPLO_TEXTO = "Wenas Mor, tengo varios videitos cogiendo, masturbándome, con juguetitos y mis deditos, también tengo manoseándome las tetas, y puedo cumplir fetiche dependiendo lo que envíes :3 🥵\n\n¿Quieres que te pase precios?"
 
 def get_menu():
     return InlineKeyboardMarkup([[InlineKeyboardButton("💎 COMPRAR",callback_data='comprar')],[InlineKeyboardButton("🎁 GRATIS",callback_data='gratis')],[InlineKeyboardButton("🔗 MI LINK",callback_data='milink')],[InlineKeyboardButton("📊 RANKING",callback_data='ranking')],[InlineKeyboardButton("🔥 Canal",url=LINK_CANAL)]])
@@ -135,7 +130,7 @@ def detectar_pais(t):
     t=normalizar(t)
     if any(x in t for x in ['peru']): return 'pe'
     if any(x in t for x in ['mex','mexico']): return 'mx'
-    if any(x in t for x in ['usa','eeuu','estados unidos','united','colombia','argentina','chile','ecuador','venezuela','bolivia','espana','america','espana']): return 'usa'
+    if any(x in t for x in ['usa','eeuu','estados unidos','united','colombia','argentina','chile','ecuador','venezuela','bolivia','espana','america']): return 'usa'
     return None
 def es_pago(txt):
     patrones=['yape','plin','ya te pague','te yapee','yapee','ya te transferi','transferi','deposite','comprobante','pago realizado','ya quedo','te pague','te envie']
@@ -163,10 +158,19 @@ async def analizar_video(ctx, uid, user, fid):
         kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 ABRIR CHAT", url=url)]])
         await ctx.bot.send_video(ADMIN_ID, fid, caption=f"VIDEO RECIBIDO\n👤 {username}\n🆔 <code>{uid}</code>", reply_markup=kb, parse_mode='HTML')
     except Exception as e: logger.error(e)
+
 async def enviar_gratis(m):
-    try: await m.reply_media_group([InputMediaPhoto(open('fotitos1.JPG','rb')),InputMediaPhoto(open('fotitos2.JPG','rb')),InputMediaPhoto(open('fotitos3.JPG','rb')),InputMediaPhoto(open('fotitos4.JPG','rb')),InputMediaPhoto(open('fotitos5.JPG','rb'))])
+    try:
+        await m.reply_media_group([
+            InputMediaPhoto(open('fotitos1.JPG','rb')),
+            InputMediaPhoto(open('fotitos2.JPG','rb')),
+            InputMediaPhoto(open('fotitos3.JPG','rb')),
+            InputMediaPhoto(open('fotitos4.JPG','rb')),
+            InputMediaPhoto(open('fotitos5.JPG','rb'))
+        ])
     except: pass
     await m.reply_text(GRATIS_TEXTO)
+
 async def start_cmd(upd, ctx): await upd.message.reply_text("Hola mor 🥵 bienvenido, elige:", reply_markup=get_menu())
 
 async def recordar(context):
@@ -244,8 +248,9 @@ async def todo(upd, ctx):
         if 'sexting' in txt: await m.reply_text("Sexting va en el PREMIUM mor 🥵 ¿lo quieres?"); return
         if USUARIOS[uid].get('atendido'): return
 
+        # PRIMER MENSAJE = PROMO + 5 FOTOS
         if not USUARIOS[uid].get('saludo_enviado'):
-            await m.reply_text(EJEMPLO_TEXTO)
+            await enviar_gratis(m)
             USUARIOS[uid]['saludo_enviado']=True; guardar_datos()
             ESPERA_PAIS[uid]=True
             await m.reply_text("de donde eres mor?")
