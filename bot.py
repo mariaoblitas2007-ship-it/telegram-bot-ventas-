@@ -132,6 +132,10 @@ def detectar_pais(t):
     if any(x in t for x in ['mex','mexico']): return 'mx'
     if any(x in t for x in ['usa','eeuu','estados unidos','united','colombia','argentina','chile','ecuador','venezuela','bolivia','espana','america']): return 'usa'
     return None
+def es_hot(txt):
+    # mensaje caliente o que pide precios
+    kws = ['precio','precios','cuanto','cuesta','costo','pack','video','videos','videito','videitos','foto','fotos','fotito','desnuda','coger','cogiendo','masturbar','masturbando','tetas','culito','quiero','manda','mandame','pasame','envia','comprar','quiero comprar']
+    return any(k in txt for k in kws)
 def es_pago(txt):
     patrones=['yape','plin','ya te pague','te yapee','yapee','ya te transferi','transferi','deposite','comprobante','pago realizado','ya quedo','te pague','te envie']
     return any(p in txt for p in patrones) or bool(re.search(r'(ya|listo).*(pague|yapee|plin|transfer)', txt))
@@ -169,8 +173,9 @@ async def enviar_bienvenida(m):
             InputMediaPhoto(open('fotitos5.JPG','rb'))
         ])
     except: pass
-    texto = f"{GRATIS_TEXTO}\n\n🔥 Mi canal privado aquí mor 👇\n{LINK_CANAL}\n\nde donde eres mor?"
-    await m.reply_text(texto)
+    await m.reply_text(GRATIS_TEXTO)
+    await m.reply_text(f"🔥 Mi canal privado aquí mor 👇\n{LINK_CANAL}")
+    await m.reply_text("de donde eres mor?")
 
 async def enviar_gratis(m):
     try:
@@ -223,18 +228,38 @@ async def todo(upd, ctx):
             if m.video: await analizar_video(ctx,uid,m.from_user.username or '',m.video.file_id)
             return
 
+        # ESPERANDO PAIS -> solo manda precios si dice pais o mensaje hot
         if uid in ESPERA_PAIS:
-            pais=detectar_pais(txt) or USUARIOS[uid].get('pais') or 'usa'
-            USUARIOS[uid]['pais']=pais
-            await m.reply_text(precio_por_pais(pais))
-            USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; USUARIOS[uid]['saludo_enviado']=True; guardar_datos()
-            ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
-            del ESPERA_PAIS[uid]; return
+            pais = detectar_pais(txt)
+            if pais:
+                USUARIOS[uid]['pais']=pais
+                await m.reply_text(precio_por_pais(pais))
+                USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; guardar_datos()
+                ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
+                del ESPERA_PAIS[uid]; return
+            if es_hot(txt):
+                pais_def = USUARIOS[uid].get('pais') or 'usa'
+                await m.reply_text(precio_por_pais(pais_def))
+                USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; guardar_datos()
+                ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
+                del ESPERA_PAIS[uid]; return
+            # si no es pais ni hot, no manda precios, solo espera
+            return
 
+        # Si en cualquier momento menciona pais
         nuevo_pais = detectar_pais(txt)
         if nuevo_pais:
             USUARIOS[uid]['pais']=nuevo_pais
             await m.reply_text(precio_por_pais(nuevo_pais))
+            USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; USUARIOS[uid]['saludo_enviado']=True; guardar_datos()
+            ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
+            if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
+            return
+
+        # Si pide precios con mensaje caliente
+        if es_hot(txt):
+            pais_def = USUARIOS[uid].get('pais') or 'usa'
+            await m.reply_text(precio_por_pais(pais_def))
             USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; USUARIOS[uid]['saludo_enviado']=True; guardar_datos()
             ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
             if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
@@ -265,10 +290,7 @@ async def todo(upd, ctx):
             ESPERA_PAIS[uid]=True
             return
 
-        pais=USUARIOS[uid].get('pais') or 'usa'
-        await m.reply_text(precio_por_pais(pais))
-        USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; guardar_datos()
-        ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
+        # Ya no manda precios por defecto si no es pais ni hot
         return
 
     if m.chat.type=='private': await m.reply_text("Elige:", reply_markup=get_menu())
