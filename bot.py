@@ -159,6 +159,19 @@ async def analizar_video(ctx, uid, user, fid):
         await ctx.bot.send_video(ADMIN_ID, fid, caption=f"VIDEO RECIBIDO\n👤 {username}\n🆔 <code>{uid}</code>", reply_markup=kb, parse_mode='HTML')
     except Exception as e: logger.error(e)
 
+async def enviar_bienvenida(m):
+    try:
+        await m.reply_media_group([
+            InputMediaPhoto(open('fotitos1.JPG','rb')),
+            InputMediaPhoto(open('fotitos2.JPG','rb')),
+            InputMediaPhoto(open('fotitos3.JPG','rb')),
+            InputMediaPhoto(open('fotitos4.JPG','rb')),
+            InputMediaPhoto(open('fotitos5.JPG','rb'))
+        ])
+    except: pass
+    texto = f"{GRATIS_TEXTO}\n\n🔥 Mi canal privado aquí mor 👇\n{LINK_CANAL}\n\nde donde eres mor?"
+    await m.reply_text(texto)
+
 async def enviar_gratis(m):
     try:
         await m.reply_media_group([
@@ -213,9 +226,7 @@ async def todo(upd, ctx):
         if uid in ESPERA_PAIS:
             pais=detectar_pais(txt) or USUARIOS[uid].get('pais') or 'usa'
             USUARIOS[uid]['pais']=pais
-            await m.reply_text("Perfecto mor 🥰 estos son los precios:")
             await m.reply_text(precio_por_pais(pais))
-            if not USUARIOS[uid].get('canal'): await m.reply_text(f"Únete a mi canal privado aquí mor 🔥 {LINK_CANAL}"); USUARIOS[uid]['canal']=True
             USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; USUARIOS[uid]['saludo_enviado']=True; guardar_datos()
             ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
             del ESPERA_PAIS[uid]; return
@@ -223,9 +234,7 @@ async def todo(upd, ctx):
         nuevo_pais = detectar_pais(txt)
         if nuevo_pais:
             USUARIOS[uid]['pais']=nuevo_pais
-            await m.reply_text("Perfecto mor 🥰 estos son los precios:")
             await m.reply_text(precio_por_pais(nuevo_pais))
-            if not USUARIOS[uid].get('canal'): await m.reply_text(f"Únete a mi canal privado aquí mor 🔥 {LINK_CANAL}"); USUARIOS[uid]['canal']=True
             USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; USUARIOS[uid]['saludo_enviado']=True; guardar_datos()
             ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
             if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
@@ -248,16 +257,15 @@ async def todo(upd, ctx):
         if 'sexting' in txt: await m.reply_text("Sexting va en el PREMIUM mor 🥵 ¿lo quieres?"); return
         if USUARIOS[uid].get('atendido'): return
 
-        # PRIMER MENSAJE = PROMO + 5 FOTOS
         if not USUARIOS[uid].get('saludo_enviado'):
-            await enviar_gratis(m)
-            USUARIOS[uid]['saludo_enviado']=True; guardar_datos()
+            await enviar_bienvenida(m)
+            USUARIOS[uid]['saludo_enviado']=True
+            USUARIOS[uid]['canal']=True
+            guardar_datos()
             ESPERA_PAIS[uid]=True
-            await m.reply_text("de donde eres mor?")
             return
 
         pais=USUARIOS[uid].get('pais') or 'usa'
-        await m.reply_text("Perfecto mor 🥰 estos son los precios:")
         await m.reply_text(precio_por_pais(pais))
         USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; guardar_datos()
         ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
