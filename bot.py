@@ -10,7 +10,7 @@ ADMIN_ID = 8783569348
 LINK_CANAL = "https://t.me/+zt1RzGevdHBjMDgx"
 LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 
-USUARIOS = {}; PAGARON = set(); REFERIDOS = {}; INVITADOS = {}; ESPERA_PAIS = {}; DATA_FILE = "data.json"
+USUARIOS = {}; PAGARON = set(); REFERIDOS = {}; INVITADOS = {}; DATA_FILE = "data.json"
 
 def cargar_datos():
     global USUARIOS, PAGARON, REFERIDOS, INVITADOS
@@ -118,7 +118,27 @@ En cuanto caiga te mando tu pack 🔥
 
 Si no contesto envías cap del pago a : @YanaBiBot con estos precios."""
 
-GRATIS_TEXTO = "✨ (REGALITO) QUIERES HASTA 20 VIDEITOS GRATSS? ✨\n\nhttps://t.me/YanaBiBot\n\nPasitos súper fáciles uwu:\n1️⃣ En tu bio de TikTok pon: Tg: yanabicitasa ✨\n2️⃣ Sube una fotito de las que te envié a tu story + Frase hot 😋\n3️⃣ Mándame captura + videito cuando cumplas\n4️⃣ Me confirmas cuando llegue a 100 vistas (story) :3\n5️⃣ Disfruta de hasta 20 videitos :3 ❤️\n\n¿Te animas o ño? 🥺\n(Me avisas cuando cumplas Mor)"
+GRATIS_TEXTO = """(REGALITO)
+✨ QUIERES HASTA 20 VIDEITOS GRATSS? ✨
+
+https://t.me/YanaBiBot
+
+Pasitos súper fáciles uwu:
+1️⃣ En tu bio de TikTok pon: Tg: yanabicitasa ✨
+2️⃣ Sube una fotito de las que te envié a tu story + Frase hot 😋
+3️⃣ Mándame captura + videito cuando cumplas
+4️⃣ Me confirmas cuando llegue a 100 vistas(story) :3
+5️⃣ Disfruta de hasta 20 videitos :3 ❤️‍🔥
+
+¿Te animas o ño? 🥺
+(Me avisas diciendo: ya cumpli con las 100 vistas )
+(Revisa mi perfil)"""
+
+TEXTO_100_VISTAS = """Las 100 vistas son solo para que veas lo fácil que es, mor :3 💕
+
+Cuando tu story llegue a 500-1000 me avisas y te suelto tus videitos al toque 🥵
+
+Mándame videito entrando a TikTok → tu perfil → tu story → los likes, TODO seguido sin cortar. Si lo cortas se anula la promo, bebé 😘"""
 
 def get_menu():
     return InlineKeyboardMarkup([[InlineKeyboardButton("💎 COMPRAR",callback_data='comprar')],[InlineKeyboardButton("🎁 GRATIS",callback_data='gratis')],[InlineKeyboardButton("🔗 MI LINK",callback_data='milink')],[InlineKeyboardButton("📊 RANKING",callback_data='ranking')],[InlineKeyboardButton("🔥 Canal",url=LINK_CANAL)]])
@@ -133,14 +153,13 @@ def detectar_pais(t):
     if any(x in t for x in ['usa','eeuu','estados unidos','united','colombia','argentina','chile','ecuador','venezuela','bolivia','espana','america']): return 'usa'
     return None
 def es_hot(txt):
-    # mensaje caliente o que pide precios
-    kws = ['precio','precios','cuanto','cuesta','costo','pack','video','videos','videito','videitos','foto','fotos','fotito','desnuda','coger','cogiendo','masturbar','masturbando','tetas','culito','quiero','manda','mandame','pasame','envia','comprar','quiero comprar']
+    kws = ['precio','precios','cuanto','cuesta','costo','pack','video','videos','videito','videitos','foto','fotos','desnuda','coger','cogiendo','masturbar','tetas','culito','quiero','manda','comprar','cuanto cobras']
     return any(k in txt for k in kws)
+def es_100_vistas(txt):
+    return ('100' in txt and 'vista' in txt) or ('cumpli' in txt and '100' in txt) or 'ya cumpli con las 100 vistas' in txt
 def es_pago(txt):
-    patrones=['yape','plin','ya te pague','te yapee','yapee','ya te transferi','transferi','deposite','comprobante','pago realizado','ya quedo','te pague','te envie']
-    return any(p in txt for p in patrones) or bool(re.search(r'(ya|listo).*(pague|yapee|plin|transfer)', txt))
-def es_cumplio(txt):
-    return any(p in txt for p in ['cumpli','cumplí','ya hice','hice mi parte','ya di publicidad','te di publicidad','ahora te toca','manda los vidy','porfaaa'])
+    patrones=['yape','plin','ya te pague','te yapee','yapee','ya te transferi','transferi','deposite','comprobante','pago realizado','ya quedo','te pague']
+    return any(p in txt for p in patrones)
 
 async def notificar_admin(tipo, uid, user, extra=""):
     username = f"@{user}" if user else "sin @"
@@ -152,15 +171,15 @@ async def notificar_admin(tipo, uid, user, extra=""):
 
 async def analizar_foto(ctx, uid, user, fid):
     try:
-        username = f"@{user}" if user else "sin @"; url = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
+        url = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
         kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 ABRIR CHAT", url=url)]])
-        await ctx.bot.send_photo(ADMIN_ID, fid, caption=f"FOTO RECIBIDA\n👤 {username}\n🆔 <code>{uid}</code>", reply_markup=kb, parse_mode='HTML')
+        await ctx.bot.send_photo(ADMIN_ID, fid, caption=f"FOTO RECIBIDA\n🆔 <code>{uid}</code>", reply_markup=kb, parse_mode='HTML')
     except Exception as e: logger.error(e)
 async def analizar_video(ctx, uid, user, fid):
     try:
-        username = f"@{user}" if user else "sin @"; url = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
+        url = f"https://t.me/{user}" if user else f"tg://user?id={uid}"
         kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 ABRIR CHAT", url=url)]])
-        await ctx.bot.send_video(ADMIN_ID, fid, caption=f"VIDEO RECIBIDO\n👤 {username}\n🆔 <code>{uid}</code>", reply_markup=kb, parse_mode='HTML')
+        await ctx.bot.send_video(ADMIN_ID, fid, caption=f"VIDEO RECIBIDO\n🆔 <code>{uid}</code>", reply_markup=kb, parse_mode='HTML')
     except Exception as e: logger.error(e)
 
 async def enviar_bienvenida(m):
@@ -175,7 +194,6 @@ async def enviar_bienvenida(m):
     except: pass
     await m.reply_text(GRATIS_TEXTO)
     await m.reply_text(f"🔥 Mi canal privado aquí mor 👇\n{LINK_CANAL}")
-    await m.reply_text("de donde eres mor?")
 
 async def enviar_gratis(m):
     try:
@@ -194,8 +212,7 @@ async def start_cmd(upd, ctx): await upd.message.reply_text("Hola mor 🥵 bienv
 async def recordar(context):
     uid=context.job.data['uid']; chat_id=context.job.data['chat_id']
     bc_id=context.job.data.get('business_connection_id')
-    if uid in PAGARON: return
-    if USUARIOS.get(uid,{}).get('respondio'): return
+    if uid in PAGARON or USUARIOS.get(uid,{}).get('respondio'): return
     try:
         if bc_id:
             await context.bot.send_message(chat_id, "sigues ahí? 🥹", business_connection_id=bc_id)
@@ -203,8 +220,6 @@ async def recordar(context):
             await context.bot.send_message(chat_id, "Mor si mandas el PREMIUM hoy te doy el DOBLE de contenido 😍 20 vds extra + 2 personalizados solo por hoy, ¿te lo aparto?", business_connection_id=bc_id)
         else:
             await context.bot.send_message(chat_id, "sigues ahí? 🥹")
-            await asyncio.sleep(1.5)
-            await context.bot.send_message(chat_id, "Mor si mandas el PREMIUM hoy te doy el DOBLE de contenido 😍 20 vds extra + 2 personalizados solo por hoy, ¿te lo aparto?")
         USUARIOS[uid]['atendido']=True; guardar_datos()
     except: pass
 
@@ -218,7 +233,7 @@ async def todo(upd, ctx):
     es_neg=upd.business_message is not None
     txt=normalizar(m.text); raw=m.text or ""
     def tiene(l): return any(p in txt for p in l)
-    PROMO=['promo','promocion','gratis','free']; ENCUENTRO=['encuentro','cita','en persona','vernos']
+    PROMO=['promo','promocion','free']; ENCUENTRO=['encuentro','cita','en persona','vernos']
     bc_id = getattr(m, 'business_connection_id', None)
 
     if es_neg:
@@ -228,69 +243,48 @@ async def todo(upd, ctx):
             if m.video: await analizar_video(ctx,uid,m.from_user.username or '',m.video.file_id)
             return
 
-        # ESPERANDO PAIS -> solo manda precios si dice pais o mensaje hot
-        if uid in ESPERA_PAIS:
-            pais = detectar_pais(txt)
-            if pais:
-                USUARIOS[uid]['pais']=pais
-                await m.reply_text(precio_por_pais(pais))
-                USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; guardar_datos()
-                ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
-                del ESPERA_PAIS[uid]; return
-            if es_hot(txt):
-                pais_def = USUARIOS[uid].get('pais') or 'usa'
-                await m.reply_text(precio_por_pais(pais_def))
-                USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; guardar_datos()
-                ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
-                del ESPERA_PAIS[uid]; return
-            # si no es pais ni hot, no manda precios, solo espera
-            return
-
-        # Si en cualquier momento menciona pais
-        nuevo_pais = detectar_pais(txt)
-        if nuevo_pais:
-            USUARIOS[uid]['pais']=nuevo_pais
-            await m.reply_text(precio_por_pais(nuevo_pais))
-            USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; USUARIOS[uid]['saludo_enviado']=True; guardar_datos()
-            ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
-            if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
-            return
-
-        # Si pide precios con mensaje caliente
-        if es_hot(txt):
-            pais_def = USUARIOS[uid].get('pais') or 'usa'
-            await m.reply_text(precio_por_pais(pais_def))
-            USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; USUARIOS[uid]['saludo_enviado']=True; guardar_datos()
-            ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
-            if uid in ESPERA_PAIS: del ESPERA_PAIS[uid]
-            return
-
-        if es_pago(txt) or es_cumplio(txt):
-            tipo="💰 PAGO" if es_pago(txt) else "⚠️ DICE QUE CUMPLIO"
-            await notificar_admin(tipo, uid, m.from_user.username, f"💬 {raw[:80]}")
-            PAGARON.add(uid); USUARIOS[uid]['atendido']=True; USUARIOS[uid]['saludo_enviado']=True; guardar_datos(); return
-
         if m.photo:
             await analizar_foto(ctx,uid,m.from_user.username or '',m.photo[-1].file_id)
-            USUARIOS[uid]['atendido']=True; USUARIOS[uid]['saludo_enviado']=True; guardar_datos(); return
+            USUARIOS[uid]['atendido']=True; guardar_datos(); return
         if m.video:
             await analizar_video(ctx,uid,m.from_user.username or '',m.video.file_id)
-            USUARIOS[uid]['atendido']=True; USUARIOS[uid]['saludo_enviado']=True; guardar_datos(); return
+            USUARIOS[uid]['atendido']=True; guardar_datos(); return
+
+        if es_100_vistas(txt):
+            await m.reply_text(TEXTO_100_VISTAS)
+            USUARIOS[uid]['atendido']=True; guardar_datos(); return
+
+        if es_pago(txt):
+            await notificar_admin("💰 PAGO", uid, m.from_user.username, f"💬 {raw[:80]}")
+            PAGARON.add(uid); USUARIOS[uid]['atendido']=True; guardar_datos(); return
 
         if tiene(ENCUENTRO): await m.reply_text("Los encuentros son SOLO con PREMIUM mor 😏 incluye videollamada + personalizado. ¿Te paso el PREMIUM?"); return
         if tiene(PROMO): await enviar_gratis(m); return
         if 'sexting' in txt: await m.reply_text("Sexting va en el PREMIUM mor 🥵 ¿lo quieres?"); return
+
+        # Detecta pais si lo dice voluntariamente
+        pais = detectar_pais(txt)
+        if pais:
+            USUARIOS[uid]['pais']=pais
+            await m.reply_text(precio_por_pais(pais))
+            USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; guardar_datos()
+            ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
+            return
+
+        # Solo si muestra interés en comprar
+        if es_hot(txt):
+            pais_def = USUARIOS[uid].get('pais') or 'usa'
+            await m.reply_text(precio_por_pais(pais_def))
+            USUARIOS[uid]['atendido']=True; USUARIOS[uid]['respondio']=False; guardar_datos()
+            ctx.job_queue.run_once(recordar, 300, data={'uid':uid,'chat_id':m.chat.id,'business_connection_id':bc_id}, name=f"rec_{uid}")
+            return
+
         if USUARIOS[uid].get('atendido'): return
 
         if not USUARIOS[uid].get('saludo_enviado'):
             await enviar_bienvenida(m)
-            USUARIOS[uid]['saludo_enviado']=True
-            USUARIOS[uid]['canal']=True
-            guardar_datos()
-            ESPERA_PAIS[uid]=True
+            USUARIOS[uid]['saludo_enviado']=True; USUARIOS[uid]['canal']=True; guardar_datos()
             return
-
-        # Ya no manda precios por defecto si no es pais ni hot
         return
 
     if m.chat.type=='private': await m.reply_text("Elige:", reply_markup=get_menu())
@@ -301,7 +295,7 @@ async def btn(upd, ctx):
     elif q.data=='pe': await q.edit_message_text(PE_PRECIOS)
     elif q.data=='mx': await q.edit_message_text(MX_PRECIOS)
     elif q.data=='usa': await q.edit_message_text(USA_PRECIOS)
-    elif q.data=='gratis': await q.edit_message_text("Escribe 'gratis' a @yanabicitasa")
+    elif q.data=='gratis': await q.edit_message_text(GRATIS_TEXTO)
     elif q.data=='milink':
         link=f"https://t.me/YanaBiBot?start={q.from_user.id}"; REFERIDOS[q.from_user.id]={'link':link}; guardar_datos(); await q.edit_message_text(f"Tu link:\n{link}")
     elif q.data=='ranking':
