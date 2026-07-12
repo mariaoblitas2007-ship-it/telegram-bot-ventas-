@@ -1,4 +1,4 @@
-# GRATIS CON LINK DEL CANAL + PASOS FACILES + SIN REPETIR MENSAJE
+# DEFINITIVO - SIN SPAM - SIN REPETIR - SOLO PERU/MEX + OTROS
 import os, json, logging, time, unicodedata, re
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
@@ -9,33 +9,30 @@ ADMIN_ID = 8783569348
 DATA_FILE = "data.json"
 USUARIOS = {}; ESPERA_PAIS = {}
 
-CANAL_LINK = "https://t.me/Yanabicitasa" # <-- pon tu canal aquí
+CANAL_LINK = "https://t.me/Yanabicitasa"
 
 GRATIS_TEXTO = f"""✨ ¿Quieres verme cogiendo y moviendo las ttas? 👀💕 ✨
 
-Te lo regalo mor, es súper fácil:
+Te lo regalo mor, es fácil:
 
-1️⃣ Sube una de las 5 fotitos a tu historia 🥺 (que dure 24h)
+1️⃣ Sube una de las 5 fotitos a tu historia 🥺 (24h)
 
-2️⃣ Ve a TikTok, busca videitos hormonales y comenta cosas como:
-   👉 alguien?, Revisa mi story, busco nv, yo si cumplo 🫣 y cositas así
+2️⃣ Ve a TikTok, busca videitos hormonales y comenta:
+   alguien?, Revisa mi story, busco nv, yo si cumplo 🫣
 
-3️⃣ Cuando tu historia llegue a 100 vistas, mándame captura grabando seguido:
-   TikTok → tu perfil → tu historia → likes, todo sin cortar 🥵
+3️⃣ Cuando llegues a 100 vistas mándame captura grabando seguido sin cortar 🥵
 
 Verifico y te suelto los videitos gratis :3
 
-📢 Donde respondo más rápido y subo todo:
+📢 Mi canal:
 {CANAL_LINK}"""
 
 GRATIS_RECORDATORIO = "ya te mande como conseguir mis videitos gratis mor 🥺💦"
 PREGUNTA_PAIS = "De dónde eres Mor?"
-PREGUNTA_PAIS_AYUDA = "Dime de qué país eres mor? 🙈"
 UPSELL_PICANTE = """Si pagas ahora mismo mor te mando extras bien ricos 😝🔥
 dependiendo lo que elijas te sorprendo con más regalitos :3
 solo si es ahora, después ya no"""
 TEXTO_100_A_500 = """Cuando tu story llegue a 500-1000 me avisas y te suelto tus videitos al toque 🥵
-
 Mándame videito entrando a TikTok → tu perfil → tu story → los likes, TODO seguido sin cortar. Si lo cortas se anula la promo, bebé 😘"""
 
 MX_PRECIOS = """🛍 <b>VIDEOS</b> 🛒
@@ -75,38 +72,47 @@ def normalizar(t):
     if not t: return ""
     t=unicodedata.normalize('NFKD',t).encode('ascii','ignore').decode().lower()
     return re.sub(r'[^\w\s]',' ',t)
+
 def detectar_pais(t):
     t=normalizar(t)
-    if any(x in t for x in ['peru','lima']): return 'pe'
-    if any(x in t for x in ['mexico','mx']): return 'mx'
-    return 'usa' if any(x in t for x in ['colombia','argentina','chile','usa','eeuu','espana']) else None
+    mx=['mexico','mx','cdmx','jalisco','guadalajara','monterrey','nuevo leon','puebla','cancun','quintana roo','veracruz','yucatan','merida','tijuana','sinaloa','sonora','chihuahua','oaxaca','chiapas','guanajuato','queretaro','aguascalientes','baja','toluca','culiacan']
+    pe=['peru','pe','lima','arequipa','trujillo','chiclayo','lambayeque','piura','cusco','cuzco','ica','tacna','puno','ayacucho','cajamarca','chimbote','huancayo','junin','iquitos','loreto','huanuco','tarapoto','pucallpa','tumbes','moquegua','huacho']
+    if any(x in t for x in mx): return 'mx'
+    if any(x in t for x in pe): return 'pe'
+    if len(t) >= 3: return 'usa' # Colombia, Chile, Argentina, etc = Otros
+    return None
+
 def detectar_intencion(txt,cap=""):
     t=normalizar(f"{txt} {cap}")
-    if any(k in t for k in ['vendes','vende','quiero conte','conte','contenido','pack','precio','precios','presio','cuanto','cuánto']): return "comprar"
+    if any(k in t for k in ['vendes','vende','quiero conte','conte','contenido','pack','precio','precios','presio','cuanto']): return "comprar"
     if "500" in t or "1000" in t: return "vistas500"
     if "100" in t: return "vistas100"
     if any(x in t for x in ['prueba','vistas','cumpli']): return "prueba"
     if any(x in t for x in ['gratis','promo']): return "promo"
     return "otro"
 
+# FIX REAL ANTI-SPAM
 def puede_enviar(uid, tipo, cd):
     ahora=time.time()
     USUARIOS.setdefault(uid,{}).setdefault('antispam',{})
     if not isinstance(USUARIOS[uid]['antispam'], dict): USUARIOS[uid]['antispam']={}
     ultimo = USUARIOS[uid]['antispam'].get(tipo, 0)
     if ahora - ultimo < cd: return False
-    USUARIOS[uid]['antispam']=ahora
+    USUARIOS[uid]['antispam'][tipo] = ahora # FIX: antes borraba el dict
     return True
 
 async def reply_once(m, uid, tipo, texto, **kwargs):
-    enviados = USUARIOS[uid].get('enviados_lista', [])
-    if texto in enviados and tipo in ["gratis_recordatorio","vivo"]:
+    # NUNCA repite el mismo texto en el mismo chat
+    USUARIOS[uid].setdefault('historial_textos', [])
+    if texto in USUARIOS[uid]['historial_textos']:
         return False
-    if not puede_enviar(uid, tipo, kwargs.pop('cd', 20)):
+    cd = kwargs.pop('cd', 600)
+    if not puede_enviar(uid, tipo, cd):
         return False
     await m.reply_text(texto, **kwargs)
-    enviados.append(texto)
-    USUARIOS[uid]['enviados_lista'] = enviados[-10:]
+    USUARIOS[uid]['historial_textos'].append(texto)
+    if len(USUARIOS[uid]['historial_textos']) > 15:
+        USUARIOS[uid]['historial_textos'] = USUARIOS[uid]['historial_textos'][-15:]
     return True
 
 def link_directo(uid,un): return f"https://t.me/{un}" if un!="None" else f"tg://user?id={uid}"
@@ -140,21 +146,19 @@ async def btn(u,c):
     if d=='volver': await q.edit_message_text("¿Qué quieres mor? :3", reply_markup=get_menu())
     elif d=='comprar':
         if USUARIOS[uid].get('pais_guardado'):
-            await q.edit_message_text(precio_por_pais(USUARIOS[uid]['pais_guardado']), parse_mode='HTML', disable_web_page_preview=False, reply_markup=get_volver())
-            return
+            await q.edit_message_text(precio_por_pais(USUARIOS[uid]['pais_guardado']), parse_mode='HTML', disable_web_page_preview=False, reply_markup=get_volver()); return
         await q.edit_message_text("De donde eres mor 👀✨", reply_markup=get_precios())
     elif d in ['pe','mx','usa']:
         USUARIOS[uid]['pais_guardado']=d
         await q.edit_message_text(precio_por_pais(d), parse_mode='HTML', disable_web_page_preview=False, reply_markup=get_volver())
         if not USUARIOS[uid]['flags'].get('upsell'):
-            await q.message.reply_text(UPSELL_PICANTE, reply_markup=get_volver())
-            USUARIOS[uid]['flags']['upsell']=True
+            await q.message.reply_text(UPSELL_PICANTE, reply_markup=get_volver()); USUARIOS[uid]['flags']['upsell']=True
     elif d=='gratis':
         if not USUARIOS[uid]['flags'].get('gratis_enviado'):
             await enviar_5_fotos(q.message); await q.message.reply_text(GRATIS_TEXTO, reply_markup=get_volver(), disable_web_page_preview=False)
             USUARIOS[uid]['flags']['gratis_enviado']=True
         else:
-            await reply_once(q.message, uid, "gratis_recordatorio", GRATIS_RECORDATORIO, cd=600, reply_markup=get_volver())
+            await reply_once(q.message, uid, "gratis_recordatorio", GRATIS_RECORDATORIO, cd=999, reply_markup=get_volver())
 
 async def handle_all(update, context):
     m = update.business_message or update.message
@@ -163,12 +167,11 @@ async def handle_all(update, context):
     es_neg = update.business_message is not None
     if es_neg and uid==ADMIN_ID: return
     USUARIOS.setdefault(uid,{}); USUARIOS[uid].setdefault('flags',{})
-    if time.time()-USUARIOS[uid].get('ultimo',0) < 0.8: return
+    if time.time()-USUARIOS[uid].get('ultimo',0) < 1: return
     USUARIOS[uid]['ultimo']=time.time()
     if USUARIOS[uid]['flags'].get('pausado'): return
     if USUARIOS[uid]['flags'].get('pausado_foto'):
-        if not any(x in normalizar(raw+" "+cap) for x in ['100','500','vistas','prueba','gratis','precio']):
-            return
+        if not any(x in normalizar(raw+" "+cap) for x in ['100','500','vistas','prueba','gratis','precio']): return
         USUARIOS[uid]['flags']['pausado_foto']=False
     intent=detectar_intencion(raw,cap)
     if es_neg:
@@ -184,13 +187,11 @@ async def handle_all(update, context):
         if m.photo or m.video:
             cn=normalizar(cap+" "+raw); fid=m.video.file_id if m.video else m.photo[-1].file_id
             if any(x in cn for x in ['100','500','1000','vistas','prueba','cumpli']):
-                txt=f"📈 PRUEBA {cn[:20]}\n@{m.from_user.username or uid}"
+                txt=f"📈 PRUEBA @{m.from_user.username or uid}"
                 if m.video: await context.bot.send_video(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin_100(uid,m.from_user.username or "None"))
                 else: await context.bot.send_photo(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin_100(uid,m.from_user.username or "None"))
                 return
             else:
-                if m.video: await context.bot.send_video(ADMIN_ID,fid,caption=f"📷 SIN PRUEBA @{m.from_user.username or uid}")
-                else: await context.bot.send_photo(ADMIN_ID,fid,caption=f"📷 SIN PRUEBA @{m.from_user.username or uid}")
                 USUARIOS[uid]['flags']['pausado_foto']=True; return
         if not USUARIOS[uid]['flags'].get('gratis_enviado'):
             if intent=="comprar":
@@ -201,10 +202,10 @@ async def handle_all(update, context):
             await enviar_5_fotos(m); await m.reply_text(GRATIS_TEXTO, disable_web_page_preview=False)
             USUARIOS[uid]['flags']['gratis_enviado']=True; return
         if intent in ["promo","prueba"]:
-            await reply_once(m, uid, "gratis_recordatorio", GRATIS_RECORDATORIO, cd=600); return
+            await reply_once(m, uid, "gratis_recordatorio", GRATIS_RECORDATORIO, cd=999999); return
         if intent=="comprar":
             if USUARIOS[uid].get('pais_guardado'):
-                await reply_once(m, uid, "precio_directo", precio_por_pais(USUARIOS[uid]['pais_guardado']), cd=30, parse_mode='HTML', disable_web_page_preview=False); return
+                await reply_once(m, uid, "precio_directo", precio_por_pais(USUARIOS[uid]['pais_guardado']), cd=999999, parse_mode='HTML', disable_web_page_preview=False); return
             if uid not in ESPERA_PAIS:
                 await m.reply_text(PREGUNTA_PAIS); ESPERA_PAIS[uid]={'intentos':0}
             return
@@ -218,11 +219,7 @@ async def handle_all(update, context):
             await enviar_5_fotos(m); await m.reply_text(GRATIS_TEXTO, reply_markup=get_menu(), disable_web_page_preview=False)
             USUARIOS[uid]['flags']['gratis_enviado']=True; return
         if intent in ["promo","prueba"]:
-            await reply_once(m, uid, "gratis_recordatorio", GRATIS_RECORDATORIO, cd=600, reply_markup=get_volver()); return
-        if intent=="comprar":
-            if USUARIOS[uid].get('pais_guardado'):
-                await m.reply_text(precio_por_pais(USUARIOS[uid]['pais_guardado']), parse_mode='HTML', reply_markup=get_volver()); return
-            await m.reply_text("De donde eres mor 👀✨", reply_markup=get_precios()); return
+            await reply_once(m, uid, "gratis_recordatorio", GRATIS_RECORDATORIO, cd=999999, reply_markup=get_volver()); return
 
 def main():
     cargar_datos()
@@ -232,6 +229,6 @@ def main():
     app.add_handler(MessageHandler(filters.UpdateType.BUSINESS_MESSAGE, handle_all))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_all))
     app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, handle_all))
-    print("Gratis con canal + pasos faciles activo")
+    print("Bot sin spam - sin repetir mensajes - activo")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 if __name__=='__main__': main()
