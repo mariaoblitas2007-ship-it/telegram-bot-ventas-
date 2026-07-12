@@ -1,4 +1,4 @@
-# FIX ANTI-SPAM REAL - ya no repite el mismo mensaje
+# FINAL FIX - sin video con nombre, sin spam, foto/video = silencio a menos que diga 100
 import os, json, logging, time, unicodedata, re
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
@@ -21,13 +21,20 @@ Verifico y te suelto los videitos gratis :3"""
 GRATIS_RECORDATORIO = "Ya te envié como ganarte los gratis mor 🥺 cumplan la promo para los videos gratis :3"
 PREGUNTA_PAIS = "De dónde eres Mor?"
 PREGUNTA_PAIS_AYUDA = "Dime de qué país eres mor? 🙈"
+
+# FIX 1: ya no dice que grabas con su nombre
+UPSELL_PICANTE = """Si pagas ahora mismo mor te mando extras bien ricos 😝🔥
+dependiendo lo que elijas te sorprendo con más regalitos :3
+solo si es ahora, después ya no"""
+
+# Texto que sale en tu captura de Jesús Morales 500-1000
+TEXTO_100_A_500 = """Cuando tu story llegue a 500-1000 me avisas y te suelto tus videitos al toque 🥵
+
+Mándame videito entrando a TikTok → tu perfil → tu story → los likes, TODO seguido sin cortar. Si lo cortas se anula la promo, bebé 😘"""
+
 OCUPADITA_MSG = "ando ocupadita en videollamada 👀 en un ratito te confirmo mor 🥰"
-UPSELL_PICANTE = """Si pagas ahora mismo mor te mando regalitos extra bien puercos 😝🔥
-te grabo moviendo las ttas y gimiendo tu nombre solo para ti 🥵💦
-solo si es ahora, después ya no lo regalo"""
 
 MX_PRECIOS = """🛍 <b>VIDEOS</b> 🛒
-
 🎂 <b>BÁSICO: $100 MXN</b> → 5 videitos | $20 c/u
 ━━━━━━━━━━━━━━
 🔥 <b>TOP: $200 MXN ← MÁS VENDIDO</b> → 12 videitos | $16 c/u
@@ -72,26 +79,22 @@ def detectar_pais(t):
     return None
 def detectar_intencion(txt,cap=""):
     t=normalizar(f"{txt} {cap}")
-    comprar_kw = ['vendes','vende','quiero conte','conte','contenido','pack','precio','precios','presio','cuanto','cuánto','q cuesta','valor','cuanto vale']
+    comprar_kw = ['vendes','vende','quiero conte','conte','contenido','pack','precio','precios','presio','cuanto','cuánto','q cuesta','valor']
     if any(k in t for k in comprar_kw): return "comprar"
-    if "500" in t and "vist" in t: return "vistas500"
-    if "100" in t and "vist" in t: return "vistas100"
-    if any(x in t for x in ['ya cumpli','cumpli']): return "cumplido"
+    if "500" in t or "1000" in t: return "vistas500"
+    if "100" in t: return "vistas100"
+    if any(x in t for x in ['ya cumpli','cumpli','prueba','vistas']): return "cumplido"
     if any(x in t for x in ['gratis','promo','gratiss']): return "promo"
-    if any(x in t for x in ['yape','plin','pago']): return "pago"
     return "otro"
 
-# FIX REAL DEL ANTI-SPAM
+# ANTI-SPAM REAL FIX
 def puede_enviar(uid, tipo, cd):
     ahora=time.time()
-    USUARIOS.setdefault(uid,{})
-    USUARIOS[uid].setdefault('antispam',{})
-    if not isinstance(USUARIOS[uid]['antispam'], dict):
-        USUARIOS[uid]['antispam']={}
+    USUARIOS.setdefault(uid,{}); USUARIOS[uid].setdefault('antispam',{})
+    if not isinstance(USUARIOS[uid]['antispam'], dict): USUARIOS[uid]['antispam']={}
     ultimo = USUARIOS[uid]['antispam'].get(tipo, 0)
-    if ahora - ultimo < cd:
-        return False
-    USUARIOS[uid]['antispam'][tipo] = ahora
+    if ahora - ultimo < cd: return False
+    USUARIOS[uid]['antispam']=ahora
     return True
 
 def link_directo(uid,un): return f"https://t.me/{un}" if un!="None" else f"tg://user?id={uid}"
@@ -120,10 +123,10 @@ async def btn(u,c):
         acc,t=d.split("_",1); t=int(t)
         if acc=="ok": await c.bot.send_message(t,"Listo mor ya te confirmé 💖")
         elif acc=="no": await c.bot.send_message(t,"Mor mándame mejor la pruebita completa porfa 🥺")
-        elif acc=="500": await c.bot.send_message(t,"Sii mor son 500 vistas 🥵 sigue comentando")
+        elif acc=="500": await c.bot.send_message(t,TEXTO_100_A_500)
         return
     if d=='volver':
-        if not puede_enviar(uid,'volver',3): return
+        if not puede_enviar(uid,'volver',2): return
         await q.edit_message_text("¿Qué quieres mor? :3", reply_markup=get_menu())
     elif d=='comprar':
         if USUARIOS[uid].get('pais_guardado'):
@@ -147,16 +150,43 @@ async def btn(u,c):
 async def handle_all(update, context):
     m = update.business_message or update.message
     if not m or not m.from_user or m.from_user.is_bot: return
-    uid=m.from_user.id; raw=(m.text or "").strip(); cap=getattr(m,'caption','') or ""
+    uid=m.from_user.id; un=m.from_user.username or "None"; raw=(m.text or "").strip(); cap=getattr(m,'caption','') or ""
     es_neg = update.business_message is not None
     if es_neg and uid==ADMIN_ID: return
     USUARIOS.setdefault(uid,{}); USUARIOS[uid].setdefault('flags',{})
-    if time.time()-USUARIOS[uid].get('ultimo',0) < 1: return
+    if time.time()-USUARIOS[uid].get('ultimo',0) < 0.8: return
     USUARIOS[uid]['ultimo']=time.time()
     if USUARIOS[uid]['flags'].get('pausado'): return
+    # Si está pausado por foto, solo deja pasar si dice 100/500/vistas/prueba
+    if USUARIOS[uid]['flags'].get('pausado_foto'):
+        cn=normalizar(raw+" "+cap)
+        if not any(x in cn for x in ['100','500','1000','vistas','prueba','cumpli']):
+            return
+        else:
+            USUARIOS[uid]['flags']['pausado_foto']=False
+
     intent=detectar_intencion(raw,cap)
 
     if es_neg:
+        # FOTO / VIDEO - FIX 2: deja de responder a menos que diga 100
+        if m.photo or m.video:
+            cn=normalizar(cap+" "+raw)
+            fid=m.video.file_id if m.video else m.photo[-1].file_id
+            es_prueba = any(x in cn for x in ['100','500','1000','vistas','prueba','cumpli'])
+            if es_prueba:
+                txt=f"📈 PRUEBA {cn[:20]}\n@{un} {uid}"
+                if m.video: await context.bot.send_video(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin_100(uid,un))
+                else: await context.bot.send_photo(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin_100(uid,un))
+                # No responde al usuario, solo te avisa a ti
+                return
+            else:
+                # Foto random sin texto de prueba -> silencio total, solo te la reenvío a ti
+                txt=f"📷 FOTO/VIDEO SIN PRUEBA\n@{un} {uid} - se pausó auto-respuesta"
+                if m.video: await context.bot.send_video(ADMIN_ID,fid,caption=txt)
+                else: await context.bot.send_photo(ADMIN_ID,fid,caption=txt)
+                USUARIOS[uid]['flags']['pausado_foto']=True
+                return
+
         if uid in ESPERA_PAIS:
             pais=detectar_pais(raw)
             if pais:
@@ -167,26 +197,10 @@ async def handle_all(update, context):
                     USUARIOS[uid]['flags']['upsell_n']=True
                 del ESPERA_PAIS[uid]; return
             else:
-                if ESPERA_PAIS[uid].get('intentos',0)==0 and puede_enviar(uid,'pais_ayuda',30):
+                if ESPERA_PAIS[uid].get('intentos',0)==0 and puede_enviar(uid,'pais_ayuda',20):
                     await m.reply_text(PREGUNTA_PAIS_AYUDA)
                     ESPERA_PAIS[uid]['intentos']=1; return
                 else: return
-
-        if m.photo or m.video:
-            cn=normalizar(cap+" "+raw)
-            fid=m.video.file_id if m.video else m.photo[-1].file_id
-            if "100" in cn and "500" not in cn:
-                if puede_enviar(uid,'notif_100',20):
-                    txt=f"📈 NEGOCIO 100\n@{m.from_user.username or uid}"
-                    if m.video: await context.bot.send_video(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin_100(uid,m.from_user.username or "None"))
-                    else: await context.bot.send_photo(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin_100(uid,m.from_user.username or "None"))
-                return
-            if "500" in cn:
-                txt=f"✅ NEGOCIO 500\n@{m.from_user.username or uid}"
-                if m.video: await context.bot.send_video(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin(uid,m.from_user.username or "None"))
-                else: await context.bot.send_photo(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin(uid,m.from_user.username or "None"))
-                await m.reply_text(OCUPADITA_MSG); USUARIOS[uid]['flags']['pausado']=True; return
-            return
 
         if not USUARIOS[uid]['flags'].get('gratis_enviado'):
             if intent=="comprar":
@@ -205,24 +219,19 @@ async def handle_all(update, context):
                     await m.reply_text(precio_por_pais(USUARIOS[uid]['pais_guardado']), parse_mode='HTML', disable_web_page_preview=False)
                 return
             if uid in ESPERA_PAIS: return
-            if puede_enviar(uid,'pregunta_pais',30):
+            if puede_enviar(uid,'pregunta_pais',20):
                 await m.reply_text(PREGUNTA_PAIS)
                 ESPERA_PAIS[uid]={'intentos':0}
             return
-
         if intent=="promo":
-            # Solo 1 vez por hora, no spam
             if puede_enviar(uid,'gratis_recordatorio',3600):
                 await m.reply_text(GRATIS_RECORDATORIO)
             return
-
         if intent=="otro":
-            # Este era el que spameaba - ahora solo 1 vez cada 10 min, si no, silencio
             if puede_enviar(uid,'vivo_otro',600):
                 await m.reply_text("Aquí estoy mor 🙈 dime si quieres los gratis o precios? 👀")
             return
     else:
-        # BOT CON BOTONES
         if not USUARIOS[uid]['flags'].get('gratis_enviado'):
             if intent=="comprar":
                 USUARIOS[uid]['flags']['gratis_enviado']=True
@@ -238,13 +247,9 @@ async def handle_all(update, context):
             if puede_enviar(uid,'comprar_b',5):
                 await m.reply_text("De donde eres mor 👀✨", reply_markup=get_precios())
             return
-        if intent=="promo":
+        if intent in ["promo","vistas100","vistas500"]:
             if puede_enviar(uid,'promo_b',3600):
                 await m.reply_text(GRATIS_RECORDATORIO, reply_markup=get_volver())
-            return
-        if intent=="otro":
-            if puede_enviar(uid,'otro_bot',600):
-                await m.reply_text("Wenas mor 🙈 ¿gratis o precios?", reply_markup=get_menu())
             return
 
 def main():
@@ -255,6 +260,6 @@ def main():
     app.add_handler(MessageHandler(filters.UpdateType.BUSINESS_MESSAGE, handle_all))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_all))
     app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, handle_all))
-    print("Anti-spam real activo - ya no repite mensajes")
+    print("Fix final - sin nombre, sin spam foto")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 if __name__=='__main__': main()
