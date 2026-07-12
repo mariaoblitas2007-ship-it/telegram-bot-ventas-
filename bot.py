@@ -6,9 +6,8 @@ logging.basicConfig(level=logging.INFO)
 TOKEN = '8762577283:AAFVT7_WMpZ7njVnToIlZypUpCToF5LGcbA'
 ADMIN_ID = 8783569348
 LINK_CANAL = "https://t.me/+zt1RzGevdHBjMDgx"
-LINK_PAYPAL = "https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE"
 
-USUARIOS = {}; INVITADOS = {}; REFERIDOS = {}; JOBS_FOLLOW = {}; ESPERA_PAIS = {}; DATA_FILE = "data.json"
+USUARIOS = {}; JOBS_FOLLOW = {}; ESPERA_PAIS = {}; DATA_FILE = "data.json"
 
 SALUDO_NEGOCIO = f"""Wenas mor, ando grabando quieres verme? 🙈🔥
 
@@ -79,34 +78,19 @@ USA_PRECIOS = """🛍 <b>VIDEOS</b> 🛒
 🌐 Link: <code>https://www.paypal.com/qrcodes/p2pqrc/76RWY9FF7Q7RE</code>
 1. Pagas 2. Captura"""
 
-GRATIS_TODO = """✨ <b>¿QUIERES GANAR HASTA 20 VIDEITOS GRATIS? :3</b> ✨
+GRATIS_TODO = """✨ <b>¿Quieres hasta 20 gratis mor? :3</b> ✨
 
-Te explico todo juntito mor, es súper fácil y te ayudo con truquito 🥺💖
+Solo haz esto mor:
+1️⃣ Sube la foto de mi QR a tu story
+2️⃣ Comenta cositas hormo en TikToks con #hormo #hot para que te lleguen vistas
 
-🌸 <b>Tip que funciona mejor mor:</b>
-Créate una cuentita nueva en TikTok, ponte una fotito tierna y un nombrecito lindo :3 tipo “karla19” “sofihot” así la gente entra más rápido a verte.
+Avísame cuando llegues a 100 vistas 🥵
 
-1️⃣ En tu bio pon: <code>Tg: yanabicitasa</code> ✨
-2️⃣ Sube una fotito de las que te envié a tu story + una frase hot 😋
-3️⃣ Mándame captura + videito de que lo hiciste
-4️⃣ Me avisas cuando llegue a 100 vistas y luego a 500-1000
-5️⃣ Disfruta de <b>HASTA 20 videitos</b> bien ricos ❤️‍🔥 :3
+Mándame captura + videito de que lo hiciste"""
 
-⚠️ Ojo mor: solo califico a compradores. Si promocionas a alguien más te bloqueo, si me promocionas a mí te mando regalitos extra 🎁
-
-¿Le entras mor? dime: <i>ya cumplí con las 100 vistas</i>
-
-💋 <b>Para conseguir vistas rápido mor:</b>
-Busca videos con #hormo #hot #hormonal #amigoshormo y deja comentarios bien ricos 🥵
-
-Escribe cositas como: “¿quién?” “¿alguno?” “miren mi story” “ando horm...”
-
-Entre más caliente comentes, más gente entra a verte, mor 😏"""
-
-TEXTO_100="Sii mor las 100 vistas son solo para que veas lo fácil que es :3 cuando llegues a 500-1000 me avisas y te suelto tus videitos al toque 🥵 mándame videito sin cortar"
+TEXTO_100="Listo mor ya con 100 vistas me avisas 🥺✨ mándame captura + videito sin cortar y te suelto tus regalitos al toque"
 TEXTO_INTER="No hago intercambios mor 🥰 yo vendo, pero si cumples la promo te doy videitos al toque 😏"
 
-# MENSAJE CORREGIDO - YA NO PIDE MÁS DINERO
 CUMPLIDO_MSG = "ando algo ocupadita haciéndo videollamada 👀 en un ratito te confirmo mor 🥰"
 PAGO_MSG = "ando algo ocupadita haciéndo videollamada 👀 en un ratito te confirmo mor 🥰"
 
@@ -119,23 +103,23 @@ VIDEOLLAMADA_MSGS = [
     "Videollamadita 🥰 5 y 10 min, si me compras ahora te doy prioridad :3",
     "Hago videollamadita solo virtual mor 5 y 10 min 🥰 si me compras ahora te consiento mucho 😏"
 ]
-DUDAR_MSGS=["Entiendo mor piensalo tranqui 🥺 pero si me compras ahora te pongo en prioridad 💖","Puedes pensarlo bebe las que pagan ahora las atiendo primero y con extra 😏"]
-CALENTADA_MSGS=["Cuando compras te enseño todo sin censura mor completito para ti 🥵","Si compras te muestro todo lo que no subo a ningun lado 😏"]
-COMPRA_MSGS=["TOP y PREMIUM son los mas pedidos mor 🔥 te contesto al toque despues del pago :3","Si eliges TOP o PREMIUM te mando extras bien ricos 💋"]
-VIDEITOS_MSGS=["Videitos tengo BÁSICO, TOP y PREMIUM mor 🔥","Mis videitos son sin censura el TOP es el mas pedido y PREMIUM te enseño todo 💖"]
-SALIR_MSGS=["Por ahora no hago saliditas mor 🙈 soy solo virtual pero bien atrevida si eres premium 💋","No hago presencial bebe pero virtual soy toda tuya si eres TOP o PREMIUM 😏"]
-FOLLOW_MSGS=["Anais caliente si compras ahora y me sorprendes te doy doble mor 🥵","Bebe solo hoy doble + extra si me compras 😏","Mor me quede con ganas si compras ahora te lo doy todo x2 🙈"]
+DUDAR_MSGS=["Entiendo mor piensalo tranqui 🥺 pero si me compras ahora te pongo en prioridad 💖"]
+CALENTADA_MSGS=["Cuando compras te enseño todo sin censura mor completito para ti 🥵"]
+COMPRA_MSGS=["TOP y PREMIUM son los mas pedidos mor 🔥 te contesto al toque despues del pago :3"]
+VIDEITOS_MSGS=["Videitos tengo BÁSICO, TOP y PREMIUM mor 🔥"]
+SALIR_MSGS=[
+    "Si compras el premium lo pienso mor 🥺 por ahora solo hago virtual 🙈",
+    "Lo puedo pensar si compras el premium mor 💖 si eres premium vemos que hacemos :3"
+]
+FOLLOW_MSGS=["Mor si compras ahora te doy doble 🥵","Bebe solo hoy doble + extra si me compras 😏"]
 
 def cargar_datos():
-    global USUARIOS, INVITADOS, REFERIDOS
+    global USUARIOS
     if os.path.exists(DATA_FILE):
         try:
-            d=json.load(open(DATA_FILE))
-            USUARIOS={int(k):v for k,v in d.get('usuarios',{}).items()}
-            INVITADOS={int(k):v for k,v in d.get('invitados',{}).items()}
-            REFERIDOS={int(k):v for k,v in d.get('referidos',{}).items()}
+            d=json.load(open(DATA_FILE)); USUARIOS={int(k):v for k,v in d.get('usuarios',{}).items()}
         except: pass
-def guardar_datos(): json.dump({'usuarios':USUARIOS,'invitados':INVITADOS,'referidos':REFERIDOS}, open(DATA_FILE,'w'))
+def guardar_datos(): json.dump({'usuarios':USUARIOS}, open(DATA_FILE,'w'))
 def get_menu(): return InlineKeyboardMarkup([[InlineKeyboardButton("💎 COMPRAR",callback_data='comprar')],[InlineKeyboardButton("🎁 GRATIS",callback_data='gratis')]])
 def get_precios():
     return InlineKeyboardMarkup([
@@ -162,19 +146,18 @@ def detectar_pais(t):
     return None
 def detectar_intencion(txt, cap=""):
     t=normalizar(f"{txt} {cap}")
-    if any(x in t for x in ['eres real','eres bot','eres un bot','robot','fake','no eres real','prueba que eres','asegurarme que eres','ver que eres real','eres tu','video para asegurarme']):
+    if any(x in t for x in ['eres real','eres bot','eres un bot','robot','fake','no eres real','prueba que eres','asegurarme que eres','eres tu','video para asegurarme']):
         return "real"
-    if any(x in t for x in ['no entendi','no entiendo','como es','explica','como funciona']): return "no_entendi"
-    if any(x in t for x in ['ya cumpli','ya cumplí','cumpli','ya esta','termine promo','ya lo hice','ya lo subi']): return "cumplido"
-    if fuzzy(t, ["videollamada","vdeollamada","llamada","en vivo"]): return "videollamada"
-    if fuzzy(t, ["yape","plin","pague","pago","comprobante","transfer","capture"]): return "pago"
+    if any(x in t for x in ['no entendi','no entiendo','como es','explica']): return "no_entendi"
+    if any(x in t for x in ['ya cumpli','ya cumplí','cumpli','ya esta','termine promo','ya lo hice']): return "cumplido"
     if "100" in t and "vist" in t: return "vistas100"
+    if any(x in t for x in ['yape','plin','pague','pago','comprobante','transfer','capture']): return "pago"
+    if any(x in t for x in ['gratis','grtis','promo','regalo']): return "promo"
+    if any(x in t for x in ['videollamada','vdeollamada']): return "videollamada"
+    if any(x in t for x in ['videitos','vdeitos','precio','presio','cuanto','comprar','pack']): return "comprar"
+    if any(x in t for x in ['salidita','salimos','vernos','nos vemos','encuentro','hotel','presencial']): return "salir"
     if fuzzy(t, ["intercambio","cambias"]): return "intercambio"
-    if fuzzy(t, ["salir","vernos","encuentro","hotel","presencial"]): return "salir"
     if fuzzy(t, ["pienso","pensarlo","luego"]): return "dudar"
-    if fuzzy(t, ["gratis","grtis","promo","regalo"]): return "promo"
-    if fuzzy(t, ["videitos","vdeitos","videos","pack"]): return "videitos"
-    if fuzzy(t, ["precio","presio","cuanto","qnto","comprar","costo"]): return "comprar"
     if fuzzy(t, ["caliente","cachondo","ganas"]): return "hormonal"
     return "otro"
 def puede(uid,k): USUARIOS.setdefault(uid,{}); USUARIOS[uid].setdefault('flags',{}); return not USUARIOS[uid]['flags'].get(k)
@@ -193,7 +176,9 @@ def precio_por_pais(p): return PE_PRECIOS if p=='pe' else MX_PRECIOS if p=='mx' 
 
 async def bienvenida_promo(m):
     try: await m.reply_media_group([InputMediaPhoto(open(f'fotitos{i}.JPG','rb')) for i in range(1,6)])
-    except: pass
+    except:
+        try: await m.reply_media_group([InputMediaPhoto(open(f'fotitos{i}.jpg','rb')) for i in range(1,6)])
+        except: pass
     await m.reply_text(GRATIS_TODO, parse_mode='HTML')
 
 async def followup_job(c):
@@ -227,7 +212,12 @@ async def btn(u,c):
     elif d=='pe': await q.edit_message_text(PE_PRECIOS, parse_mode='HTML')
     elif d=='mx': await q.edit_message_text(MX_PRECIOS, parse_mode='HTML')
     elif d=='usa': await q.edit_message_text(USA_PRECIOS, parse_mode='HTML')
-    elif d=='gratis': await q.edit_message_text(GRATIS_TODO, parse_mode='HTML')
+    elif d=='gratis':
+        try: await q.message.reply_media_group([InputMediaPhoto(open(f'fotitos{i}.JPG','rb')) for i in range(1,6)])
+        except:
+            try: await q.message.reply_media_group([InputMediaPhoto(open(f'fotitos{i}.jpg','rb')) for i in range(1,6)])
+            except: pass
+        await q.message.reply_text(GRATIS_TODO, parse_mode='HTML')
 
 async def handle_all(update,context):
     m=update.business_message or update.message
@@ -242,7 +232,7 @@ async def handle_all(update,context):
     if es_neg:
         if m.photo or m.video:
             is_v=bool(m.video); fid=m.video.file_id if is_v else m.photo[-1].file_id
-            tipo="💰 CAPTURA PAGO" if fuzzy(normalizar(cap),["yape","plin","pago"]) else "📸 PRUEBA PROMO"
+            tipo="💰 CAPTURA PAGO" if any(x in normalizar(cap) for x in ['yape','plin','pago']) else "📸 PRUEBA PROMO"
             try:
                 if is_v: await context.bot.send_video(ADMIN_ID,fid,caption=f"{tipo}\n@{un} {uid}",reply_markup=teclado_admin(uid,un))
                 else: await context.bot.send_photo(ADMIN_ID,fid,caption=f"{tipo}\n@{un} {uid}",reply_markup=teclado_admin(uid,un))
@@ -259,17 +249,15 @@ async def handle_all(update,context):
             await m.reply_text(CUMPLIDO_MSG); await context.bot.send_message(ADMIN_ID,f"✅ CUMPLIÓ PROMO @{un} {uid}\n{raw}",reply_markup=teclado_admin(uid,un)); USUARIOS[uid].setdefault('flags',{})['pausado']=True; guardar_datos(); return
         if intent=="pago":
             await m.reply_text(PAGO_MSG); await context.bot.send_message(ADMIN_ID,f"💰 PAGÓ @{un} {uid}\n{raw}",reply_markup=teclado_admin(uid,un)); USUARIOS[uid].setdefault('flags',{})['pausado']=True; guardar_datos(); return
-
         if intent=="real": await m.reply_text(no_repite(uid,'real',REAL_MSGS)); guardar_datos(); prog_follow(context,uid,m.chat.id); return
         if intent=="no_entendi":
             await m.reply_text("Tranqui mor te explico facilito 🥺👇\nTengo videitos y videollamada, todo virtual 🙈"); await m.reply_text("De donde eres mor 👀✨", reply_markup=get_precios()); ESPERA_PAIS[uid]=True; guardar_datos(); prog_follow(context,uid,m.chat.id); return
-
         if intent=="vistas100":
             if puede(uid,'v100'): await m.reply_text(TEXTO_100); USUARIOS[uid].setdefault('flags',{})['v100']=True
         elif intent=="promo": await bienvenida_promo(m)
         elif intent=="videollamada":
             await m.reply_text(no_repite(uid,'vdll',VIDEOLLAMADA_MSGS)); await m.reply_text("De donde eres mor 👀✨", reply_markup=get_precios()); ESPERA_PAIS[uid]=True
-        elif intent in ["videitos","comprar"]:
+        elif intent=="comprar":
             await m.reply_text(no_repite(uid,'compra',COMPRA_MSGS)); await m.reply_text("De donde eres mor 👀✨", reply_markup=get_precios()); ESPERA_PAIS[uid]=True
         elif intent=="dudar": await m.reply_text(no_repite(uid,'dudar',DUDAR_MSGS))
         elif intent=="hormonal": await m.reply_text(no_repite(uid,'calentada',CALENTADA_MSGS))
@@ -289,7 +277,7 @@ def main():
     app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, handle_all))
     app.add_handler(MessageHandler(filters.UpdateType.BUSINESS_MESSAGE & (filters.PHOTO | filters.VIDEO), handle_all))
     app.add_handler(MessageHandler(filters.CAPTION & filters.UpdateType.BUSINESS_MESSAGE, handle_all))
-    print("Bot final - ocupadita en videollamada listo")
+    print("Bot final - 5 fotos + gratis corto + ocupadita listo")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__=='__main__': main()
