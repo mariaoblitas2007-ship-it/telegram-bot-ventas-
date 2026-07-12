@@ -1,4 +1,4 @@
-# FIX GRATIS NO ENVIABA - pausado_foto ya no bloquea gratis/precio + anti-spam corregido
+# FIX DEFINITIVO - nunca repite el mismo mensaje en el mismo chat
 import os, json, logging, time, unicodedata, re
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
@@ -18,7 +18,7 @@ Te lo regalo mor, es fácil:
 Cuando llegues a 100 vistas mándame captura 🥵
 Verifico y te suelto los videitos gratis :3"""
 
-GRATIS_RECORDATORIO = "Ya te envié como ganarte los gratis mor 🥺 cumplan la promo para los videos gratis :3"
+GRATIS_RECORDATORIO = "ya te mande como conseguir mis videitos gratis mor 🥺💦"
 PREGUNTA_PAIS = "De dónde eres Mor?"
 PREGUNTA_PAIS_AYUDA = "Dime de qué país eres mor? 🙈"
 UPSELL_PICANTE = """Si pagas ahora mismo mor te mando extras bien ricos 😝🔥
@@ -68,28 +68,43 @@ def normalizar(t):
     return re.sub(r'[^\w\s]',' ',t)
 def detectar_pais(t):
     t=normalizar(t)
-    if any(x in t for x in ['peru','lima','arequipa']): return 'pe'
+    if any(x in t for x in ['peru','lima']): return 'pe'
     if any(x in t for x in ['mexico','mx']): return 'mx'
     if any(x in t for x in ['colombia','argentina','chile','venezuela','usa','eeuu','espana']): return 'usa'
     return None
 def detectar_intencion(txt,cap=""):
     t=normalizar(f"{txt} {cap}")
-    comprar_kw = ['vendes','vende','quiero conte','conte','contenido','pack','precio','precios','presio','cuanto','cuánto','q cuesta','valor','cuanto vale']
+    comprar_kw = ['vendes','vende','quiero conte','conte','contenido','pack','precio','precios','presio','cuanto','cuánto','q cuesta']
     if any(k in t for k in comprar_kw): return "comprar"
     if "500" in t or "1000" in t: return "vistas500"
     if "100" in t: return "vistas100"
-    if any(x in t for x in ['ya cumpli','cumpli','prueba','vistas']): return "cumplido"
-    if any(x in t for x in ['gratis','promo','gratiss','gratisss']): return "promo"
+    if any(x in t for x in ['prueba','vistas','cumpli']): return "prueba"
+    if any(x in t for x in ['gratis','promo','gratiss']): return "promo"
     return "otro"
 
-# ANTI-SPAM CORREGIDO 100%
+# ANTI-SPAM Y ANTI-REPETIDO CORREGIDO
 def puede_enviar(uid, tipo, cd):
     ahora=time.time()
     USUARIOS.setdefault(uid,{}); USUARIOS[uid].setdefault('antispam',{})
     if not isinstance(USUARIOS[uid]['antispam'], dict): USUARIOS[uid]['antispam']={}
     ultimo = USUARIOS[uid]['antispam'].get(tipo, 0)
     if ahora - ultimo < cd: return False
-    USUARIOS[uid]['antispam'] = ahora
+    USUARIOS[uid]['antispam']=ahora
+    return True
+
+async def reply_once(m, uid, tipo, texto, **kwargs):
+    # No repite el mismo texto en el mismo chat nunca
+    USUARIOS[uid].setdefault('enviados', set())
+    # convierto a lista para json
+    enviados = USUARIOS[uid].get('enviados_lista', [])
+    if texto in enviados and tipo in ["gratis_recordatorio","vivo","promo_b"]:
+        return False
+    if not puede_enviar(uid, tipo, kwargs.pop('cd', 20)):
+        return False
+    await m.reply_text(texto, **kwargs)
+    enviados.append(texto)
+    # guardo solo ultimos 10 para no crecer infinito
+    USUARIOS[uid]['enviados_lista'] = enviados[-10:]
     return True
 
 def link_directo(uid,un): return f"https://t.me/{un}" if un!="None" else f"tg://user?id={uid}"
@@ -120,9 +135,7 @@ async def btn(u,c):
         elif acc=="no": await c.bot.send_message(t,"Mor mándame mejor la pruebita completa porfa 🥺")
         elif acc=="500": await c.bot.send_message(t,TEXTO_100_A_500)
         return
-    if d=='volver':
-        if not puede_enviar(uid,'volver',2): return
-        await q.edit_message_text("¿Qué quieres mor? :3", reply_markup=get_menu())
+    if d=='volver': await q.edit_message_text("¿Qué quieres mor? :3", reply_markup=get_menu())
     elif d=='comprar':
         if USUARIOS[uid].get('pais_guardado'):
             await q.edit_message_text(precio_por_pais(USUARIOS[uid]['pais_guardado']), parse_mode='HTML', disable_web_page_preview=False, reply_markup=get_volver())
@@ -139,8 +152,7 @@ async def btn(u,c):
             await enviar_5_fotos(q.message); await q.message.reply_text(GRATIS_TEXTO, reply_markup=get_volver())
             USUARIOS[uid]['flags']['gratis_enviado']=True
         else:
-            if puede_enviar(uid,'gratis_aviso',10):
-                await q.message.reply_text(GRATIS_RECORDATORIO, reply_markup=get_volver())
+            await reply_once(q.message, uid, "gratis_recordatorio", GRATIS_RECORDATORIO, cd=600, reply_markup=get_volver())
 
 async def handle_all(update, context):
     m = update.business_message or update.message
@@ -152,19 +164,12 @@ async def handle_all(update, context):
     if time.time()-USUARIOS[uid].get('ultimo',0) < 0.8: return
     USUARIOS[uid]['ultimo']=time.time()
     if USUARIOS[uid]['flags'].get('pausado'): return
-
-    intent=detectar_intencion(raw,cap)
-
-    # FIX: pausado_foto ya NO bloquea gratis/precio
     if USUARIOS[uid]['flags'].get('pausado_foto'):
-        if intent in ["promo","comprar","vistas100","vistas500","cumplido"]:
-            USUARIOS[uid]['flags']['pausado_foto']=False
-        else:
-            cn=normalizar(raw+" "+cap)
-            if not any(x in cn for x in ['100','500','1000','vistas','prueba','cumpli','gratis','precio','presio']):
-                return
-            USUARIOS[uid]['flags']['pausado_foto']=False
-
+        cn=normalizar(raw+" "+cap)
+        if not any(x in cn for x in ['100','500','vistas','prueba','gratis','precio','presio']):
+            return
+        USUARIOS[uid]['flags']['pausado_foto']=False
+    intent=detectar_intencion(raw,cap)
     if es_neg:
         if uid in ESPERA_PAIS:
             pais=detectar_pais(raw)
@@ -175,86 +180,56 @@ async def handle_all(update, context):
                     await m.reply_text(UPSELL_PICANTE)
                     USUARIOS[uid]['flags']['upsell_n']=True
                 del ESPERA_PAIS[uid]; return
-            else:
-                if ESPERA_PAIS[uid].get('intentos',0)==0 and puede_enviar(uid,'pais_ayuda',15):
-                    await m.reply_text(PREGUNTA_PAIS_AYUDA)
-                    ESPERA_PAIS[uid]['intentos']=1; return
-                else: return
-
+            else: return
         if m.photo or m.video:
-            cn=normalizar(cap+" "+raw)
-            fid=m.video.file_id if m.video else m.photo[-1].file_id
-            es_prueba = any(x in cn for x in ['100','500','1000','vistas','prueba','cumpli'])
-            if es_prueba:
-                txt=f"📈 PRUEBA {cn[:30]}\n@{m.from_user.username or uid} {uid}"
+            cn=normalizar(cap+" "+raw); fid=m.video.file_id if m.video else m.photo[-1].file_id
+            if any(x in cn for x in ['100','500','1000','vistas','prueba','cumpli']):
+                txt=f"📈 PRUEBA {cn[:20]}\n@{m.from_user.username or uid}"
                 if m.video: await context.bot.send_video(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin_100(uid,m.from_user.username or "None"))
                 else: await context.bot.send_photo(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin_100(uid,m.from_user.username or "None"))
                 return
             else:
-                txt=f"📷 FOTO SIN PRUEBA\n@{m.from_user.username or uid} {uid} - pausado"
-                if m.video: await context.bot.send_video(ADMIN_ID,fid,caption=txt)
-                else: await context.bot.send_photo(ADMIN_ID,fid,caption=txt)
+                if m.video: await context.bot.send_video(ADMIN_ID,fid,caption=f"📷 SIN PRUEBA @{m.from_user.username or uid}")
+                else: await context.bot.send_photo(ADMIN_ID,fid,caption=f"📷 SIN PRUEBA @{m.from_user.username or uid}")
                 USUARIOS[uid]['flags']['pausado_foto']=True
                 return
-
         if not USUARIOS[uid]['flags'].get('gratis_enviado'):
             if intent=="comprar":
                 USUARIOS[uid]['flags']['gratis_enviado']=True
                 if USUARIOS[uid].get('pais_guardado'):
                     await m.reply_text(precio_por_pais(USUARIOS[uid]['pais_guardado']), parse_mode='HTML', disable_web_page_preview=False)
                     return
-                await m.reply_text(PREGUNTA_PAIS)
-                ESPERA_PAIS[uid]={'intentos':0}; return
-            # Si pide gratis o es primer hola -> manda gratis
+                await m.reply_text(PREGUNTA_PAIS); ESPERA_PAIS[uid]={'intentos':0}; return
             await enviar_5_fotos(m); await m.reply_text(GRATIS_TEXTO)
             USUARIOS[uid]['flags']['gratis_enviado']=True; return
-
+        if intent in ["promo","prueba"]:
+            await reply_once(m, uid, "gratis_recordatorio", GRATIS_RECORDATORIO, cd=600)
+            return
         if intent=="comprar":
             if USUARIOS[uid].get('pais_guardado'):
-                if puede_enviar(uid,'precio_directo',5):
-                    await m.reply_text(precio_por_pais(USUARIOS[uid]['pais_guardado']), parse_mode='HTML', disable_web_page_preview=False)
+                await reply_once(m, uid, "precio_directo", precio_por_pais(USUARIOS[uid]['pais_guardado']), cd=30, parse_mode='HTML', disable_web_page_preview=False)
                 return
-            if uid in ESPERA_PAIS: return
-            if puede_enviar(uid,'pregunta_pais',15):
-                await m.reply_text(PREGUNTA_PAIS)
-                ESPERA_PAIS[uid]={'intentos':0}
-            return
-        if intent=="promo":
-            if puede_enviar(uid,'gratis_recordatorio',20):
-                await m.reply_text(GRATIS_RECORDATORIO)
-            return
-        if intent in ["vistas100","vistas500","cumplido"]:
-            if puede_enviar(uid,'prueba_txt',10):
-                await context.bot.send_message(ADMIN_ID,f"📩 PRUEBA TEXTO @{m.from_user.username or uid} {uid}\n{raw}",reply_markup=teclado_admin_100(uid,m.from_user.username or "None"))
+            if uid not in ESPERA_PAIS:
+                await m.reply_text(PREGUNTA_PAIS); ESPERA_PAIS[uid]={'intentos':0}
             return
         if intent=="otro":
-            if puede_enviar(uid,'vivo_otro',300):
-                await m.reply_text("Aquí estoy mor 🙈 dime si quieres los gratis o precios? 👀")
+            await reply_once(m, uid, "vivo", "Aquí estoy mor 🙈 dime si quieres los gratis o precios? 👀", cd=600)
             return
     else:
         if not USUARIOS[uid]['flags'].get('gratis_enviado'):
             if intent=="comprar":
                 USUARIOS[uid]['flags']['gratis_enviado']=True
-                await m.reply_text("De donde eres mor 👀✨", reply_markup=get_precios())
-                return
+                await m.reply_text("De donde eres mor 👀✨", reply_markup=get_precios()); return
             await enviar_5_fotos(m); await m.reply_text(GRATIS_TEXTO, reply_markup=get_menu())
             USUARIOS[uid]['flags']['gratis_enviado']=True; return
+        if intent in ["promo","prueba"]:
+            await reply_once(m, uid, "gratis_recordatorio", GRATIS_RECORDATORIO, cd=600, reply_markup=get_volver())
+            return
         if intent=="comprar":
             if USUARIOS[uid].get('pais_guardado'):
-                if puede_enviar(uid,'precio_directo_b',5):
-                    await m.reply_text(precio_por_pais(USUARIOS[uid]['pais_guardado']), parse_mode='HTML', reply_markup=get_volver())
+                await m.reply_text(precio_por_pais(USUARIOS[uid]['pais_guardado']), parse_mode='HTML', reply_markup=get_volver())
                 return
-            if puede_enviar(uid,'comprar_b',3):
-                await m.reply_text("De donde eres mor 👀✨", reply_markup=get_precios())
-            return
-        if intent=="promo" or intent in ["vistas100","vistas500","cumplido"]:
-            if puede_enviar(uid,'promo_b',15):
-                await m.reply_text(GRATIS_RECORDATORIO, reply_markup=get_volver())
-            return
-        if intent=="otro":
-            if puede_enviar(uid,'otro_bot',300):
-                await m.reply_text("Wenas mor 🙈 ¿gratis o precios?", reply_markup=get_menu())
-            return
+            await m.reply_text("De donde eres mor 👀✨", reply_markup=get_precios()); return
 
 def main():
     cargar_datos()
@@ -264,6 +239,6 @@ def main():
     app.add_handler(MessageHandler(filters.UpdateType.BUSINESS_MESSAGE, handle_all))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_all))
     app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, handle_all))
-    print("Fix gratis ya envía + no bloquea por foto")
+    print("Anti-duplicado activo")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 if __name__=='__main__': main()
