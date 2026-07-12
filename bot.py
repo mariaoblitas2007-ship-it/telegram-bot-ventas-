@@ -1,4 +1,4 @@
-# FINAL - Texto corregido: Sube una de las 5 fotitos 🥺
+# FIX ANTI-SPAM REAL - ya no repite el mismo mensaje
 import os, json, logging, time, unicodedata, re
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
@@ -21,9 +21,6 @@ Verifico y te suelto los videitos gratis :3"""
 GRATIS_RECORDATORIO = "Ya te envié como ganarte los gratis mor 🥺 cumplan la promo para los videos gratis :3"
 PREGUNTA_PAIS = "De dónde eres Mor?"
 PREGUNTA_PAIS_AYUDA = "Dime de qué país eres mor? 🙈"
-RESPUESTA_VIVO_NEGOCIO = "Aquí estoy mor 🙈 dime si quieres los gratis o precios? 👀"
-RESPUESTA_VIVO_BOT = "Wenas mor 🙈 ¿gratis o precios?"
-TEXTO_100_A_500 = "Sii mor son 500 vistas 🥵 sigue comentando y cuando llegues me mandas prueba :3"
 OCUPADITA_MSG = "ando ocupadita en videollamada 👀 en un ratito te confirmo mor 🥰"
 UPSELL_PICANTE = """Si pagas ahora mismo mor te mando regalitos extra bien puercos 😝🔥
 te grabo moviendo las ttas y gimiendo tu nombre solo para ti 🥵💦
@@ -40,7 +37,6 @@ MX_PRECIOS = """🛍 <b>VIDEOS</b> 🛒
 📼 <b>VIDEOLLAMADAS</b> $400 5min | $600 10min
 <b>PAGO MX:</b> CLABE: <code>646180546711450910</code> Ref: <code>yanae</code>"""
 PE_PRECIOS = """🛍 <b>VIDEOS</b> 🛒
-
 🎂 <b>BÁSICO: S/ 15</b> → 5 videitos | S/ 3 c/u
 ━━━━━━━━━━━━━━
 🔥 <b>TOP: S/ 30 ← MÁS VENDIDO</b> → 12 videitos | S/ 2.5 c/u
@@ -50,7 +46,6 @@ PE_PRECIOS = """🛍 <b>VIDEOS</b> 🛒
 📼 <b>VIDEOLLAMADAS</b> S/60 5min | S/80 10min
 <b>YAPE / PLIN:</b> <code>923553612</code>"""
 USA_PRECIOS = """🛍 <b>VIDEOS</b> 🛒
-
 🎂 <b>BÁSICO: $5 USD</b> → 5 videitos | $1 c/u
 ━━━━━━━━━━━━━━
 🔥 <b>TOP: $9 USD ← MÁS VENDIDO</b> → 12 videitos | $0.75 c/u
@@ -71,28 +66,34 @@ def normalizar(t):
     return re.sub(r'[^\w\s]',' ',t)
 def detectar_pais(t):
     t=normalizar(t)
-    if any(x in t for x in ['peru','lima','arequipa','cusco']): return 'pe'
+    if any(x in t for x in ['peru','lima','arequipa']): return 'pe'
     if any(x in t for x in ['mexico','mx']): return 'mx'
-    if any(x in t for x in ['colombia','argentina','chile','venezuela','ecuador','usa','eeuu','espana']): return 'usa'
+    if any(x in t for x in ['colombia','argentina','chile','venezuela','usa','eeuu','espana']): return 'usa'
     return None
 def detectar_intencion(txt,cap=""):
     t=normalizar(f"{txt} {cap}")
-    comprar_kw = ['vendes','vende','venta','quiero conte','quiero conté','conte','contenido','pack','packs','video','videos','precio','precios','presio','presios','costo','cuanto','cuánto','q cuesta','valor','info']
+    comprar_kw = ['vendes','vende','quiero conte','conte','contenido','pack','precio','precios','presio','cuanto','cuánto','q cuesta','valor','cuanto vale']
     if any(k in t for k in comprar_kw): return "comprar"
     if "500" in t and "vist" in t: return "vistas500"
     if "100" in t and "vist" in t: return "vistas100"
     if any(x in t for x in ['ya cumpli','cumpli']): return "cumplido"
-    if any(x in t for x in ['yape','plin','pago','comprobante']): return "pago"
-    if any(x in t for x in ['gratis','promo']): return "promo"
+    if any(x in t for x in ['gratis','promo','gratiss']): return "promo"
+    if any(x in t for x in ['yape','plin','pago']): return "pago"
     return "otro"
+
+# FIX REAL DEL ANTI-SPAM
 def puede_enviar(uid, tipo, cd):
     ahora=time.time()
+    USUARIOS.setdefault(uid,{})
     USUARIOS[uid].setdefault('antispam',{})
-    if not isinstance(USUARIOS[uid]['antispam'], dict): USUARIOS[uid]['antispam']={}
-    ultimo=USUARIOS[uid]['antispam'].get(tipo,0)
-    if ahora - ultimo < cd: return False
-    USUARIOS[uid]['antispam']=ahora
+    if not isinstance(USUARIOS[uid]['antispam'], dict):
+        USUARIOS[uid]['antispam']={}
+    ultimo = USUARIOS[uid]['antispam'].get(tipo, 0)
+    if ahora - ultimo < cd:
+        return False
+    USUARIOS[uid]['antispam'][tipo] = ahora
     return True
+
 def link_directo(uid,un): return f"https://t.me/{un}" if un!="None" else f"tg://user?id={uid}"
 def get_menu(): return InlineKeyboardMarkup([[InlineKeyboardButton("💎 COMPRAR",callback_data='comprar')],[InlineKeyboardButton("🎁 GRATIS",callback_data='gratis')]])
 def get_precios(): return InlineKeyboardMarkup([[InlineKeyboardButton("🇵🇪 Perú",callback_data='pe')],[InlineKeyboardButton("🇲🇽 México",callback_data='mx')],[InlineKeyboardButton("🌍 Otros países",callback_data='usa')],[InlineKeyboardButton("⬅️ Volver",callback_data='volver')]])
@@ -119,10 +120,10 @@ async def btn(u,c):
         acc,t=d.split("_",1); t=int(t)
         if acc=="ok": await c.bot.send_message(t,"Listo mor ya te confirmé 💖")
         elif acc=="no": await c.bot.send_message(t,"Mor mándame mejor la pruebita completa porfa 🥺")
-        elif acc=="500": await c.bot.send_message(t,TEXTO_100_A_500)
+        elif acc=="500": await c.bot.send_message(t,"Sii mor son 500 vistas 🥵 sigue comentando")
         return
     if d=='volver':
-        if not puede_enviar(uid,'volver',2): return
+        if not puede_enviar(uid,'volver',3): return
         await q.edit_message_text("¿Qué quieres mor? :3", reply_markup=get_menu())
     elif d=='comprar':
         if USUARIOS[uid].get('pais_guardado'):
@@ -140,8 +141,9 @@ async def btn(u,c):
             await enviar_5_fotos(q.message); await q.message.reply_text(GRATIS_TEXTO, reply_markup=get_volver())
             USUARIOS[uid]['flags']['gratis_enviado']=True
         else:
-            if puede_enviar(uid,'gratis_aviso',20):
+            if puede_enviar(uid,'gratis_aviso',3600):
                 await q.message.reply_text(GRATIS_RECORDATORIO, reply_markup=get_volver())
+
 async def handle_all(update, context):
     m = update.business_message or update.message
     if not m or not m.from_user or m.from_user.is_bot: return
@@ -149,10 +151,11 @@ async def handle_all(update, context):
     es_neg = update.business_message is not None
     if es_neg and uid==ADMIN_ID: return
     USUARIOS.setdefault(uid,{}); USUARIOS[uid].setdefault('flags',{})
-    if time.time()-USUARIOS[uid].get('ultimo',0) < 0.8: return
+    if time.time()-USUARIOS[uid].get('ultimo',0) < 1: return
     USUARIOS[uid]['ultimo']=time.time()
     if USUARIOS[uid]['flags'].get('pausado'): return
     intent=detectar_intencion(raw,cap)
+
     if es_neg:
         if uid in ESPERA_PAIS:
             pais=detectar_pais(raw)
@@ -164,16 +167,19 @@ async def handle_all(update, context):
                     USUARIOS[uid]['flags']['upsell_n']=True
                 del ESPERA_PAIS[uid]; return
             else:
-                if ESPERA_PAIS[uid].get('intentos',0)==0 and puede_enviar(uid,'pais_ayuda',8):
+                if ESPERA_PAIS[uid].get('intentos',0)==0 and puede_enviar(uid,'pais_ayuda',30):
                     await m.reply_text(PREGUNTA_PAIS_AYUDA)
                     ESPERA_PAIS[uid]['intentos']=1; return
                 else: return
+
         if m.photo or m.video:
-            cn=normalizar(cap+" "+raw); fid=m.video.file_id if m.video else m.photo[-1].file_id
+            cn=normalizar(cap+" "+raw)
+            fid=m.video.file_id if m.video else m.photo[-1].file_id
             if "100" in cn and "500" not in cn:
-                txt=f"📈 NEGOCIO 100\n@{m.from_user.username or uid}"
-                if m.video: await context.bot.send_video(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin_100(uid,m.from_user.username or "None"))
-                else: await context.bot.send_photo(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin_100(uid,m.from_user.username or "None"))
+                if puede_enviar(uid,'notif_100',20):
+                    txt=f"📈 NEGOCIO 100\n@{m.from_user.username or uid}"
+                    if m.video: await context.bot.send_video(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin_100(uid,m.from_user.username or "None"))
+                    else: await context.bot.send_photo(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin_100(uid,m.from_user.username or "None"))
                 return
             if "500" in cn:
                 txt=f"✅ NEGOCIO 500\n@{m.from_user.username or uid}"
@@ -181,6 +187,7 @@ async def handle_all(update, context):
                 else: await context.bot.send_photo(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin(uid,m.from_user.username or "None"))
                 await m.reply_text(OCUPADITA_MSG); USUARIOS[uid]['flags']['pausado']=True; return
             return
+
         if not USUARIOS[uid]['flags'].get('gratis_enviado'):
             if intent=="comprar":
                 USUARIOS[uid]['flags']['gratis_enviado']=True
@@ -189,54 +196,58 @@ async def handle_all(update, context):
                     return
                 await m.reply_text(PREGUNTA_PAIS)
                 ESPERA_PAIS[uid]={'intentos':0}; return
-            else:
-                await enviar_5_fotos(m); await m.reply_text(GRATIS_TEXTO)
-                USUARIOS[uid]['flags']['gratis_enviado']=True; return
+            await enviar_5_fotos(m); await m.reply_text(GRATIS_TEXTO)
+            USUARIOS[uid]['flags']['gratis_enviado']=True; return
+
         if intent=="comprar":
             if USUARIOS[uid].get('pais_guardado'):
-                if puede_enviar(uid,'precio_directo',3):
+                if puede_enviar(uid,'precio_directo',10):
                     await m.reply_text(precio_por_pais(USUARIOS[uid]['pais_guardado']), parse_mode='HTML', disable_web_page_preview=False)
                 return
             if uid in ESPERA_PAIS: return
-            await m.reply_text(PREGUNTA_PAIS)
-            ESPERA_PAIS[uid]={'intentos':0}; return
+            if puede_enviar(uid,'pregunta_pais',30):
+                await m.reply_text(PREGUNTA_PAIS)
+                ESPERA_PAIS[uid]={'intentos':0}
+            return
+
         if intent=="promo":
-            if puede_enviar(uid,'gratis_aviso_n',20):
+            # Solo 1 vez por hora, no spam
+            if puede_enviar(uid,'gratis_recordatorio',3600):
                 await m.reply_text(GRATIS_RECORDATORIO)
             return
+
         if intent=="otro":
-            if puede_enviar(uid,'vivo_n',25):
-                await m.reply_text(RESPUESTA_VIVO_NEGOCIO)
+            # Este era el que spameaba - ahora solo 1 vez cada 10 min, si no, silencio
+            if puede_enviar(uid,'vivo_otro',600):
+                await m.reply_text("Aquí estoy mor 🙈 dime si quieres los gratis o precios? 👀")
             return
     else:
+        # BOT CON BOTONES
         if not USUARIOS[uid]['flags'].get('gratis_enviado'):
             if intent=="comprar":
                 USUARIOS[uid]['flags']['gratis_enviado']=True
-                if USUARIOS[uid].get('pais_guardado'):
-                    await m.reply_text(precio_por_pais(USUARIOS[uid]['pais_guardado']), parse_mode='HTML', reply_markup=get_volver())
-                    return
                 await m.reply_text("De donde eres mor 👀✨", reply_markup=get_precios())
                 return
             await enviar_5_fotos(m); await m.reply_text(GRATIS_TEXTO, reply_markup=get_menu())
             USUARIOS[uid]['flags']['gratis_enviado']=True; return
         if intent=="comprar":
             if USUARIOS[uid].get('pais_guardado'):
-                if puede_enviar(uid,'precio_directo_b',3):
+                if puede_enviar(uid,'precio_directo_b',10):
                     await m.reply_text(precio_por_pais(USUARIOS[uid]['pais_guardado']), parse_mode='HTML', reply_markup=get_volver())
                 return
-            if puede_enviar(uid,'comprar_b',2):
+            if puede_enviar(uid,'comprar_b',5):
                 await m.reply_text("De donde eres mor 👀✨", reply_markup=get_precios())
             return
         if intent=="promo":
-            if puede_enviar(uid,'promo_b',10):
+            if puede_enviar(uid,'promo_b',3600):
                 await m.reply_text(GRATIS_RECORDATORIO, reply_markup=get_volver())
             return
         if intent=="otro":
-            if puede_enviar(uid,'otro_bot',15):
-                await m.reply_text(RESPUESTA_VIVO_BOT, reply_markup=get_menu())
+            if puede_enviar(uid,'otro_bot',600):
+                await m.reply_text("Wenas mor 🙈 ¿gratis o precios?", reply_markup=get_menu())
             return
+
 def main():
-    from telegram import Update
     cargar_datos()
     app=Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start_cmd))
@@ -244,6 +255,6 @@ def main():
     app.add_handler(MessageHandler(filters.UpdateType.BUSINESS_MESSAGE, handle_all))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_all))
     app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, handle_all))
-    print("Bot listo con texto corregido fotitos")
+    print("Anti-spam real activo - ya no repite mensajes")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 if __name__=='__main__': main()
