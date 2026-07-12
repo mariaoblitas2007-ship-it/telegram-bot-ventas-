@@ -1,6 +1,4 @@
-# ============================================================
-# SOLO PAÍS - Precios en dólares con mismo formato que Perú/México
-# ============================================================
+# FINAL 100% - Negocio = SIN botones / Bot = CON botones / Solo país sin mencionar países
 import os, json, logging, time, unicodedata, re
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
@@ -9,7 +7,6 @@ logging.basicConfig(level=logging.INFO)
 TOKEN = '8762577283:AAFVT7_WMpZ7njVnToIlZypUpCToF5LGcbA'
 ADMIN_ID = 8783569348
 DATA_FILE = "data.json"
-
 USUARIOS = {}; ESPERA_PAIS = {}
 
 GRATIS_TEXTO = """✨ ¿Quieres verme cogiendo y moviendo las ttas? 👀💕 ✨
@@ -22,7 +19,7 @@ Avísame cuando llegues a 100 vistas 🥵
 Mándame pruebas que cumpliste con la promo :3"""
 GRATIS_RECORDATORIO = "Ya te envié como ganarte los gratis mor 🥺 cumplan la promo para los videos gratis :3"
 PREGUNTA_PAIS = "De dónde eres Mor?"
-PREGUNTA_PAIS_AYUDA = "Dime de qué país eres mor? 🙈 Perú, México, Colombia, etc."
+PREGUNTA_PAIS_AYUDA = "Dime de qué país eres mor? 🙈"
 TEXTO_100_A_500 = "Sii mor ya vi que llegaste a 100 🥺✨ pero son 500 vistas mor 🥵 sigue comentando y cuando llegues a 500 me mandas pruebas que cumpliste con la promo :3"
 OCUPADITA_MSG = "ando algo ocupadita haciéndo videollamada 👀 en un ratito te confirmo mor 🥰"
 UPSELL_PICANTE = """Si pagas ahora mismo mor te mando regalitos extra bien puercos 😝🔥
@@ -68,7 +65,6 @@ PE_PRECIOS = """🛍 <b>VIDEOS</b> 🛒
 <b>YAPE / PLIN:</b>
 <code>923553612</code>"""
 
-# MISMO FORMATO QUE LOS DEMÁS, CON LINK DIRECTO
 USA_PRECIOS = """🛍 <b>VIDEOS</b> 🛒
 
 🎂 <b>BÁSICO: $5 USD</b>
@@ -100,9 +96,9 @@ def normalizar(t):
     return re.sub(r'[^\w\s]',' ',t)
 def detectar_pais(t):
     t=normalizar(t)
-    if any(x in t for x in ['peru','lima','arequipa','cusco','trujillo','chiclayo','piura']): return 'pe'
-    if any(x in t for x in ['mexico','mx','jalisco','guadalajara','monterrey','cancun','puebla']): return 'mx'
-    if any(x in t for x in ['colombia','argentina','chile','venezuela','ecuador','bolivia','usa','eeuu','españa']): return 'usa'
+    if any(x in t for x in ['peru','lima','arequipa','cusco','trujillo','chiclayo']): return 'pe'
+    if any(x in t for x in ['mexico','mx','jalisco','guadalajara','monterrey','cancun']): return 'mx'
+    if any(x in t for x in ['colombia','argentina','chile','venezuela','ecuador','usa','eeuu','españa']): return 'usa'
     return None
 def detectar_intencion(txt,cap=""):
     t=normalizar(f"{txt} {cap}")
@@ -142,8 +138,8 @@ async def btn(u,c):
     USUARIOS.setdefault(uid,{}).setdefault('flags',{})
     if q.from_user.id==ADMIN_ID and "_" in d:
         acc,t=d.split("_",1); t=int(t)
-        if acc=="ok": await c.bot.send_message(t,"Listo mor ya te confirmé 💖"); await q.edit_message_caption(caption=(q.message.caption or "")+"\n✅ CONFIRMADO"); USUARIOS.setdefault(t,{}).setdefault('flags',{})['pausado']=False
-        elif acc=="no": await c.bot.send_message(t,"Mor mándame mejor la pruebita completa porfa 🥺"); await q.edit_message_caption(caption=(q.message.caption or "")+"\n❌ PEDIDA"); USUARIOS.setdefault(t,{}).setdefault('flags',{})['pausado']=False
+        if acc=="ok": await c.bot.send_message(t,"Listo mor ya te confirmé 💖"); await q.edit_message_caption(caption=(q.message.caption or "")+"\n✅ CONFIRMADO")
+        elif acc=="no": await c.bot.send_message(t,"Mor mándame mejor la pruebita completa porfa 🥺"); await q.edit_message_caption(caption=(q.message.caption or "")+"\n❌ PEDIDA")
         elif acc=="500": await c.bot.send_message(t,TEXTO_100_A_500); await q.edit_message_caption(caption=(q.message.caption or "")+"\n📈 MENSAJE 500 ENVIADO")
         guardar_datos(); return
     if d=='volver':
@@ -178,7 +174,9 @@ async def handle_all(update, context):
     if ahora-USUARIOS[uid].get('ultimo',0) < 2.2: return
     USUARIOS[uid]['ultimo']=ahora
     if USUARIOS[uid]['flags'].get('pausado'): return
+
     if es_neg:
+        # NEGOCIO 100% SIN BOTONES
         if uid in ESPERA_PAIS:
             pais = detectar_pais(raw)
             if pais:
@@ -189,8 +187,7 @@ async def handle_all(update, context):
                         USUARIOS[uid]['flags']['upsell_negocio']=True
                 del ESPERA_PAIS[uid]; guardar_datos(); return
             else:
-                intentos=ESPERA_PAIS[uid].get('intentos',0)
-                if intentos==0 and puede_enviar(uid,'pais_ayuda',20):
+                if ESPERA_PAIS[uid].get('intentos',0)==0 and puede_enviar(uid,'pais_ayuda',20):
                     await m.reply_text(PREGUNTA_PAIS_AYUDA)
                     ESPERA_PAIS[uid]['intentos']=1; guardar_datos(); return
                 else: return
@@ -229,6 +226,7 @@ async def handle_all(update, context):
             return
         return
     else:
+        # BOT 100% CON BOTONES
         intent=detectar_intencion(raw,cap)
         if intent=="otro": return
         if not USUARIOS[uid]['flags'].get('gratis_enviado'):
@@ -251,7 +249,7 @@ def main():
     app.add_handler(MessageHandler(filters.UpdateType.BUSINESS_MESSAGE, handle_all))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_all))
     app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, handle_all))
-    print("Solo país + dólares mismo formato listo")
+    print("Negocio sin botones / Bot con botones - listo")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__=='__main__': main()
