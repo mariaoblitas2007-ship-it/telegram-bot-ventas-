@@ -1,8 +1,8 @@
 # ============================================================
-# FINAL: Bot = solo botones | Negocio = gratis + si compra pregunta moneda
-# Precios extendidos completos
+# FIX SPAM GRATIS: Solo 1 vez el mensaje largo, después 1 solo aviso
+# Bot = solo botones | Negocio = gratis 1 vez + pregunta moneda si compra
 # ============================================================
-import os, json, logging, time, unicodedata, random, re
+import os, json, logging, time, unicodedata, re
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
@@ -23,6 +23,8 @@ Solo haz esto mor:
 Avísame cuando llegues a 100 vistas 🥵
 Mándame pruebas que cumpliste con la promo :3"""
 
+GRATIS_RECORDATORIO_UNICO = "Ya te envié como ganarte los gratis mor 🥺 cumplan la promo para los videos gratis :3"
+
 PREGUNTA_MONEDA = """De donde eres mor? que moneda usas? :3
 dime si usas soles, pesos o dolares 🙈"""
 
@@ -33,9 +35,7 @@ TEXTO_100_A_500 = """Sii mor ya vi que llegaste a 100 🥺✨ pero para soltarte
 Cuando llegues a 500 me mandas pruebas que cumpliste con la promo :3 y te los suelto al toque 😏"""
 
 OCUPADITA_MSG = "ando algo ocupadita haciéndo videollamada 👀 en un ratito te confirmo mor 🥰"
-RECORDATORIO_CORTO = "Ya te dejé los pasitos arribita mor 👆 cuando llegues a 100 me mandas pruebas que cumpliste con la promo :3"
 
-# ========== PRECIOS EXTENDIDOS COMO ANTES ==========
 MX_PRECIOS = """🛍 <b>VIDEOS</b> 🛒
 
 🎂 <b>BÁSICO: $100 MXN</b>
@@ -110,15 +110,10 @@ def normalizar(t):
     return re.sub(r'[^\w\s]',' ',t)
 def detectar_pais_moneda(t):
     t=normalizar(t)
-    peru_lugares = ['peru','lima','arequipa','cusco','trujillo','chiclayo','piura','huancayo','ica','cajamarca','pucallpa','iquitos','tacna']
-    peru_moneda = ['sol','soles','s/','yape','plin']
-    mex_lugares = ['mexico','mx','cdmx','ciudad de mexico','jalisco','guadalajara','monterrey','puebla','cancun','yucatan','tijuana','veracruz','edomex']
-    mex_moneda = ['peso mexicano','mxn','clabe']
-    if any(x in t for x in peru_moneda): return 'pe'
-    if any(x in t for x in peru_lugares): return 'pe'
-    if any(x in t for x in mex_moneda): return 'mx'
-    if any(x in t for x in mex_lugares): return 'mx'
-    if 'peso' in t or 'pesos' in t: return 'mx'
+    if any(x in t for x in ['sol','soles','s/','yape','plin','peru','lima','arequipa','cusco','trujillo','chiclayo']):
+        if 'sol' in t or 'soles' in t or 'peru' in t or 'lima' in t: return 'pe'
+    if any(x in t for x in ['mexico','mx','cdmx','jalisco','guadalajara','monterrey','cancun']): return 'mx'
+    if 'peso' in t or 'pesos' in t or 'mxn' in t or 'clabe' in t: return 'mx'
     if 'dolar' in t or 'dolares' in t or 'usd' in t: return 'usa'
     return None
 def detectar_intencion(txt,cap=""):
@@ -154,6 +149,7 @@ async def despedida(m, es_neg, uid):
 async def start_cmd(u,c):
     uid=u.effective_user.id; USUARIOS.setdefault(uid,{}); USUARIOS[uid]['ultimo']=time.time(); guardar_datos()
     await enviar_5_fotos(u.message); await u.message.reply_text(GRATIS_TEXTO, reply_markup=get_menu())
+    USUARIOS[uid].setdefault('flags',{})['gratis_enviado']=True
 
 async def btn(u,c):
     q=u.callback_query; await q.answer(); d=q.data
@@ -163,10 +159,20 @@ async def btn(u,c):
         elif acc=="no": await c.bot.send_message(t,"Mor mándame mejor la pruebita completa porfa 🥺"); await q.edit_message_caption(caption=(q.message.caption or "")+"\n❌ PEDIDA"); USUARIOS.setdefault(t,{}).setdefault('flags',{})['pausado']=False
         elif acc=="500": await c.bot.send_message(t,TEXTO_100_A_500); await q.edit_message_caption(caption=(q.message.caption or "")+"\n📈 MENSAJE 500 ENVIADO")
         guardar_datos(); return
+    uid=q.from_user.id; USUARIOS.setdefault(uid,{}).setdefault('flags',{})
     if d=='volver': await q.edit_message_text("¿Qué quieres mor? :3", reply_markup=get_menu())
     elif d=='comprar': await q.edit_message_text("De donde eres mor 👀✨", reply_markup=get_precios())
     elif d in ['pe','mx','usa']: await q.edit_message_text(precio_por_pais(d), parse_mode='HTML', reply_markup=get_volver())
-    elif d=='gratis': await enviar_5_fotos(q.message); await q.message.reply_text(GRATIS_TEXTO, reply_markup=get_volver())
+    elif d=='gratis':
+        # Bot también solo 1 vez el largo, después 1 aviso
+        if not USUARIOS[uid]['flags'].get('gratis_enviado'):
+            await enviar_5_fotos(q.message); await q.message.reply_text(GRATIS_TEXTO, reply_markup=get_volver())
+            USUARIOS[uid]['flags']['gratis_enviado']=True; guardar_datos()
+        else:
+            if not USUARIOS[uid]['flags'].get('gratis_aviso'):
+                await q.message.reply_text(GRATIS_RECORDATORIO_UNICO, reply_markup=get_volver())
+                USUARIOS[uid]['flags']['gratis_aviso']=True; guardar_datos()
+            # si ya avisó, no hace nada para no spamear
 
 async def handle_all(update, context):
     m = update.business_message or update.message
@@ -174,7 +180,8 @@ async def handle_all(update, context):
     uid=m.from_user.id; un=m.from_user.username or "None"; raw=m.text or ""; cap=getattr(m,'caption','') or ""
     es_neg = update.business_message is not None
     if es_neg and uid==ADMIN_ID: return
-    USUARIOS.setdefault(uid,{}); ahora=time.time()
+    USUARIOS.setdefault(uid,{}); USUARIOS[uid].setdefault('flags',{})
+    ahora=time.time()
     if ahora-USUARIOS[uid].get('ultimo',0) < 2.5: return
     USUARIOS[uid]['ultimo']=ahora
     if USUARIOS[uid].get('flags',{}).get('ban') or USUARIOS[uid].get('flags',{}).get('pausado'): return
@@ -182,8 +189,7 @@ async def handle_all(update, context):
     if es_neg:
         if uid in ESPERA_MONEDA_NEGOCIO:
             pais = detectar_pais_moneda(raw)
-            if pais: await m.reply_text(precio_por_pais(pais), parse_mode='HTML')
-            else: await m.reply_text(USA_PRECIOS, parse_mode='HTML')
+            await m.reply_text(precio_por_pais(pais) if pais else USA_PRECIOS, parse_mode='HTML')
             del ESPERA_MONEDA_NEGOCIO[uid]; guardar_datos(); return
         if m.photo or m.video:
             is_v=bool(m.video); fid=m.video.file_id if is_v else m.photo[-1].file_id
@@ -200,26 +206,39 @@ async def handle_all(update, context):
                 else: await context.bot.send_photo(ADMIN_ID,fid,caption=txt,reply_markup=teclado_admin(uid,un))
                 await despedida(m, True, uid); return
             return
-        if not USUARIOS[uid].get('flags',{}).get('saludo_negocio'):
+        # PRIMER MENSAJE = 1 VEZ GRATIS CON FOTOS
+        if not USUARIOS[uid]['flags'].get('gratis_enviado'):
             await enviar_5_fotos(m); await m.reply_text(GRATIS_TEXTO)
-            USUARIOS[uid].setdefault('flags',{})['saludo_negocio']=True; guardar_datos(); return
+            USUARIOS[uid]['flags']['gratis_enviado']=True; guardar_datos(); return
+
         intent=detectar_intencion(raw,cap)
         if intent in ["vistas100","cumplido"]:
             link=f"https://t.me/{un}" if un!="None" else f"tg://user?id={uid}"
             await context.bot.send_message(ADMIN_ID,f"📈 NEGOCIO 100 @{un} {uid}\n{raw}\n{link}",reply_markup=teclado_admin_100(uid,un)); return
+
+        if intent=="promo":
+            # Ya se envió una vez, ahora solo 1 aviso y nunca más
+            if not USUARIOS[uid]['flags'].get('gratis_aviso'):
+                await m.reply_text(GRATIS_RECORDATORIO_UNICO)
+                USUARIOS[uid]['flags']['gratis_aviso']=True; guardar_datos()
+            return
+
         if intent=="comprar":
             await m.reply_text(PREGUNTA_MONEDA)
             ESPERA_MONEDA_NEGOCIO[uid]=True; guardar_datos(); return
-        if intent=="promo": await m.reply_text(GRATIS_TEXTO); return
         return
     else:
-        if not USUARIOS[uid].get('flags',{}).get('saludo_bot'):
+        if not USUARIOS[uid]['flags'].get('gratis_enviado'):
             await enviar_5_fotos(m); await m.reply_text(GRATIS_TEXTO, reply_markup=get_menu())
-            USUARIOS[uid].setdefault('flags',{})['saludo_bot']=True; guardar_datos(); return
+            USUARIOS[uid]['flags']['gratis_enviado']=True; guardar_datos(); return
         intent=detectar_intencion(raw,cap)
         if intent=="comprar": await m.reply_text("De donde eres mor 👀✨", reply_markup=get_precios()); return
-        if intent=="pago": await m.reply_text(OCUPADITA_MSG, reply_markup=get_volver()); await context.bot.send_message(ADMIN_ID,f"💰 PAGO BOT @{un} {uid}",reply_markup=teclado_admin(uid,un)); USUARIOS[uid].setdefault('flags',{})['pausado']=True; guardar_datos(); return
-        if intent=="promo": await enviar_5_fotos(m); await m.reply_text(GRATIS_TEXTO, reply_markup=get_volver()); return
+        if intent=="promo":
+            if not USUARIOS[uid]['flags'].get('gratis_aviso'):
+                await m.reply_text(GRATIS_RECORDATORIO_UNICO, reply_markup=get_volver())
+                USUARIOS[uid]['flags']['gratis_aviso']=True; guardar_datos()
+            return
+        if intent=="pago": await m.reply_text(OCUPADITA_MSG, reply_markup=get_volver()); await context.bot.send_message(ADMIN_ID,f"💰 PAGO BOT @{un} {uid}",reply_markup=teclado_admin(uid,un)); USUARIOS[uid]['flags']['pausado']=True; guardar_datos(); return
         await m.reply_text(f"Wenas mor 🙈\nMi canal: {LINK_CANAL}", reply_markup=get_menu())
 
 def main():
@@ -230,7 +249,7 @@ def main():
     app.add_handler(MessageHandler(filters.UpdateType.BUSINESS_MESSAGE, handle_all))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_all))
     app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, handle_all))
-    print("Bot listo: precios extendidos")
+    print("Fix gratis 1 vez listo")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__=='__main__': main()
