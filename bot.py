@@ -17,7 +17,6 @@ Mi canal donde subo de todo:
 
 ¿Quieres gratis o comprar? dime mor :3"""
 
-# PRECIOS CON FORMATO IGUAL EN LOS 3 - COPIABLES
 MX_PRECIOS = """🛍 <b>VIDEOS</b> 🛒
 
 🎂 <b>BÁSICO: $100 MXN</b>
@@ -46,7 +45,7 @@ PE_PRECIOS = """🛍 <b>VIDEOS</b> 🛒
 
 ━━━━━━━━━━━━━━
 🔥 <b>TOP: S/ 30</b>
-→ 12 videitos | S/2.50 c/u
+→ 12 videitos
 
 ━━━━━━━━━━━━━━
 🏆 <b>PREMIUM: S/ 60</b>
@@ -106,25 +105,26 @@ Entre más caliente comentes, más gente entra a verte, mor 😏"""
 
 TEXTO_100="Sii mor las 100 vistas son solo para que veas lo fácil que es :3 cuando llegues a 500-1000 me avisas y te suelto tus videitos al toque 🥵 mándame videito sin cortar"
 TEXTO_INTER="No hago intercambios mor 🥰 yo vendo, pero si cumples la promo te doy videitos al toque 😏"
-CUMPLIDO_MSG="Ayy gracias mor 💖 ya vi tu pruebita 🥺✨ ya la estoy revisando\n\nSi me compras ahora y me sorprendes con dinerito 💸🙈 te caen regalitos extra bien ricos solo para ti, te pongo en prioridad y te atiendo al toque :3"
-PAGO_MSG="Gracias por tu comprita mor 🥰💖 ya reviso tu captura, si me sorprendes con un poquito más 💸🙈 te mando regalitos extra que nadie tiene :3"
+
+# MENSAJE CORREGIDO - YA NO PIDE MÁS DINERO
+CUMPLIDO_MSG = "ando algo ocupadita haciéndo videollamada 👀 en un ratito te confirmo mor 🥰"
+PAGO_MSG = "ando algo ocupadita haciéndo videollamada 👀 en un ratito te confirmo mor 🥰"
 
 REAL_MSGS = [
     f"Sii soy yo mor 🥰 revisa mi canal ahí subo todo sin censura, verás que soy real :3\n{LINK_CANAL}",
     f"Soy real mor, entra a mi canal y ves mis videitos nuevos bien ricos 🙈✨\n{LINK_CANAL}",
-    f"Claro que soy yo mor 🥺 en mi canal me ves completita, ahí estoy grabando ahora\n{LINK_CANAL}",
-    f"Soy yo mor, revisa mi canal para que veas que no soy bot y te animes 💖\n{LINK_CANAL}"
+    f"Claro que soy yo mor 🥺 en mi canal me ves completita, ahí estoy grabando ahora\n{LINK_CANAL}"
 ]
 VIDEOLLAMADA_MSGS = [
     "Videollamadita 🥰 5 y 10 min, si me compras ahora te doy prioridad :3",
     "Hago videollamadita solo virtual mor 5 y 10 min 🥰 si me compras ahora te consiento mucho 😏"
 ]
-DUDAR_MSGS=["Entiendo mor piensalo tranqui 🥺 pero si me sorprendes con el pago ahora te pongo en prioridad 💖","Puedes pensarlo bebe las que pagan ahora las atiendo primero y con extra 😏"]
+DUDAR_MSGS=["Entiendo mor piensalo tranqui 🥺 pero si me compras ahora te pongo en prioridad 💖","Puedes pensarlo bebe las que pagan ahora las atiendo primero y con extra 😏"]
 CALENTADA_MSGS=["Cuando compras te enseño todo sin censura mor completito para ti 🥵","Si compras te muestro todo lo que no subo a ningun lado 😏"]
-COMPRA_MSGS=["TOP y PREMIUM son los mas pedidos mor 🔥 si mandas poquito mas te mando extras y te contesto al toque despues del pago :3","Si eliges TOP o PREMIUM y me sorprendes con dinerito te regalo videitos fuera de catalogo 💋"]
-VIDEITOS_MSGS=["Videitos tengo BÁSICO, TOP y PREMIUM mor 🔥 si me compras ahora te mando doble 🥵","Mis videitos son sin censura el TOP es el mas pedido y PREMIUM te enseño todo 💖"]
+COMPRA_MSGS=["TOP y PREMIUM son los mas pedidos mor 🔥 te contesto al toque despues del pago :3","Si eliges TOP o PREMIUM te mando extras bien ricos 💋"]
+VIDEITOS_MSGS=["Videitos tengo BÁSICO, TOP y PREMIUM mor 🔥","Mis videitos son sin censura el TOP es el mas pedido y PREMIUM te enseño todo 💖"]
 SALIR_MSGS=["Por ahora no hago saliditas mor 🙈 soy solo virtual pero bien atrevida si eres premium 💋","No hago presencial bebe pero virtual soy toda tuya si eres TOP o PREMIUM 😏"]
-FOLLOW_MSGS=["Anais caliente si compras ahora y me sorprendes 💸 te doy doble mor 🥵","Bebe solo hoy doble + extra si me compras 😏","Mor me quede con ganas si compras ahora y me das regalito te lo doy todo x2 🙈"]
+FOLLOW_MSGS=["Anais caliente si compras ahora y me sorprendes te doy doble mor 🥵","Bebe solo hoy doble + extra si me compras 😏","Mor me quede con ganas si compras ahora te lo doy todo x2 🙈"]
 
 def cargar_datos():
     global USUARIOS, INVITADOS, REFERIDOS
@@ -158,21 +158,20 @@ def detectar_pais(t):
     t=normalizar(t)
     if any(x in t for x in ['peru','pe']): return 'pe'
     if any(x in t for x in ['mexico','mx']): return 'mx'
-    if any(x in t for x in ['usa','eeuu','colombia','argentina','chile','otros','mundo','dolar','dolares']): return 'usa'
+    if any(x in t for x in ['usa','eeuu','colombia','argentina','chile','otros','mundo','dolar']): return 'usa'
     return None
 def detectar_intencion(txt, cap=""):
     t=normalizar(f"{txt} {cap}")
-    if any(x in t for x in ['eres real','eres bot','eres un bot','robot','fake','no eres real','prueba que eres','asegurarme que eres','ver que eres real','eres tu','muestra que eres real','video para asegurarme']):
+    if any(x in t for x in ['eres real','eres bot','eres un bot','robot','fake','no eres real','prueba que eres','asegurarme que eres','ver que eres real','eres tu','video para asegurarme']):
         return "real"
-    if any(x in t for x in ['no entendi','no entiendo','como es','explica','como funciona']):
-        return "no_entendi"
+    if any(x in t for x in ['no entendi','no entiendo','como es','explica','como funciona']): return "no_entendi"
     if any(x in t for x in ['ya cumpli','ya cumplí','cumpli','ya esta','termine promo','ya lo hice','ya lo subi']): return "cumplido"
     if fuzzy(t, ["videollamada","vdeollamada","llamada","en vivo"]): return "videollamada"
     if fuzzy(t, ["yape","plin","pague","pago","comprobante","transfer","capture"]): return "pago"
     if "100" in t and "vist" in t: return "vistas100"
     if fuzzy(t, ["intercambio","cambias"]): return "intercambio"
     if fuzzy(t, ["salir","vernos","encuentro","hotel","presencial"]): return "salir"
-    if fuzzy(t, ["pienso","pensarlo","luego","despues"]): return "dudar"
+    if fuzzy(t, ["pienso","pensarlo","luego"]): return "dudar"
     if fuzzy(t, ["gratis","grtis","promo","regalo"]): return "promo"
     if fuzzy(t, ["videitos","vdeitos","videos","pack"]): return "videitos"
     if fuzzy(t, ["precio","presio","cuanto","qnto","comprar","costo"]): return "comprar"
@@ -212,8 +211,7 @@ def prog_follow(ctx,uid,cid):
         except: pass
     JOBS_FOLLOW[uid]=ctx.job_queue.run_once(followup_job,300,data={'uid':uid,'chat_id':cid})
 
-async def start_cmd(u,c):
-    await u.message.reply_text("Hola mor 🥵",reply_markup=get_menu())
+async def start_cmd(u,c): await u.message.reply_text("Hola mor 🥵",reply_markup=get_menu())
 
 async def btn(u,c):
     q=u.callback_query; await q.answer(); d=q.data
@@ -252,10 +250,8 @@ async def handle_all(update,context):
             await m.reply_text(CUMPLIDO_MSG); USUARIOS[uid].setdefault('flags',{})['pausado']=True; guardar_datos(); return
 
         intent=detectar_intencion(raw,cap); pais=detectar_pais(raw)
-
         if not USUARIOS[uid].get('flags',{}).get('saludo'):
             await m.reply_text(SALUDO_NEGOCIO); USUARIOS[uid].setdefault('flags',{})['saludo']=True; guardar_datos(); prog_follow(context,uid,m.chat.id); return
-
         if uid in ESPERA_PAIS and pais:
             await m.reply_text(precio_por_pais(pais), parse_mode='HTML'); del ESPERA_PAIS[uid]; guardar_datos(); prog_follow(context,uid,m.chat.id); return
 
@@ -264,10 +260,10 @@ async def handle_all(update,context):
         if intent=="pago":
             await m.reply_text(PAGO_MSG); await context.bot.send_message(ADMIN_ID,f"💰 PAGÓ @{un} {uid}\n{raw}",reply_markup=teclado_admin(uid,un)); USUARIOS[uid].setdefault('flags',{})['pausado']=True; guardar_datos(); return
 
-        if intent=="real":
-            await m.reply_text(no_repite(uid,'real',REAL_MSGS)); guardar_datos(); prog_follow(context,uid,m.chat.id); return
+        if intent=="real": await m.reply_text(no_repite(uid,'real',REAL_MSGS)); guardar_datos(); prog_follow(context,uid,m.chat.id); return
         if intent=="no_entendi":
             await m.reply_text("Tranqui mor te explico facilito 🥺👇\nTengo videitos y videollamada, todo virtual 🙈"); await m.reply_text("De donde eres mor 👀✨", reply_markup=get_precios()); ESPERA_PAIS[uid]=True; guardar_datos(); prog_follow(context,uid,m.chat.id); return
+
         if intent=="vistas100":
             if puede(uid,'v100'): await m.reply_text(TEXTO_100); USUARIOS[uid].setdefault('flags',{})['v100']=True
         elif intent=="promo": await bienvenida_promo(m)
@@ -293,7 +289,7 @@ def main():
     app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, handle_all))
     app.add_handler(MessageHandler(filters.UpdateType.BUSINESS_MESSAGE & (filters.PHOTO | filters.VIDEO), handle_all))
     app.add_handler(MessageHandler(filters.CAPTION & filters.UpdateType.BUSINESS_MESSAGE, handle_all))
-    print("Bot final - precios con lineas + comprension real/bot listo")
+    print("Bot final - ocupadita en videollamada listo")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__=='__main__': main()
