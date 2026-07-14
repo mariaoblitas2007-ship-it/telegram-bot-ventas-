@@ -1,4 +1,4 @@
-# 5 FOTOS + MENSAJE + LINK DEL CANAL APARTE - SIN SPAM - NO REPITE
+# MENSAJE GRATIS NUEVO + 5 FOTOS + LINK APARTE + SIN SPAM
 import time, unicodedata, re
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
@@ -9,18 +9,19 @@ USUARIOS = {}; ESPERA_PAIS = {}
 
 CANAL_LINK = "https://telegram.me/+lG8bEHr5J2QxMjhh"
 
-GRATIS_TEXTO = """✨ ¿Quieres verme cogiendo y moviendo las ttas? 👀💕 ✨
+GRATIS_TEXTO = """(REGALITO)
+✨ QUIERES HASTA 20 VIDEITOS GRATSS? ✨
 
-Te lo regalo mor, es fácil:
+Pasitos súper fáciles uwu:
+1️⃣ En tu bio de TikTok pon: Tg: yanabicitasa ✨
+2️⃣ Sube una fotito de las que te envié a tu story + Frase hot 😋
+3️⃣ Mándame captura + videito cuando cumplas
+4️⃣ Me confirmas cuando llegue a 100 vistas(story) :3
+5️⃣ Disfruta de hasta 20 videitos :3 ❤️‍🔥
 
-1️⃣ Sube una de las 5 fotitos a tu historia 🥺 (24h)
-
-2️⃣ Ve a TikTok, busca videitos hormonales y comenta:
-   alguien?, Revisa mi story, busco nv, yo si cumplo 🫣
-
-3️⃣ Cuando llegues a 100 vistas mándame captura grabando seguido sin cortar 🥵
-
-Verifico y te suelto los videitos gratis :3"""
+¿Te animas o ño? 🥺
+(Me avisas diciendo: ya cumpli con las 100 vistas )
+(Revisa mi perfil)"""
 
 GRATIS_RECORDATORIO = "ya te mande como conseguir mis videitos gratis mor 🥺💦"
 PREGUNTA_PAIS = "De dónde eres Mor?"
@@ -63,20 +64,20 @@ def normalizar(t):
     return re.sub(r'[^\w\s]',' ',t)
 def detectar_pais(t):
     t=normalizar(t)
-    mx=['mexico','mx','cdmx','jalisco','guadalajara','monterrey','nuevo leon','puebla','cancun','veracruz']
-    pe=['peru','pe','lima','arequipa','trujillo','chiclayo','lambayeque','piura','cusco','ica','tacna','puno']
+    mx=['mexico','mx','cdmx','jalisco','guadalajara','monterrey','nuevo leon','puebla','cancun']
+    pe=['peru','pe','lima','arequipa','trujillo','chiclayo','lambayeque','piura','cusco','ica']
     if any(x in t for x in mx): return 'mx'
     if any(x in t for x in pe): return 'pe'
     if len(t)>=3: return 'usa'
     return None
 def detectar_intencion(txt,cap=""):
     t=normalizar(f"{txt} {cap}")
-    if any(x in t for x in ['videos gratis','video gratis','gratis','promo']): return "promo"
+    if any(x in t for x in ['videos gratis','video gratis','gratis','promo','regalito','20 videitos']): return "promo"
     if any(x in t for x in ['yape','plin','pago','pague','comprobante','paypal','clabe']): return "pago"
     if "500" in t or "1000" in t: return "vistas500"
-    if "100" in t: return "vistas100"
+    if "100" in t or "ya cumpli" in t: return "vistas100"
     if any(x in t for x in ['prueba','vistas','cumpli']): return "prueba"
-    if any(x in t for x in ['precio','precios','presio','pack','contenido','conte','vendes','cuanto']): return "comprar"
+    if any(x in t for x in ['precio','precios','pack','contenido','conte','vendes','cuanto']): return "comprar"
     return "otro"
 
 def puede_enviar(uid,tipo,cd):
@@ -110,20 +111,15 @@ async def enviar_5_fotos(m):
         try: await m.reply_media_group([InputMediaPhoto(open(f'fotitos{i}.jpg','rb')) for i in range(1,6)])
         except: pass
 
-# FUNCION NUEVA - MANDA TODO SEPARADO COMO PEDISTE
 async def enviar_gratis_completo(m, con_botones=False):
     await enviar_5_fotos(m)
-    if con_botones:
-        await m.reply_text(GRATIS_TEXTO, reply_markup=get_menu())
-    else:
-        await m.reply_text(GRATIS_TEXTO)
-    # LINK APARTE SOLO
+    if con_botones: await m.reply_text(GRATIS_TEXTO, reply_markup=get_menu())
+    else: await m.reply_text(GRATIS_TEXTO)
     await m.reply_text(CANAL_LINK, disable_web_page_preview=False)
 
 async def start_cmd(u,c):
     uid=u.effective_user.id; USUARIOS.setdefault(uid,{}).setdefault('flags',{})['gratis_enviado']=True
     await enviar_gratis_completo(u.message, con_botones=True)
-
 async def btn(u,c):
     q=u.callback_query; await q.answer(); d=q.data; uid=q.from_user.id
     if d=='volver': await q.edit_message_text("¿Qué quieres mor? :3",reply_markup=get_menu()); return
@@ -158,14 +154,14 @@ async def handle_all(update,context):
     if m.photo or m.video:
         fid=m.video.file_id if m.video else m.photo[-1].file_id
         cn=normalizar(cap+" "+raw)
-        if any(x in cn for x in ['100','500','vistas','prueba']): razon="📈 PRUEBA VISTAS"
+        if any(x in cn for x in ['100','500','vistas','ya cumpli']): razon="📈 PRUEBA VISTAS"
         elif any(x in cn for x in ['yape','plin','pago','paypal','comprobante']): razon="💸 PAGO"
         else: razon="📷 FOTO/VIDEO"
         caption=f"{razon}\n👤 @{un} | {uid}\n🔗 {link_cli}\n💬 {cap[:80] if cap else raw[:80]}"
         kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Abrir chat",url=link_cli)]])
         if m.video: await context.bot.send_video(ADMIN_ID,fid,caption=caption,reply_markup=kb)
         else: await context.bot.send_photo(ADMIN_ID,fid,caption=caption,reply_markup=kb)
-        if "PAGO" in razon: await enviar_unico(m,uid,"ocupadita",OCUPADITA_MSG,cd=60)
+        if "PAGO" in razon: await enviar_unico(m,uid,"ocupadita","ando ocupadita en videollamada 👀 en un ratito te confirmo mor 🥰",cd=60)
         return
 
     if es_negocio:
@@ -177,8 +173,8 @@ async def handle_all(update,context):
             await enviar_gratis_completo(m, con_botones=False); USUARIOS[uid]['flags']['gratis_enviado']=True; return
         if intent=="pago":
             await context.bot.send_message(ADMIN_ID,f"💸 PAGO TEXTO\n👤 @{un} | {uid}\n🔗 {link_cli}\n💬 {raw}",reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Abrir",url=link_cli)]]))
-            await enviar_unico(m,uid,"pago",OCUPADITA_MSG,cd=60); return
-        if intent in ["promo","prueba"]: await enviar_unico(m,uid,"gratis_recordatorio",GRATIS_RECORDATORIO,cd=999999); return
+            await enviar_unico(m,uid,"pago","ando ocupadita en videollamada 👀 en un ratito te confirmo mor 🥰",cd=60); return
+        if intent in ["promo","prueba","vistas100"]: await enviar_unico(m,uid,"gratis_recordatorio",GRATIS_RECORDATORIO,cd=999999); return
         if intent=="comprar":
             if USUARIOS[uid].get('pais_guardado'): await enviar_unico(m,uid,f"precio_{USUARIOS[uid]['pais_guardado']}",precio_por_pais(USUARIOS[uid]['pais_guardado']),cd=999999,parse_mode='HTML',disable_web_page_preview=False); return
             await m.reply_text(PREGUNTA_PAIS); ESPERA_PAIS[uid]=True; return
@@ -199,6 +195,6 @@ def main():
     app.add_handler(MessageHandler(filters.UpdateType.BUSINESS_MESSAGE,handle_all))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,handle_all))
     app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO | filters.Sticker.ALL,handle_all))
-    print("5 fotos + mensaje + link aparte activo")
+    print("Nuevo mensaje gratis + 5 fotos + link aparte")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 if __name__=='__main__': main()
