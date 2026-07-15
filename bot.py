@@ -1,4 +1,4 @@
-# FINAL DEFINITIVO - TODO EN UNO
+# FINAL DEFINITIVO - TODO EN UNO - SIN REENVIAR STICKERS
 import time, unicodedata, re
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
@@ -158,7 +158,7 @@ async def handle_all(update,context):
     USUARIOS[uid]['ultimo']=time.time()
     intent=detectar_intencion(raw,cap); link_cli=link_cliente(uid,un)
 
-    if m.sticker: await context.bot.send_sticker(ADMIN_ID,m.sticker.file_id); await context.bot.send_message(ADMIN_ID,f"🎭 STICKER\n👤 @{un} | {uid}\n🔗 {link_cli}"); return
+    if m.sticker: return
     if m.photo or m.video:
         fid=m.video.file_id if m.video else m.photo[-1].file_id; cn=normalizar(cap+" "+raw)
         razon="📈 PRUEBA VISTAS" if "100" in cn or "ya cumpli" in cn else "💸 PAGO" if any(x in cn for x in ['yape','pago','paypal']) else "📷 FOTO"
@@ -225,6 +225,6 @@ def main():
     app.add_handler(MessageHandler(filters.UpdateType.BUSINESS_MESSAGE,handle_all))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,handle_all))
     app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO | filters.Sticker.ALL,handle_all))
-    print("FINAL ANTI-SPAM + RECORDAR PAIS + PAYPAL ACTIVO")
+    print("FINAL ANTI-SPAM + RECORDAR PAIS + PAYPAL ACTIVO - SIN STICKERS")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 if __name__=='__main__': main()
