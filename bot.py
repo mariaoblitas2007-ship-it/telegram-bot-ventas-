@@ -3,7 +3,7 @@ import time, unicodedata, re
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
-TOKEN = '8762577283:AAFVT7_WMpZ7njVnToIlZypUpCToF5LGcbA'
+TOKEN = '8762577283:AAEcwdGvxVSpKBfBRzvbGONIsHFkcphOf3Q'
 ADMIN_ID = 8783569348
 USUARIOS = {}; ESPERA_PAIS = {}
 
